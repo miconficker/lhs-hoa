@@ -60,7 +60,7 @@ authRouter.post('/register', async (c) => {
     'SELECT id, email, role, phone, created_at FROM users WHERE id = ?'
   ).bind(userId).first() as any;
 
-  const token = generateToken(user.id, user.role, c.env.JWT_SECRET);
+  const token = await generateToken(user.id, user.role, c.env.JWT_SECRET);
 
   return c.json({ user, token }, 201);
 });
@@ -91,7 +91,7 @@ authRouter.post('/login', async (c) => {
     return c.json({ error: 'Invalid credentials' }, 401);
   }
 
-  const token = generateToken(user.id, user.role, c.env.JWT_SECRET);
+  const token = await generateToken(user.id, user.role, c.env.JWT_SECRET);
 
   // Remove password_hash from response
   const { password_hash, ...userResponse } = user;
@@ -101,7 +101,7 @@ authRouter.post('/login', async (c) => {
 
 // Get current user
 authRouter.get('/me', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
