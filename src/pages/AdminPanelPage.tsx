@@ -1,0 +1,773 @@
+import { useState, useEffect } from 'react';
+import { api, type AdminUser, type AdminHousehold } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
+
+type Tab = 'users' | 'households' | 'import' | 'settings';
+
+export function AdminPanelPage() {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<Tab>('users');
+  const [loading, setLoading] = useState(true);
+
+  // Users state
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+
+  // Households state
+  const [households, setHouseholds] = useState<AdminHousehold[]>([]);
+  const [showHouseholdModal, setShowHouseholdModal] = useState(false);
+  const [editingHousehold, setEditingHousehold] = useState<AdminHousehold | null>(null);
+
+  // Import state
+  const [importData, setImportData] = useState('');
+  const [importResult, setImportResult] = useState<{
+    success: number;
+    failed: number;
+    errors: string[];
+  } | null>(null);
+
+  // Stats state
+  const [stats, setStats] = useState<any>(null);
+
+  useEffect(() => {
+    if (activeTab === 'users') loadUsers();
+    if (activeTab === 'households') loadHouseholds();
+    if (activeTab === 'settings') loadStats();
+  }, [activeTab]);
+
+  const loadUsers = async () => {
+    setLoading(true);
+    const response = await api.admin.listUsers();
+    if (response.data) {
+      setUsers(response.data.users);
+    }
+    setLoading(false);
+  };
+
+  const loadHouseholds = async () => {
+    setLoading(true);
+    const response = await api.admin.listHouseholds();
+    if (response.data) {
+      setHouseholds(response.data.households);
+    }
+    setLoading(false);
+  };
+
+  const loadStats = async () => {
+    setLoading(true);
+    const response = await api.admin.getStats();
+    if (response.data) {
+      setStats(response.data.stats);
+    }
+    setLoading(false);
+  };
+
+  const handleCreateUser = async (data: any) => {
+    const response = await api.admin.createUser(data);
+    if (response.error) {
+      alert(response.error);
+      return;
+    }
+    setShowUserModal(false);
+    loadUsers();
+  };
+
+  const handleUpdateUser = async (id: string, data: any) => {
+    const response = await api.admin.updateUser(id, data);
+    if (response.error) {
+      alert(response.error);
+      return;
+    }
+    setShowUserModal(false);
+    setEditingUser(null);
+    loadUsers();
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this user?')) return;
+    const response = await api.admin.deleteUser(id);
+    if (response.error) {
+      alert(response.error);
+      return;
+    }
+    loadUsers();
+  };
+
+  const handleCreateHousehold = async (data: any) => {
+    const response = await api.admin.createHousehold(data);
+    if (response.error) {
+      alert(response.error);
+      return;
+    }
+    setShowHouseholdModal(false);
+    loadHouseholds();
+  };
+
+  const handleUpdateHousehold = async (id: string, data: any) => {
+    const response = await api.admin.updateHousehold(id, data);
+    if (response.error) {
+      alert(response.error);
+      return;
+    }
+    setShowHouseholdModal(false);
+    setEditingHousehold(null);
+    loadHouseholds();
+  };
+
+  const handleDeleteHousehold = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this household?')) return;
+    const response = await api.admin.deleteHousehold(id);
+    if (response.error) {
+      alert(response.error);
+      return;
+    }
+    loadHouseholds();
+  };
+
+  const handleImport = async () => {
+    try {
+      const data = JSON.parse(importData);
+      const response = await api.admin.importHouseholds({ households: data });
+      if (response.data) {
+        setImportResult(response.data.results);
+        if (response.data.results.success > 0) {
+          loadHouseholds();
+        }
+      }
+    } catch (e) {
+      alert('Invalid JSON format');
+    }
+  };
+
+  const tabs = [
+    { id: 'users' as Tab, label: 'Users', icon: '👥' },
+    { id: 'households' as Tab, label: 'Households', icon: '🏠' },
+    { id: 'import' as Tab, label: 'Import', icon: '📥' },
+    { id: 'settings' as Tab, label: 'Stats', icon: '📊' },
+  ];
+
+  if (user?.role !== 'admin') {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-2">Access Denied</h2>
+          <p className="text-gray-600">You don't have permission to access this page.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center px-1 py-4 border-b-2 font-medium text-sm ${
+                activeTab === tab.id
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+              }`}
+            >
+              <span className="mr-2">{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Content */}
+      <div className="bg-white rounded-lg shadow p-6">
+        {activeTab === 'users' && (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">User Management</h2>
+              <button
+                onClick={() => { setEditingUser(null); setShowUserModal(true); }}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+              >
+                Add User
+              </button>
+            </div>
+
+            {loading ? (
+              <div className="text-center py-8">Loading...</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Households</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {users.map((user) => (
+                      <tr key={user.id}>
+                        <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                            user.role === 'staff' ? 'bg-blue-100 text-blue-800' :
+                            user.role === 'resident' ? 'bg-green-100 text-green-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">{user.phone || '-'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">{user.household_count || 0}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                          <button
+                            onClick={() => { setEditingUser(user); setShowUserModal(true); }}
+                            className="text-primary-600 hover:text-primary-900"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'households' && (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Household Management</h2>
+              <button
+                onClick={() => { setEditingHousehold(null); setShowHouseholdModal(true); }}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+              >
+                Add Household
+              </button>
+            </div>
+
+            {loading ? (
+              <div className="text-center py-8">Loading...</div>
+            ) : (
+              <div className="space-y-4">
+                {households.map((household) => (
+                  <div key={household.id} className="border rounded-lg p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-semibold">{household.address}</h3>
+                        <p className="text-sm text-gray-500">
+                          {household.block && `Block ${household.block}`}
+                          {household.block && household.lot && ' - '}
+                          {household.lot && `Lot ${household.lot}`}
+                        </p>
+                        {household.owner_email && (
+                          <p className="text-sm text-gray-600">Owner: {household.owner_email}</p>
+                        )}
+                      </div>
+                      <div className="space-x-2">
+                        <button
+                          onClick={() => { setEditingHousehold(household); setShowHouseholdModal(true); }}
+                          className="text-primary-600 hover:text-primary-900 text-sm"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteHousehold(household.id)}
+                          className="text-red-600 hover:text-red-900 text-sm"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                    {household.residents && household.residents.length > 0 && (
+                      <div className="mt-3 pt-3 border-t">
+                        <p className="text-sm text-gray-600 mb-2">Residents:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {household.residents.map((resident) => (
+                            <span
+                              key={resident.id}
+                              className={`px-2 py-1 text-xs rounded ${
+                                resident.is_primary
+                                  ? 'bg-primary-100 text-primary-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}
+                            >
+                              {resident.first_name} {resident.last_name}
+                              {resident.is_primary && ' (Primary)'}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'import' && (
+          <div>
+            <h2 className="text-xl font-semibold mb-6">Bulk Import Households</h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Paste JSON data or enter manually
+                </label>
+                <textarea
+                  value={importData}
+                  onChange={(e) => setImportData(e.target.value)}
+                  rows={10}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono text-sm"
+                  placeholder={`[
+  {
+    "address": "123 Main St",
+    "block": "1",
+    "lot": "1",
+    "latitude": 14.1234,
+    "longitude": 121.5678,
+    "owner_email": "owner@example.com",
+    "residents": [
+      { "first_name": "John", "last_name": "Doe", "is_primary": true },
+      { "first_name": "Jane", "last_name": "Doe", "is_primary": false }
+    ]
+  }
+]`}
+                />
+              </div>
+
+              <button
+                onClick={handleImport}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+              >
+                Import Households
+              </button>
+
+              {importResult && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <h3 className="font-semibold mb-2">Import Results</h3>
+                  <p className="text-green-600">✓ {importResult.success} households imported</p>
+                  <p className="text-red-600">✗ {importResult.failed} households failed</p>
+                  {importResult.errors.length > 0 && (
+                    <div className="mt-2">
+                      <p className="font-medium">Errors:</p>
+                      <ul className="list-disc list-inside text-sm text-red-600">
+                        {importResult.errors.map((error, i) => (
+                          <li key={i}>{error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'settings' && (
+          <div>
+            <h2 className="text-xl font-semibold mb-6">System Statistics</h2>
+
+            {loading ? (
+              <div className="text-center py-8">Loading...</div>
+            ) : stats ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Users Stats */}
+                <div className="bg-purple-50 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-purple-900 mb-4">Users</h3>
+                  <p className="text-3xl font-bold text-purple-600">{stats.users.total}</p>
+                  <div className="mt-4 space-y-2">
+                    {stats.users.byRole.map((item: any) => (
+                      <div key={item.role} className="flex justify-between text-sm">
+                        <span className="capitalize">{item.role}</span>
+                        <span className="font-medium">{item.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Households Stats */}
+                <div className="bg-blue-50 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-blue-900 mb-4">Households</h3>
+                  <p className="text-3xl font-bold text-blue-600">{stats.households.total}</p>
+                  <div className="mt-4 space-y-2">
+                    {stats.households.byBlock.map((item: any) => (
+                      <div key={item.block} className="flex justify-between text-sm">
+                        <span>Block {item.block}</span>
+                        <span className="font-medium">{item.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Residents Stats */}
+                <div className="bg-green-50 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-green-900 mb-4">Residents</h3>
+                  <p className="text-3xl font-bold text-green-600">{stats.residents}</p>
+                </div>
+
+                {/* Service Requests Stats */}
+                <div className="bg-yellow-50 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-yellow-900 mb-4">Pending Requests</h3>
+                  <p className="text-3xl font-bold text-yellow-600">{stats.serviceRequests.pending}</p>
+                </div>
+
+                {/* Reservations Stats */}
+                <div className="bg-indigo-50 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-indigo-900 mb-4">Upcoming Reservations</h3>
+                  <p className="text-3xl font-bold text-indigo-600">{stats.reservations.upcoming}</p>
+                </div>
+
+                {/* Payments Stats */}
+                <div className="bg-red-50 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-red-900 mb-4">Unpaid Payments</h3>
+                  <p className="text-3xl font-bold text-red-600">{stats.payments.unpaid}</p>
+                  <p className="text-sm text-red-700 mt-2">
+                    PHP {stats.payments.unpaidAmount.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      {/* User Modal */}
+      {showUserModal && (
+        <UserModal
+          user={editingUser}
+          onSave={editingUser ? (data) => handleUpdateUser(editingUser.id, data) : handleCreateUser}
+          onClose={() => { setShowUserModal(false); setEditingUser(null); }}
+        />
+      )}
+
+      {/* Household Modal */}
+      {showHouseholdModal && (
+        <HouseholdModal
+          household={editingHousehold}
+          onSave={editingHousehold ? (data) => handleUpdateHousehold(editingHousehold.id, data) : handleCreateHousehold}
+          onClose={() => { setShowHouseholdModal(false); setEditingHousehold(null); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function UserModal({ user, onSave, onClose }: { user: AdminUser | null; onSave: (data: any) => void; onClose: () => void }) {
+  const [email, setEmail] = useState(user?.email || '');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState(user?.role || 'resident');
+  const [phone, setPhone] = useState(user?.phone || '');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const data: any = { email, role, phone };
+    if (password) data.password = password;
+    onSave(data);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <h2 className="text-xl font-semibold mb-4">{user ? 'Edit User' : 'Create User'}</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              required
+            />
+          </div>
+          {!user && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                required={!user}
+              />
+            </div>
+          )}
+          {user && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">New Password (optional)</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="admin">Admin</option>
+              <option value="staff">Staff</option>
+              <option value="resident">Resident</option>
+              <option value="guest">Guest</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+            <input
+              type="text"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+          </div>
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+            >
+              {user ? 'Update' : 'Create'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function HouseholdModal({ household, onSave, onClose }: { household: AdminHousehold | null; onSave: (data: any) => void; onClose: () => void }) {
+  const [address, setAddress] = useState(household?.address || '');
+  const [block, setBlock] = useState(household?.block || '');
+  const [lot, setLot] = useState(household?.lot || '');
+  const [latitude, setLatitude] = useState(household?.latitude?.toString() || '');
+  const [longitude, setLongitude] = useState(household?.longitude?.toString() || '');
+  const [mapMarkerX, setMapMarkerX] = useState(household?.map_marker_x?.toString() || '');
+  const [mapMarkerY, setMapMarkerY] = useState(household?.map_marker_y?.toString() || '');
+  const [ownerEmail, setOwnerEmail] = useState(household?.owner_email || '');
+  const [residents, setResidents] = useState(
+    household?.residents.map(r => ({
+      first_name: r.first_name,
+      last_name: r.last_name,
+      is_primary: r.is_primary,
+    })) || []
+  );
+
+  const addResident = () => {
+    setResidents([...residents, { first_name: '', last_name: '', is_primary: false }]);
+  };
+
+  const updateResident = (index: number, field: string, value: any) => {
+    const newResidents = [...residents];
+    (newResidents as any)[index][field] = value;
+    setResidents(newResidents);
+  };
+
+  const removeResident = (index: number) => {
+    setResidents(residents.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const data: any = {
+      address,
+      block: block || undefined,
+      lot: lot || undefined,
+      latitude: latitude ? parseFloat(latitude) : undefined,
+      longitude: longitude ? parseFloat(longitude) : undefined,
+      map_marker_x: mapMarkerX ? parseFloat(mapMarkerX) : undefined,
+      map_marker_y: mapMarkerY ? parseFloat(mapMarkerY) : undefined,
+      residents,
+    };
+    onSave(data);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl font-semibold mb-4">{household ? 'Edit Household' : 'Create Household'}</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Block</label>
+              <input
+                type="text"
+                value={block}
+                onChange={(e) => setBlock(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Lot</label>
+              <input
+                type="text"
+                value={lot}
+                onChange={(e) => setLot(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
+              <input
+                type="number"
+                step="any"
+                value={latitude}
+                onChange={(e) => setLatitude(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
+              <input
+                type="number"
+                step="any"
+                value={longitude}
+                onChange={(e) => setLongitude(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Map Marker X</label>
+              <input
+                type="number"
+                step="any"
+                value={mapMarkerX}
+                onChange={(e) => setMapMarkerX(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Map Marker Y</label>
+              <input
+                type="number"
+                step="any"
+                value={mapMarkerY}
+                onChange={(e) => setMapMarkerY(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Owner Email</label>
+            <input
+              type="email"
+              value={ownerEmail}
+              onChange={(e) => setOwnerEmail(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+          </div>
+
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-medium text-gray-700">Residents</label>
+              <button
+                type="button"
+                onClick={addResident}
+                className="text-sm text-primary-600 hover:text-primary-700"
+              >
+                + Add Resident
+              </button>
+            </div>
+            <div className="space-y-2">
+              {residents.map((resident, index) => (
+                <div key={index} className="flex items-center space-x-2 p-2 bg-gray-50 rounded">
+                  <input
+                    type="text"
+                    placeholder="First name"
+                    value={resident.first_name}
+                    onChange={(e) => updateResident(index, 'first_name', e.target.value)}
+                    className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Last name"
+                    value={resident.last_name}
+                    onChange={(e) => updateResident(index, 'last_name', e.target.value)}
+                    className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                    required
+                  />
+                  <label className="flex items-center text-sm">
+                    <input
+                      type="checkbox"
+                      checked={resident.is_primary}
+                      onChange={(e) => updateResident(index, 'is_primary', e.target.checked)}
+                      className="mr-1"
+                    />
+                    Primary
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => removeResident(index)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+            >
+              {household ? 'Update' : 'Create'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

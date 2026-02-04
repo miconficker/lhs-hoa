@@ -10,6 +10,9 @@ import { ReservationsPage } from './pages/ReservationsPage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
 import { EventsPage } from './pages/EventsPage';
 import { PaymentsPage } from './pages/PaymentsPage';
+import { PollsPage } from './pages/PollsPage';
+import { DocumentsPage } from './pages/DocumentsPage';
+import { AdminPanelPage } from './pages/AdminPanelPage';
 import { useAuth } from './hooks/useAuth';
 
 function App() {
@@ -37,14 +40,15 @@ function App() {
           <Route path="service-requests" element={<ServiceRequestsPage />} />
           <Route path="reservations" element={<ReservationsPage />} />
           <Route path="payments" element={<PaymentsPage />} />
-          <Route path="documents" element={<div className="text-xl font-semibold">Documents coming soon...</div>} />
+          <Route path="documents" element={<DocumentsPage />} />
           <Route path="announcements" element={<AnnouncementsPage />} />
           <Route path="events" element={<EventsPage />} />
+          <Route path="polls" element={<PollsPage />} />
           <Route
             path="admin"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
-                <div className="text-xl font-semibold">Admin Panel coming soon...</div>
+                <AdminPanelPage />
               </ProtectedRoute>
             }
           />

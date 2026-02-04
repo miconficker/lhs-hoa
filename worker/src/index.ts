@@ -8,6 +8,9 @@ import { serviceRequestsRouter } from './routes/service-requests';
 import { householdsRouter } from './routes/households';
 import { paymentsRouter } from './routes/payments';
 import { reservationsRouter } from './routes/reservations';
+import { pollsRouter } from './routes/polls';
+import { documentsRouter } from './routes/documents';
+import { adminRouter } from './routes/admin';
 
 type Env = {
   DB: D1Database;
@@ -35,5 +38,8 @@ app.route('/api/service-requests', serviceRequestsRouter);
 app.route('/api/households', householdsRouter);
 app.route('/api/payments', paymentsRouter);
 app.route('/api/reservations', reservationsRouter);
+app.route('/api/polls', pollsRouter);
+app.route('/api/documents', documentsRouter);
+app.route('/api/admin', adminRouter);
 
 export default app;

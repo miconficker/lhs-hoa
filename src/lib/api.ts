@@ -8,6 +8,9 @@ import type {
   Reservation,
   AmenityAvailability,
   Payment,
+  Poll,
+  PollWithResults,
+  Document,
 } from '@/types';
 
 const API_BASE = '/api';
@@ -36,6 +39,29 @@ export async function apiRequest<T>(
 
   if (!response.ok) {
     return { error: data.error || 'Request failed' };
+  }
+
+  return { data };
+}
+
+export async function apiUpload<T>(
+  endpoint: string,
+  formData: FormData
+): Promise<ApiResponse<T>> {
+  const token = localStorage.getItem('hoa_token');
+
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    method: 'POST',
+    headers: {
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    body: formData,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    return { error: data.error || 'Upload failed' };
   }
 
   return { data };
@@ -178,6 +204,197 @@ export interface CreatePaymentInput {
   method: 'gcash' | 'paymaya' | 'instapay' | 'cash';
   period: string; // YYYY-MM format
   reference_number?: string;
+}
+
+// Polls types
+export interface PollsResponse {
+  polls: Poll[];
+}
+
+export interface PollResponse {
+  poll: PollWithResults;
+}
+
+export interface PollVoteResponse {
+  voted: boolean;
+  vote?: {
+    id: string;
+    poll_id: string;
+    household_id: string;
+    selected_option: string;
+    voted_at: string;
+  };
+}
+
+export interface CreatePollInput {
+  question: string;
+  options: string[];
+  ends_at: string;
+}
+
+export interface VoteInput {
+  household_id: string;
+  selected_option: string;
+}
+
+// Documents types
+export interface DocumentsResponse {
+  documents: Document[];
+}
+
+export interface DocumentResponse {
+  document: Document;
+}
+
+export interface CreateDocumentInput {
+  title: string;
+  category?: 'rules' | 'forms' | 'minutes' | 'policies';
+  file: File;
+}
+
+// Admin types
+export interface AdminUser {
+  id: string;
+  email: string;
+  role: string;
+  phone?: string;
+  created_at: string;
+  household_count?: number;
+  household_addresses?: string;
+}
+
+export interface AdminUsersResponse {
+  users: AdminUser[];
+}
+
+export interface AdminUserResponse {
+  user: AdminUser;
+}
+
+export interface CreateAdminUserInput {
+  email: string;
+  password: string;
+  role: 'admin' | 'resident' | 'staff' | 'guest';
+  phone?: string;
+}
+
+export interface UpdateAdminUserInput {
+  email?: string;
+  password?: string;
+  role?: 'admin' | 'resident' | 'staff' | 'guest';
+  phone?: string;
+}
+
+export interface AdminHousehold {
+  id: string;
+  address: string;
+  block?: string;
+  lot?: string;
+  latitude?: number;
+  longitude?: number;
+  map_marker_x?: number;
+  map_marker_y?: number;
+  owner_id?: string;
+  created_at: string;
+  owner_email?: string;
+  residents: AdminResident[];
+}
+
+export interface AdminResident {
+  id: string;
+  household_id: string;
+  user_id?: string;
+  first_name: string;
+  last_name: string;
+  is_primary: boolean;
+}
+
+export interface AdminHouseholdsResponse {
+  households: AdminHousehold[];
+}
+
+export interface AdminHouseholdResponse {
+  household: AdminHousehold;
+}
+
+export interface CreateAdminHouseholdInput {
+  address: string;
+  block?: string;
+  lot?: string;
+  latitude?: number;
+  longitude?: number;
+  map_marker_x?: number;
+  map_marker_y?: number;
+  owner_id?: string;
+  residents?: Array<{
+    first_name: string;
+    last_name: string;
+    is_primary?: boolean;
+    user_id?: string;
+  }>;
+}
+
+export interface UpdateAdminHouseholdInput {
+  address?: string;
+  block?: string;
+  lot?: string;
+  latitude?: number;
+  longitude?: number;
+  map_marker_x?: number;
+  map_marker_y?: number;
+  owner_id?: string;
+}
+
+export interface ImportHouseholdInput {
+  address: string;
+  block?: string;
+  lot?: string;
+  latitude?: number;
+  longitude?: number;
+  map_marker_x?: number;
+  map_marker_y?: number;
+  owner_email?: string;
+  residents?: Array<{
+    first_name: string;
+    last_name: string;
+    is_primary?: boolean;
+  }>;
+}
+
+export interface AdminImportInput {
+  households: ImportHouseholdInput[];
+}
+
+export interface AdminImportResponse {
+  results: {
+    success: number;
+    failed: number;
+    errors: string[];
+  };
+}
+
+export interface AdminStatsResponse {
+  stats: {
+    users: {
+      total: number;
+      byRole: Array<{ role: string; count: number }>;
+    };
+    households: {
+      total: number;
+      byBlock: Array<{ block: string; count: number }>;
+    };
+    residents: number;
+    serviceRequests: {
+      pending: number;
+    };
+    reservations: {
+      upcoming: number;
+    };
+    payments: {
+      unpaid: number;
+      unpaidAmount: number;
+    };
+  };
 }
 
 export const api = {
@@ -324,5 +541,93 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify({ status }),
       }),
+  },
+  polls: {
+    list: () => apiRequest<PollsResponse>('/api/polls'),
+    get: (id: string) => apiRequest<PollResponse>(`/api/polls/${id}`),
+    getMyVote: (id: string, householdId: string) =>
+      apiRequest<PollVoteResponse>(`/api/polls/${id}/my-vote?household_id=${householdId}`),
+    create: (input: CreatePollInput) =>
+      apiRequest<PollResponse>('/api/polls', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    vote: (id: string, input: VoteInput) =>
+      apiRequest<{ vote: { id: string } }>(`/api/polls/${id}/vote`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    update: (id: string, input: Partial<CreatePollInput>) =>
+      apiRequest<PollResponse>(`/api/polls/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(input),
+      }),
+    delete: (id: string) =>
+      apiRequest<{ success: boolean }>(`/api/polls/${id}`, {
+        method: 'DELETE',
+      }),
+  },
+  documents: {
+    list: (category?: string) => {
+      const query = category ? `?category=${category}` : '';
+      return apiRequest<DocumentsResponse>(`/api/documents${query}`);
+    },
+    get: (id: string) => apiRequest<DocumentResponse>(`/api/documents/${id}`),
+    create: (input: CreateDocumentInput) => {
+      const formData = new FormData();
+      formData.append('file', input.file);
+      formData.append('title', input.title);
+      if (input.category) {
+        formData.append('category', input.category);
+      }
+      return apiUpload<DocumentResponse>('/api/documents', formData);
+    },
+    getDownloadUrl: (id: string) => `/api/documents/${id}/download`,
+    delete: (id: string) =>
+      apiRequest<{ success: boolean }>(`/api/documents/${id}`, {
+        method: 'DELETE',
+      }),
+  },
+  admin: {
+    // Users
+    listUsers: () => apiRequest<AdminUsersResponse>('/api/admin/users'),
+    createUser: (input: CreateAdminUserInput) =>
+      apiRequest<AdminUserResponse>('/api/admin/users', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    updateUser: (id: string, input: UpdateAdminUserInput) =>
+      apiRequest<AdminUserResponse>(`/api/admin/users/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(input),
+      }),
+    deleteUser: (id: string) =>
+      apiRequest<{ success: boolean }>(`/api/admin/users/${id}`, {
+        method: 'DELETE',
+      }),
+    // Households
+    listHouseholds: () => apiRequest<AdminHouseholdsResponse>('/api/admin/households'),
+    createHousehold: (input: CreateAdminHouseholdInput) =>
+      apiRequest<AdminHouseholdResponse>('/api/admin/households', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    updateHousehold: (id: string, input: UpdateAdminHouseholdInput) =>
+      apiRequest<AdminHouseholdResponse>(`/api/admin/households/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(input),
+      }),
+    deleteHousehold: (id: string) =>
+      apiRequest<{ success: boolean }>(`/api/admin/households/${id}`, {
+        method: 'DELETE',
+      }),
+    // Import
+    importHouseholds: (input: AdminImportInput) =>
+      apiRequest<AdminImportResponse>('/api/admin/households/import', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    // Stats
+    getStats: () => apiRequest<AdminStatsResponse>('/api/admin/stats'),
   },
 };

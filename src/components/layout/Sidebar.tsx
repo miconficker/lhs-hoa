@@ -8,6 +8,7 @@ import {
   CreditCardIcon,
   DocumentIcon,
   ChatBubbleLeftRightIcon,
+  ChartBarIcon,
   CogIcon,
 } from '@heroicons/react/24/outline';
 
@@ -19,6 +20,7 @@ const navItems = [
   { to: '/payments', icon: CreditCardIcon, label: 'Payments', roles: ['admin', 'resident'] },
   { to: '/documents', icon: DocumentIcon, label: 'Documents', roles: ['admin', 'resident', 'staff'] },
   { to: '/announcements', icon: ChatBubbleLeftRightIcon, label: 'Announcements', roles: ['admin', 'resident', 'staff', 'guest'] },
+  { to: '/polls', icon: ChartBarIcon, label: 'Polls', roles: ['admin', 'resident', 'staff', 'guest'] },
   { to: '/admin', icon: CogIcon, label: 'Admin Panel', roles: ['admin'] },
 ];
 
