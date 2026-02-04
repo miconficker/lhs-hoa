@@ -23,7 +23,7 @@ function generateId(): string {
 
 // Get all payments (with optional filters)
 paymentsRouter.get('/', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -57,7 +57,7 @@ paymentsRouter.get('/', async (c) => {
 
 // Get outstanding balance for a household
 paymentsRouter.get('/balance/:householdId', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -88,7 +88,7 @@ paymentsRouter.get('/balance/:householdId', async (c) => {
 
 // Get my payments (for a specific household)
 paymentsRouter.get('/my/:householdId', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -106,7 +106,7 @@ paymentsRouter.get('/my/:householdId', async (c) => {
 
 // Create payment
 paymentsRouter.post('/', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -135,7 +135,7 @@ paymentsRouter.post('/', async (c) => {
 
 // Update payment status (for webhooks/admin)
 paymentsRouter.put('/:id/status', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -174,7 +174,7 @@ paymentsRouter.put('/:id/status', async (c) => {
 
 // Get single payment
 paymentsRouter.get('/:id', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }

@@ -78,7 +78,7 @@ documentsRouter.get('/:id', async (c) => {
 
 // Upload document (admin/staff only)
 documentsRouter.post('/', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser || (authUser.role !== 'admin' && authUser.role !== 'staff')) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -180,7 +180,7 @@ documentsRouter.get('/:id/download', async (c) => {
 
 // Delete document (admin only)
 documentsRouter.delete('/:id', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser || authUser.role !== 'admin') {
     return c.json({ error: 'Unauthorized' }, 401);
   }

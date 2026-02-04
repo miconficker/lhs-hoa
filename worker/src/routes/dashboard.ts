@@ -15,7 +15,7 @@ function generateId(): string {
 
 // Get dashboard statistics
 dashboardRouter.get('/stats', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -64,7 +64,7 @@ dashboardRouter.get('/stats', async (c) => {
 
 // Get quick stats for a specific household (for resident view)
 dashboardRouter.get('/my-stats/:householdId', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }

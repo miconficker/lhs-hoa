@@ -54,7 +54,7 @@ announcementsRouter.get('/:id', async (c) => {
 
 // Create announcement (admin only)
 announcementsRouter.post('/', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser || authUser.role !== 'admin') {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -83,7 +83,7 @@ announcementsRouter.post('/', async (c) => {
 
 // Update announcement
 announcementsRouter.put('/:id', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser || authUser.role !== 'admin') {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -138,7 +138,7 @@ announcementsRouter.put('/:id', async (c) => {
 
 // Delete announcement
 announcementsRouter.delete('/:id', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser || authUser.role !== 'admin') {
     return c.json({ error: 'Unauthorized' }, 401);
   }

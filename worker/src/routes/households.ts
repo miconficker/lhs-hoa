@@ -10,7 +10,7 @@ export const householdsRouter = new Hono<{ Bindings: Env }>();
 
 // Get all households with resident info
 householdsRouter.get('/', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -30,7 +30,7 @@ householdsRouter.get('/', async (c) => {
 
 // Get single household
 householdsRouter.get('/:id', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -56,7 +56,7 @@ householdsRouter.get('/:id', async (c) => {
 
 // Get map data (households with coordinates)
 householdsRouter.get('/map/locations', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }

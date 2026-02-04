@@ -10,7 +10,7 @@ type Env = {
 
 // Helper function to check if user is admin
 async function requireAdmin(c: any, env: Env): Promise<{ userId: string } | null> {
-  const authUser = getUserFromRequest(c.req.raw, env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, env.JWT_SECRET);
   if (!authUser || authUser.role !== 'admin') {
     return null;
   }

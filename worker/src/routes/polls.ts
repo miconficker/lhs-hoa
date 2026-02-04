@@ -102,7 +102,7 @@ pollsRouter.get('/:id/my-vote', async (c) => {
 
 // Create new poll (admin only)
 pollsRouter.post('/', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser || authUser.role !== 'admin') {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -186,7 +186,7 @@ pollsRouter.post('/:id/vote', async (c) => {
 
 // Update poll (admin only)
 pollsRouter.put('/:id', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser || authUser.role !== 'admin') {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -233,7 +233,7 @@ pollsRouter.put('/:id', async (c) => {
 
 // Delete poll (admin only)
 pollsRouter.delete('/:id', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser || authUser.role !== 'admin') {
     return c.json({ error: 'Unauthorized' }, 401);
   }

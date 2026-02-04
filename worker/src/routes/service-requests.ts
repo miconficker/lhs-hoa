@@ -22,7 +22,7 @@ function generateId(): string {
 
 // Get all service requests (with optional filters)
 serviceRequestsRouter.get('/', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -68,7 +68,7 @@ serviceRequestsRouter.get('/', async (c) => {
 
 // Get single service request
 serviceRequestsRouter.get('/:id', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -94,7 +94,7 @@ serviceRequestsRouter.get('/:id', async (c) => {
 
 // Create service request
 serviceRequestsRouter.post('/', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -123,7 +123,7 @@ serviceRequestsRouter.post('/', async (c) => {
 
 // Update service request (status, assignment)
 serviceRequestsRouter.put('/:id', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -182,7 +182,7 @@ serviceRequestsRouter.put('/:id', async (c) => {
 
 // Delete service request (admin only)
 serviceRequestsRouter.delete('/:id', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser || authUser.role !== 'admin') {
     return c.json({ error: 'Unauthorized' }, 401);
   }

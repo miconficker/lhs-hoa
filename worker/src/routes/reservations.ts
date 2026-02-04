@@ -27,7 +27,7 @@ function generateId(): string {
 
 // Get all reservations (with optional filters)
 reservationsRouter.get('/', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -81,7 +81,7 @@ reservationsRouter.get('/', async (c) => {
 
 // Check availability for a date range and amenity type
 reservationsRouter.get('/availability', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -156,7 +156,7 @@ reservationsRouter.get('/availability', async (c) => {
 
 // Get my reservations
 reservationsRouter.get('/my/:householdId', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -180,7 +180,7 @@ reservationsRouter.get('/my/:householdId', async (c) => {
 
 // Get single reservation
 reservationsRouter.get('/:id', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -206,7 +206,7 @@ reservationsRouter.get('/:id', async (c) => {
 
 // Create reservation
 reservationsRouter.post('/', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -251,7 +251,7 @@ reservationsRouter.post('/', async (c) => {
 
 // Update reservation (status)
 reservationsRouter.put('/:id', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
     return c.json({ error: 'Unauthorized' }, 401);
   }
@@ -299,7 +299,7 @@ reservationsRouter.put('/:id', async (c) => {
 
 // Delete reservation (admin only)
 reservationsRouter.delete('/:id', async (c) => {
-  const authUser = getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser || authUser.role !== 'admin') {
     return c.json({ error: 'Unauthorized' }, 401);
   }

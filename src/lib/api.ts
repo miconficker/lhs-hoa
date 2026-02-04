@@ -35,13 +35,35 @@ export async function apiRequest<T>(
     },
   });
 
-  const data = await response.json();
+  // Check if response has content before parsing JSON
+  const contentType = response.headers.get('content-type');
+  const hasJsonContent = contentType?.includes('application/json');
 
-  if (!response.ok) {
-    return { error: data.error || 'Request failed' };
+  if (!hasJsonContent || response.status === 204) {
+    if (!response.ok) {
+      return { error: response.statusText || 'Request failed' };
+    }
+    return { data: undefined } as ApiResponse<T>;
   }
 
-  return { data };
+  const text = await response.text();
+  if (!text.trim()) {
+    if (!response.ok) {
+      return { error: response.statusText || 'Request failed' };
+    }
+    return { data: undefined } as ApiResponse<T>;
+  }
+
+  try {
+    const data = JSON.parse(text);
+    if (!response.ok) {
+      return { error: data.error || 'Request failed' };
+    }
+    return { data };
+  } catch (e) {
+    console.error('JSON parse error:', e, 'Response text:', text);
+    return { error: 'Invalid response from server' };
+  }
 }
 
 export async function apiUpload<T>(
@@ -58,13 +80,34 @@ export async function apiUpload<T>(
     body: formData,
   });
 
-  const data = await response.json();
+  const contentType = response.headers.get('content-type');
+  const hasJsonContent = contentType?.includes('application/json');
 
-  if (!response.ok) {
-    return { error: data.error || 'Upload failed' };
+  if (!hasJsonContent || response.status === 204) {
+    if (!response.ok) {
+      return { error: response.statusText || 'Upload failed' };
+    }
+    return { data: undefined } as ApiResponse<T>;
   }
 
-  return { data };
+  const text = await response.text();
+  if (!text.trim()) {
+    if (!response.ok) {
+      return { error: response.statusText || 'Upload failed' };
+    }
+    return { data: undefined } as ApiResponse<T>;
+  }
+
+  try {
+    const data = JSON.parse(text);
+    if (!response.ok) {
+      return { error: data.error || 'Upload failed' };
+    }
+    return { data };
+  } catch (e) {
+    console.error('JSON parse error:', e, 'Response text:', text);
+    return { error: 'Invalid response from server' };
+  }
 }
 
 interface LoginCredentials {
