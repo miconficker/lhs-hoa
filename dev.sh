@@ -14,10 +14,28 @@ echo -e "${BLUE}=================================${NC}"
 echo ""
 
 # Check if this is the first run (need to run migrations?)
-if [ ! -f ".wrangler/state/v3/d1/miniflare-D1DatabaseObject"/*.sqlite ] 2>/dev/null; then
-    echo -e "${YELLOW}First run detected! Running database migrations...${NC}"
-    npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0001_schema.sql --local
+DB_CHECK=$(curl -s http://localhost:8787/api/health 2>/dev/null)
+if [ -z "$DB_CHECK" ]; then
+    echo -e "${YELLOW}Starting worker and running database setup...${NC}"
+    cd worker
+    npx wrangler dev > /tmp/worker.log 2>&1 &
+    WORKER_PID=$!
+    cd ..
+
+    # Wait for worker
+    for i in {1..10}; do
+        if curl -s http://localhost:8787/api/health > /dev/null 2>&1; then
+            break
+        fi
+        sleep 1
+    done
+
+    # Run migrations
+    echo -e "${YELLOW}Running database migrations...${NC}"
+    npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0001_schema.sql --local >/dev/null 2>&1
     echo ""
+else
+    echo -e "${BLUE}Worker already running on port 8787${NC}"
 fi
 
 # Function to cleanup on exit
