@@ -5,6 +5,9 @@ import { dashboardRouter } from './routes/dashboard';
 import { announcementsRouter } from './routes/announcements';
 import { eventsRouter } from './routes/events';
 import { serviceRequestsRouter } from './routes/service-requests';
+import { householdsRouter } from './routes/households';
+import { paymentsRouter } from './routes/payments';
+import { reservationsRouter } from './routes/reservations';
 
 type Env = {
   DB: D1Database;
@@ -29,5 +32,8 @@ app.route('/api/dashboard', dashboardRouter);
 app.route('/api/announcements', announcementsRouter);
 app.route('/api/events', eventsRouter);
 app.route('/api/service-requests', serviceRequestsRouter);
+app.route('/api/households', householdsRouter);
+app.route('/api/payments', paymentsRouter);
+app.route('/api/reservations', reservationsRouter);
 
 export default app;

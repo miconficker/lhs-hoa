@@ -4,6 +4,10 @@ import type {
   Announcement,
   Event,
   ServiceRequest,
+  MapHousehold,
+  Reservation,
+  AmenityAvailability,
+  Payment,
 } from '@/types';
 
 const API_BASE = '/api';
@@ -102,6 +106,15 @@ export interface ServiceRequestsResponse {
   requests: ServiceRequest[];
 }
 
+// Households types
+export interface HouseholdsResponse {
+  households: MapHousehold[];
+}
+
+export interface MapLocationsResponse {
+  households: MapHousehold[];
+}
+
 export interface ServiceRequestResponse {
   request: ServiceRequest;
 }
@@ -117,6 +130,54 @@ export interface UpdateServiceRequestInput {
   status?: 'pending' | 'in-progress' | 'completed' | 'rejected';
   priority?: 'low' | 'normal' | 'high' | 'urgent';
   assigned_to?: string;
+}
+
+// Reservations types
+export interface ReservationsResponse {
+  reservations: Reservation[];
+}
+
+export interface ReservationResponse {
+  reservation: Reservation;
+}
+
+export interface AvailabilityResponse {
+  availability: AmenityAvailability[];
+}
+
+export interface CreateReservationInput {
+  household_id: string;
+  amenity_type: 'clubhouse' | 'pool' | 'basketball-court';
+  date: string; // YYYY-MM-DD format
+  slot: 'AM' | 'PM';
+  purpose?: string;
+}
+
+export interface UpdateReservationInput {
+  status?: 'pending' | 'confirmed' | 'cancelled';
+}
+
+// Payments types
+export interface PaymentsResponse {
+  payments: Payment[];
+}
+
+export interface PaymentResponse {
+  payment: Payment;
+}
+
+export interface BalanceResponse {
+  household_id: string;
+  total_due: number;
+  periods_due: string[];
+}
+
+export interface CreatePaymentInput {
+  household_id: string;
+  amount: number;
+  method: 'gcash' | 'paymaya' | 'instapay' | 'cash';
+  period: string; // YYYY-MM format
+  reference_number?: string;
 }
 
 export const api = {
@@ -200,6 +261,68 @@ export const api = {
     delete: (id: string) =>
       apiRequest<{ success: boolean }>(`/api/service-requests/${id}`, {
         method: 'DELETE',
+      }),
+  },
+  households: {
+    list: () => apiRequest<HouseholdsResponse>('/api/households'),
+    get: (id: string) => apiRequest<{ household: MapHousehold }>(`/api/households/${id}`),
+    getMapLocations: () => apiRequest<MapLocationsResponse>('/api/households/map/locations'),
+  },
+  reservations: {
+    list: (filters?: { household_id?: string; amenity_type?: string; date?: string; status?: string }) => {
+      const params = new URLSearchParams();
+      if (filters?.household_id) params.append('household_id', filters.household_id);
+      if (filters?.amenity_type) params.append('amenity_type', filters.amenity_type);
+      if (filters?.date) params.append('date', filters.date);
+      if (filters?.status) params.append('status', filters.status);
+      const query = params.toString();
+      return apiRequest<ReservationsResponse>(`/api/reservations${query ? '?' + query : ''}`);
+    },
+    getAvailability: (startDate: string, endDate: string, amenityType: string) =>
+      apiRequest<AvailabilityResponse>(
+        `/api/reservations/availability?start_date=${startDate}&end_date=${endDate}&amenity_type=${amenityType}`
+      ),
+    getMy: (householdId: string) =>
+      apiRequest<ReservationsResponse>(`/api/reservations/my/${householdId}`),
+    get: (id: string) => apiRequest<ReservationResponse>(`/api/reservations/${id}`),
+    create: (input: CreateReservationInput) =>
+      apiRequest<ReservationResponse>('/api/reservations', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    update: (id: string, input: UpdateReservationInput) =>
+      apiRequest<ReservationResponse>(`/api/reservations/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(input),
+      }),
+    delete: (id: string) =>
+      apiRequest<{ success: boolean }>(`/api/reservations/${id}`, {
+        method: 'DELETE',
+      }),
+  },
+  payments: {
+    list: (filters?: { household_id?: string; status?: string; period?: string }) => {
+      const params = new URLSearchParams();
+      if (filters?.household_id) params.append('household_id', filters.household_id);
+      if (filters?.status) params.append('status', filters.status);
+      if (filters?.period) params.append('period', filters.period);
+      const query = params.toString();
+      return apiRequest<PaymentsResponse>(`/api/payments${query ? '?' + query : ''}`);
+    },
+    getBalance: (householdId: string) =>
+      apiRequest<BalanceResponse>(`/api/payments/balance/${householdId}`),
+    getMyPayments: (householdId: string) =>
+      apiRequest<PaymentsResponse>(`/api/payments/my/${householdId}`),
+    get: (id: string) => apiRequest<PaymentResponse>(`/api/payments/${id}`),
+    create: (input: CreatePaymentInput) =>
+      apiRequest<PaymentResponse>('/api/payments', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    updateStatus: (id: string, status: 'pending' | 'completed' | 'failed') =>
+      apiRequest<PaymentResponse>(`/api/payments/${id}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status }),
       }),
   },
 };
