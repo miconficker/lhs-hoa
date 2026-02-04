@@ -5,6 +5,8 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ServiceRequestsPage } from './pages/ServiceRequestsPage';
+import { AnnouncementsPage } from './pages/AnnouncementsPage';
+import { EventsPage } from './pages/EventsPage';
 import { useAuth } from './hooks/useAuth';
 
 function App() {
@@ -33,7 +35,8 @@ function App() {
           <Route path="reservations" element={<div className="text-xl font-semibold">Reservations coming soon...</div>} />
           <Route path="payments" element={<div className="text-xl font-semibold">Payments coming soon...</div>} />
           <Route path="documents" element={<div className="text-xl font-semibold">Documents coming soon...</div>} />
-          <Route path="announcements" element={<div className="text-xl font-semibold">Announcements coming soon...</div>} />
+          <Route path="announcements" element={<AnnouncementsPage />} />
+          <Route path="events" element={<EventsPage />} />
           <Route
             path="admin"
             element={
