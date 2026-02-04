@@ -1,6 +1,9 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { authRouter } from './routes/auth';
+import { dashboardRouter } from './routes/dashboard';
+import { announcementsRouter } from './routes/announcements';
+import { eventsRouter } from './routes/events';
 
 type Env = {
   DB: D1Database;
@@ -19,7 +22,10 @@ app.use('/*', cors({
 app.get('/', (c) => c.json({ message: 'Laguna Hills HOA API' }));
 app.get('/api/health', (c) => c.json({ status: 'ok' }));
 
-// Auth routes
+// API routes
 app.route('/api/auth', authRouter);
+app.route('/api/dashboard', dashboardRouter);
+app.route('/api/announcements', announcementsRouter);
+app.route('/api/events', eventsRouter);
 
 export default app;

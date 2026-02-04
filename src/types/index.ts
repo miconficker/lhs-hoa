@@ -193,3 +193,18 @@ export interface PaginatedResponse<T> {
   page: number;
   per_page: number;
 }
+
+// Dashboard
+export interface DashboardStats {
+  households: number;
+  pendingRequests: number;
+  upcomingReservations: number;
+  unpaidPayments: number;
+}
+
+export interface MyStats {
+  pendingRequests: number;
+  upcomingReservations: number;
+  unpaidPayments: number;
+  totalDue: number;
+}
