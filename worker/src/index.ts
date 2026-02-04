@@ -4,6 +4,7 @@ import { authRouter } from './routes/auth';
 import { dashboardRouter } from './routes/dashboard';
 import { announcementsRouter } from './routes/announcements';
 import { eventsRouter } from './routes/events';
+import { serviceRequestsRouter } from './routes/service-requests';
 
 type Env = {
   DB: D1Database;
@@ -27,5 +28,6 @@ app.route('/api/auth', authRouter);
 app.route('/api/dashboard', dashboardRouter);
 app.route('/api/announcements', announcementsRouter);
 app.route('/api/events', eventsRouter);
+app.route('/api/service-requests', serviceRequestsRouter);
 
 export default app;

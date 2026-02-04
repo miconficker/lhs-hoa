@@ -3,6 +3,7 @@ import type {
   User,
   Announcement,
   Event,
+  ServiceRequest,
 } from '@/types';
 
 const API_BASE = '/api';
@@ -96,6 +97,28 @@ export interface CreateEventInput {
   location?: string;
 }
 
+// Service Requests types
+export interface ServiceRequestsResponse {
+  requests: ServiceRequest[];
+}
+
+export interface ServiceRequestResponse {
+  request: ServiceRequest;
+}
+
+export interface CreateServiceRequestInput {
+  household_id: string;
+  category: 'plumbing' | 'electrical' | 'common-area' | 'security' | 'other';
+  description: string;
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+}
+
+export interface UpdateServiceRequestInput {
+  status?: 'pending' | 'in-progress' | 'completed' | 'rejected';
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  assigned_to?: string;
+}
+
 export const api = {
   auth: {
     register: (credentials: RegisterCredentials) =>
@@ -150,6 +173,32 @@ export const api = {
       }),
     delete: (id: string) =>
       apiRequest<{ success: boolean }>(`/api/events/${id}`, {
+        method: 'DELETE',
+      }),
+  },
+  serviceRequests: {
+    list: (filters?: { status?: string; priority?: string; category?: string; household_id?: string }) => {
+      const params = new URLSearchParams();
+      if (filters?.status) params.append('status', filters.status);
+      if (filters?.priority) params.append('priority', filters.priority);
+      if (filters?.category) params.append('category', filters.category);
+      if (filters?.household_id) params.append('household_id', filters.household_id);
+      const query = params.toString();
+      return apiRequest<ServiceRequestsResponse>(`/api/service-requests${query ? '?' + query : ''}`);
+    },
+    get: (id: string) => apiRequest<ServiceRequestResponse>(`/api/service-requests/${id}`),
+    create: (input: CreateServiceRequestInput) =>
+      apiRequest<ServiceRequestResponse>('/api/service-requests', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    update: (id: string, input: UpdateServiceRequestInput) =>
+      apiRequest<ServiceRequestResponse>(`/api/service-requests/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(input),
+      }),
+    delete: (id: string) =>
+      apiRequest<{ success: boolean }>(`/api/service-requests/${id}`, {
         method: 'DELETE',
       }),
   },

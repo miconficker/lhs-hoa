@@ -4,6 +4,7 @@ import { MainLayout } from './components/layout/MainLayout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { ServiceRequestsPage } from './pages/ServiceRequestsPage';
 import { useAuth } from './hooks/useAuth';
 
 function App() {
@@ -28,7 +29,7 @@ function App() {
           <Route index element={<div className="text-gray-600">Welcome! Select an option from the sidebar.</div>} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="map" element={<div className="text-xl font-semibold">Map coming soon...</div>} />
-          <Route path="service-requests" element={<div className="text-xl font-semibold">Service Requests coming soon...</div>} />
+          <Route path="service-requests" element={<ServiceRequestsPage />} />
           <Route path="reservations" element={<div className="text-xl font-semibold">Reservations coming soon...</div>} />
           <Route path="payments" element={<div className="text-xl font-semibold">Payments coming soon...</div>} />
           <Route path="documents" element={<div className="text-xl font-semibold">Documents coming soon...</div>} />
