@@ -1,3 +1,5 @@
+import type { AuthResponse, User } from '@/types';
+
 const API_BASE = '/api';
 
 interface ApiResponse<T = any> {
@@ -29,18 +31,27 @@ export async function apiRequest<T>(
   return { data };
 }
 
+interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+interface RegisterCredentials extends LoginCredentials {
+  role: string;
+}
+
 export const api = {
   auth: {
-    register: (email: string, password: string, role: string) =>
-      apiRequest('/api/auth/register', {
+    register: (credentials: RegisterCredentials) =>
+      apiRequest<AuthResponse>('/api/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ email, password, role }),
+        body: JSON.stringify(credentials),
       }),
-    login: (email: string, password: string) =>
-      apiRequest('/api/auth/login', {
+    login: (credentials: LoginCredentials) =>
+      apiRequest<AuthResponse>('/api/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(credentials),
       }),
-    getMe: () => apiRequest('/api/auth/me'),
+    getMe: () => apiRequest<{ user: User }>('/api/auth/me'),
   },
 };
