@@ -1,0 +1,16 @@
+name = "laguna-hills-hoa-api"
+main = "worker/src/index.ts"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "laguna_hills_hoa"
+database_id = "YOUR_D1_DATABASE_ID"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "hoa-documents"
+
+[vars]
+ENVIRONMENT = "development"
+JWT_SECRET = "change-me-in-production"
