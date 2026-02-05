@@ -599,8 +599,7 @@ export const api = {
       ),
     getMy: (householdId: string) =>
       apiRequest<ReservationsResponse>(`/reservations/my/${householdId}`),
-    get: (id: string) =>
-      apiRequest<ReservationResponse>(`/reservations/${id}`),
+    get: (id: string) => apiRequest<ReservationResponse>(`/reservations/${id}`),
     create: (input: CreateReservationInput) =>
       apiRequest<ReservationResponse>("/reservations", {
         method: "POST",

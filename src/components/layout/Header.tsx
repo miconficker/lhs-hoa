@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 export function Header() {
   const { user, clearAuth } = useAuth();
@@ -9,10 +9,16 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center gap-2">
-            <svg className="w-8 h-8 text-primary-600" fill="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="w-8 h-8 text-primary-600"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
             </svg>
-            <span className="text-xl font-bold text-gray-900">Laguna Hills HOA</span>
+            <span className="text-xl font-bold text-gray-900">
+              Laguna Hills HOA
+            </span>
           </Link>
 
           <nav className="flex items-center gap-4">

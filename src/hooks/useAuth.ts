@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import type { User, AuthResponse } from '@/types';
+import { create } from "zustand";
+import type { User, AuthResponse } from "@/types";
 
 interface AuthState {
   user: User | null;
@@ -16,20 +16,20 @@ export const useAuth = create<AuthState>((set) => ({
   initialized: false,
 
   setAuth: (auth) => {
-    localStorage.setItem('hoa_token', auth.token);
-    localStorage.setItem('hoa_user', JSON.stringify(auth.user));
+    localStorage.setItem("hoa_token", auth.token);
+    localStorage.setItem("hoa_user", JSON.stringify(auth.user));
     set({ user: auth.user, token: auth.token });
   },
 
   clearAuth: () => {
-    localStorage.removeItem('hoa_token');
-    localStorage.removeItem('hoa_user');
+    localStorage.removeItem("hoa_token");
+    localStorage.removeItem("hoa_user");
     set({ user: null, token: null });
   },
 
   init: () => {
-    const token = localStorage.getItem('hoa_token');
-    const userStr = localStorage.getItem('hoa_user');
+    const token = localStorage.getItem("hoa_token");
+    const userStr = localStorage.getItem("hoa_user");
     if (token && userStr) {
       try {
         set({ user: JSON.parse(userStr), token, initialized: true });

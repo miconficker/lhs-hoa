@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
-import { api, type AdminUser, type AdminHousehold } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
+import { useState, useEffect } from "react";
+import { api, type AdminUser, type AdminHousehold } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 
-type Tab = 'users' | 'households' | 'import' | 'settings';
+type Tab = "users" | "households" | "import" | "settings";
 
 export function AdminPanelPage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>('users');
+  const [activeTab, setActiveTab] = useState<Tab>("users");
   const [loading, setLoading] = useState(true);
 
   // Users state
@@ -17,10 +17,11 @@ export function AdminPanelPage() {
   // Households state
   const [households, setHouseholds] = useState<AdminHousehold[]>([]);
   const [showHouseholdModal, setShowHouseholdModal] = useState(false);
-  const [editingHousehold, setEditingHousehold] = useState<AdminHousehold | null>(null);
+  const [editingHousehold, setEditingHousehold] =
+    useState<AdminHousehold | null>(null);
 
   // Import state
-  const [importData, setImportData] = useState('');
+  const [importData, setImportData] = useState("");
   const [importResult, setImportResult] = useState<{
     success: number;
     failed: number;
@@ -31,9 +32,9 @@ export function AdminPanelPage() {
   const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
-    if (activeTab === 'users') loadUsers();
-    if (activeTab === 'households') loadHouseholds();
-    if (activeTab === 'settings') loadStats();
+    if (activeTab === "users") loadUsers();
+    if (activeTab === "households") loadHouseholds();
+    if (activeTab === "settings") loadStats();
   }, [activeTab]);
 
   const loadUsers = async () => {
@@ -85,7 +86,7 @@ export function AdminPanelPage() {
   };
 
   const handleDeleteUser = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
+    if (!confirm("Are you sure you want to delete this user?")) return;
     const response = await api.admin.deleteUser(id);
     if (response.error) {
       alert(response.error);
@@ -116,7 +117,7 @@ export function AdminPanelPage() {
   };
 
   const handleDeleteHousehold = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this household?')) return;
+    if (!confirm("Are you sure you want to delete this household?")) return;
     const response = await api.admin.deleteHousehold(id);
     if (response.error) {
       alert(response.error);
@@ -136,23 +137,27 @@ export function AdminPanelPage() {
         }
       }
     } catch (e) {
-      alert('Invalid JSON format');
+      alert("Invalid JSON format");
     }
   };
 
   const tabs = [
-    { id: 'users' as Tab, label: 'Users', icon: '👥' },
-    { id: 'households' as Tab, label: 'Households', icon: '🏠' },
-    { id: 'import' as Tab, label: 'Import', icon: '📥' },
-    { id: 'settings' as Tab, label: 'Stats', icon: '📊' },
+    { id: "users" as Tab, label: "Users", icon: "👥" },
+    { id: "households" as Tab, label: "Households", icon: "🏠" },
+    { id: "import" as Tab, label: "Import", icon: "📥" },
+    { id: "settings" as Tab, label: "Stats", icon: "📊" },
   ];
 
-  if (user?.role !== 'admin') {
+  if (user?.role !== "admin") {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-2">Access Denied</h2>
-          <p className="text-gray-600">You don't have permission to access this page.</p>
+          <h2 className="text-2xl font-bold text-red-600 mb-2">
+            Access Denied
+          </h2>
+          <p className="text-gray-600">
+            You don't have permission to access this page.
+          </p>
         </div>
       </div>
     );
@@ -173,8 +178,8 @@ export function AdminPanelPage() {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center px-1 py-4 border-b-2 font-medium text-sm ${
                 activeTab === tab.id
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                  ? "border-primary-500 text-primary-600"
+                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
               }`}
             >
               <span className="mr-2">{tab.icon}</span>
@@ -186,12 +191,15 @@ export function AdminPanelPage() {
 
       {/* Content */}
       <div className="bg-white rounded-lg shadow p-6">
-        {activeTab === 'users' && (
+        {activeTab === "users" && (
           <div>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold">User Management</h2>
               <button
-                onClick={() => { setEditingUser(null); setShowUserModal(true); }}
+                onClick={() => {
+                  setEditingUser(null);
+                  setShowUserModal(true);
+                }}
                 className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
               >
                 Add User
@@ -205,32 +213,56 @@ export function AdminPanelPage() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Households</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Email
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Role
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Phone
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Households
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {users.map((user) => (
                       <tr key={user.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                            user.role === 'staff' ? 'bg-blue-100 text-blue-800' :
-                            user.role === 'resident' ? 'bg-green-100 text-green-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
+                          {user.email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`px-2 py-1 text-xs rounded-full ${
+                              user.role === "admin"
+                                ? "bg-purple-100 text-purple-800"
+                                : user.role === "staff"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : user.role === "resident"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
                             {user.role}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">{user.phone || '-'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">{user.household_count || 0}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {user.phone || "-"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {user.household_count || 0}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                           <button
-                            onClick={() => { setEditingUser(user); setShowUserModal(true); }}
+                            onClick={() => {
+                              setEditingUser(user);
+                              setShowUserModal(true);
+                            }}
                             className="text-primary-600 hover:text-primary-900"
                           >
                             Edit
@@ -251,12 +283,15 @@ export function AdminPanelPage() {
           </div>
         )}
 
-        {activeTab === 'households' && (
+        {activeTab === "households" && (
           <div>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold">Household Management</h2>
               <button
-                onClick={() => { setEditingHousehold(null); setShowHouseholdModal(true); }}
+                onClick={() => {
+                  setEditingHousehold(null);
+                  setShowHouseholdModal(true);
+                }}
                 className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
               >
                 Add Household
@@ -274,16 +309,21 @@ export function AdminPanelPage() {
                         <h3 className="font-semibold">{household.address}</h3>
                         <p className="text-sm text-gray-500">
                           {household.block && `Block ${household.block}`}
-                          {household.block && household.lot && ' - '}
+                          {household.block && household.lot && " - "}
                           {household.lot && `Lot ${household.lot}`}
                         </p>
                         {household.owner_email && (
-                          <p className="text-sm text-gray-600">Owner: {household.owner_email}</p>
+                          <p className="text-sm text-gray-600">
+                            Owner: {household.owner_email}
+                          </p>
                         )}
                       </div>
                       <div className="space-x-2">
                         <button
-                          onClick={() => { setEditingHousehold(household); setShowHouseholdModal(true); }}
+                          onClick={() => {
+                            setEditingHousehold(household);
+                            setShowHouseholdModal(true);
+                          }}
                           className="text-primary-600 hover:text-primary-900 text-sm"
                         >
                           Edit
@@ -305,12 +345,12 @@ export function AdminPanelPage() {
                               key={resident.id}
                               className={`px-2 py-1 text-xs rounded ${
                                 resident.is_primary
-                                  ? 'bg-primary-100 text-primary-800'
-                                  : 'bg-gray-100 text-gray-800'
+                                  ? "bg-primary-100 text-primary-800"
+                                  : "bg-gray-100 text-gray-800"
                               }`}
                             >
                               {resident.first_name} {resident.last_name}
-                              {resident.is_primary && ' (Primary)'}
+                              {resident.is_primary && " (Primary)"}
                             </span>
                           ))}
                         </div>
@@ -323,9 +363,11 @@ export function AdminPanelPage() {
           </div>
         )}
 
-        {activeTab === 'import' && (
+        {activeTab === "import" && (
           <div>
-            <h2 className="text-xl font-semibold mb-6">Bulk Import Households</h2>
+            <h2 className="text-xl font-semibold mb-6">
+              Bulk Import Households
+            </h2>
 
             <div className="space-y-4">
               <div>
@@ -364,8 +406,12 @@ export function AdminPanelPage() {
               {importResult && (
                 <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                   <h3 className="font-semibold mb-2">Import Results</h3>
-                  <p className="text-green-600">✓ {importResult.success} households imported</p>
-                  <p className="text-red-600">✗ {importResult.failed} households failed</p>
+                  <p className="text-green-600">
+                    ✓ {importResult.success} households imported
+                  </p>
+                  <p className="text-red-600">
+                    ✗ {importResult.failed} households failed
+                  </p>
                   {importResult.errors.length > 0 && (
                     <div className="mt-2">
                       <p className="font-medium">Errors:</p>
@@ -382,7 +428,7 @@ export function AdminPanelPage() {
           </div>
         )}
 
-        {activeTab === 'settings' && (
+        {activeTab === "settings" && (
           <div>
             <h2 className="text-xl font-semibold mb-6">System Statistics</h2>
 
@@ -392,11 +438,18 @@ export function AdminPanelPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Users Stats */}
                 <div className="bg-purple-50 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-purple-900 mb-4">Users</h3>
-                  <p className="text-3xl font-bold text-purple-600">{stats.users.total}</p>
+                  <h3 className="text-lg font-semibold text-purple-900 mb-4">
+                    Users
+                  </h3>
+                  <p className="text-3xl font-bold text-purple-600">
+                    {stats.users.total}
+                  </p>
                   <div className="mt-4 space-y-2">
                     {stats.users.byRole.map((item: any) => (
-                      <div key={item.role} className="flex justify-between text-sm">
+                      <div
+                        key={item.role}
+                        className="flex justify-between text-sm"
+                      >
                         <span className="capitalize">{item.role}</span>
                         <span className="font-medium">{item.count}</span>
                       </div>
@@ -406,11 +459,18 @@ export function AdminPanelPage() {
 
                 {/* Households Stats */}
                 <div className="bg-blue-50 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-blue-900 mb-4">Households</h3>
-                  <p className="text-3xl font-bold text-blue-600">{stats.households.total}</p>
+                  <h3 className="text-lg font-semibold text-blue-900 mb-4">
+                    Households
+                  </h3>
+                  <p className="text-3xl font-bold text-blue-600">
+                    {stats.households.total}
+                  </p>
                   <div className="mt-4 space-y-2">
                     {stats.households.byBlock.map((item: any) => (
-                      <div key={item.block} className="flex justify-between text-sm">
+                      <div
+                        key={item.block}
+                        className="flex justify-between text-sm"
+                      >
                         <span>Block {item.block}</span>
                         <span className="font-medium">{item.count}</span>
                       </div>
@@ -420,26 +480,42 @@ export function AdminPanelPage() {
 
                 {/* Residents Stats */}
                 <div className="bg-green-50 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-green-900 mb-4">Residents</h3>
-                  <p className="text-3xl font-bold text-green-600">{stats.residents}</p>
+                  <h3 className="text-lg font-semibold text-green-900 mb-4">
+                    Residents
+                  </h3>
+                  <p className="text-3xl font-bold text-green-600">
+                    {stats.residents}
+                  </p>
                 </div>
 
                 {/* Service Requests Stats */}
                 <div className="bg-yellow-50 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-yellow-900 mb-4">Pending Requests</h3>
-                  <p className="text-3xl font-bold text-yellow-600">{stats.serviceRequests.pending}</p>
+                  <h3 className="text-lg font-semibold text-yellow-900 mb-4">
+                    Pending Requests
+                  </h3>
+                  <p className="text-3xl font-bold text-yellow-600">
+                    {stats.serviceRequests.pending}
+                  </p>
                 </div>
 
                 {/* Reservations Stats */}
                 <div className="bg-indigo-50 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-indigo-900 mb-4">Upcoming Reservations</h3>
-                  <p className="text-3xl font-bold text-indigo-600">{stats.reservations.upcoming}</p>
+                  <h3 className="text-lg font-semibold text-indigo-900 mb-4">
+                    Upcoming Reservations
+                  </h3>
+                  <p className="text-3xl font-bold text-indigo-600">
+                    {stats.reservations.upcoming}
+                  </p>
                 </div>
 
                 {/* Payments Stats */}
                 <div className="bg-red-50 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-red-900 mb-4">Unpaid Payments</h3>
-                  <p className="text-3xl font-bold text-red-600">{stats.payments.unpaid}</p>
+                  <h3 className="text-lg font-semibold text-red-900 mb-4">
+                    Unpaid Payments
+                  </h3>
+                  <p className="text-3xl font-bold text-red-600">
+                    {stats.payments.unpaid}
+                  </p>
                   <p className="text-sm text-red-700 mt-2">
                     PHP {stats.payments.unpaidAmount.toLocaleString()}
                   </p>
@@ -454,8 +530,15 @@ export function AdminPanelPage() {
       {showUserModal && (
         <UserModal
           user={editingUser}
-          onSave={editingUser ? (data) => handleUpdateUser(editingUser.id, data) : handleCreateUser}
-          onClose={() => { setShowUserModal(false); setEditingUser(null); }}
+          onSave={
+            editingUser
+              ? (data) => handleUpdateUser(editingUser.id, data)
+              : handleCreateUser
+          }
+          onClose={() => {
+            setShowUserModal(false);
+            setEditingUser(null);
+          }}
         />
       )}
 
@@ -463,19 +546,34 @@ export function AdminPanelPage() {
       {showHouseholdModal && (
         <HouseholdModal
           household={editingHousehold}
-          onSave={editingHousehold ? (data) => handleUpdateHousehold(editingHousehold.id, data) : handleCreateHousehold}
-          onClose={() => { setShowHouseholdModal(false); setEditingHousehold(null); }}
+          onSave={
+            editingHousehold
+              ? (data) => handleUpdateHousehold(editingHousehold.id, data)
+              : handleCreateHousehold
+          }
+          onClose={() => {
+            setShowHouseholdModal(false);
+            setEditingHousehold(null);
+          }}
         />
       )}
     </div>
   );
 }
 
-function UserModal({ user, onSave, onClose }: { user: AdminUser | null; onSave: (data: any) => void; onClose: () => void }) {
-  const [email, setEmail] = useState(user?.email || '');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState(user?.role || 'resident');
-  const [phone, setPhone] = useState(user?.phone || '');
+function UserModal({
+  user,
+  onSave,
+  onClose,
+}: {
+  user: AdminUser | null;
+  onSave: (data: any) => void;
+  onClose: () => void;
+}) {
+  const [email, setEmail] = useState(user?.email || "");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState(user?.role || "resident");
+  const [phone, setPhone] = useState(user?.phone || "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -487,10 +585,14 @@ function UserModal({ user, onSave, onClose }: { user: AdminUser | null; onSave: 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h2 className="text-xl font-semibold mb-4">{user ? 'Edit User' : 'Create User'}</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          {user ? "Edit User" : "Create User"}
+        </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email
+            </label>
             <input
               type="email"
               value={email}
@@ -501,7 +603,9 @@ function UserModal({ user, onSave, onClose }: { user: AdminUser | null; onSave: 
           </div>
           {!user && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Password
+              </label>
               <input
                 type="password"
                 value={password}
@@ -513,7 +617,9 @@ function UserModal({ user, onSave, onClose }: { user: AdminUser | null; onSave: 
           )}
           {user && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">New Password (optional)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                New Password (optional)
+              </label>
               <input
                 type="password"
                 value={password}
@@ -523,7 +629,9 @@ function UserModal({ user, onSave, onClose }: { user: AdminUser | null; onSave: 
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Role
+            </label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
@@ -536,7 +644,9 @@ function UserModal({ user, onSave, onClose }: { user: AdminUser | null; onSave: 
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Phone
+            </label>
             <input
               type="text"
               value={phone}
@@ -556,7 +666,7 @@ function UserModal({ user, onSave, onClose }: { user: AdminUser | null; onSave: 
               type="submit"
               className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
             >
-              {user ? 'Update' : 'Create'}
+              {user ? "Update" : "Create"}
             </button>
           </div>
         </form>
@@ -565,25 +675,44 @@ function UserModal({ user, onSave, onClose }: { user: AdminUser | null; onSave: 
   );
 }
 
-function HouseholdModal({ household, onSave, onClose }: { household: AdminHousehold | null; onSave: (data: any) => void; onClose: () => void }) {
-  const [address, setAddress] = useState(household?.address || '');
-  const [block, setBlock] = useState(household?.block || '');
-  const [lot, setLot] = useState(household?.lot || '');
-  const [latitude, setLatitude] = useState(household?.latitude?.toString() || '');
-  const [longitude, setLongitude] = useState(household?.longitude?.toString() || '');
-  const [mapMarkerX, setMapMarkerX] = useState(household?.map_marker_x?.toString() || '');
-  const [mapMarkerY, setMapMarkerY] = useState(household?.map_marker_y?.toString() || '');
-  const [ownerEmail, setOwnerEmail] = useState(household?.owner_email || '');
+function HouseholdModal({
+  household,
+  onSave,
+  onClose,
+}: {
+  household: AdminHousehold | null;
+  onSave: (data: any) => void;
+  onClose: () => void;
+}) {
+  const [address, setAddress] = useState(household?.address || "");
+  const [block, setBlock] = useState(household?.block || "");
+  const [lot, setLot] = useState(household?.lot || "");
+  const [latitude, setLatitude] = useState(
+    household?.latitude?.toString() || "",
+  );
+  const [longitude, setLongitude] = useState(
+    household?.longitude?.toString() || "",
+  );
+  const [mapMarkerX, setMapMarkerX] = useState(
+    household?.map_marker_x?.toString() || "",
+  );
+  const [mapMarkerY, setMapMarkerY] = useState(
+    household?.map_marker_y?.toString() || "",
+  );
+  const [ownerEmail, setOwnerEmail] = useState(household?.owner_email || "");
   const [residents, setResidents] = useState(
-    household?.residents.map(r => ({
+    household?.residents.map((r) => ({
       first_name: r.first_name,
       last_name: r.last_name,
       is_primary: r.is_primary,
-    })) || []
+    })) || [],
   );
 
   const addResident = () => {
-    setResidents([...residents, { first_name: '', last_name: '', is_primary: false }]);
+    setResidents([
+      ...residents,
+      { first_name: "", last_name: "", is_primary: false },
+    ]);
   };
 
   const updateResident = (index: number, field: string, value: any) => {
@@ -614,10 +743,14 @@ function HouseholdModal({ household, onSave, onClose }: { household: AdminHouseh
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-semibold mb-4">{household ? 'Edit Household' : 'Create Household'}</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          {household ? "Edit Household" : "Create Household"}
+        </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Address
+            </label>
             <input
               type="text"
               value={address}
@@ -628,7 +761,9 @@ function HouseholdModal({ household, onSave, onClose }: { household: AdminHouseh
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Block</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Block
+              </label>
               <input
                 type="text"
                 value={block}
@@ -637,7 +772,9 @@ function HouseholdModal({ household, onSave, onClose }: { household: AdminHouseh
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Lot</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Lot
+              </label>
               <input
                 type="text"
                 value={lot}
@@ -648,7 +785,9 @@ function HouseholdModal({ household, onSave, onClose }: { household: AdminHouseh
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Latitude
+              </label>
               <input
                 type="number"
                 step="any"
@@ -658,7 +797,9 @@ function HouseholdModal({ household, onSave, onClose }: { household: AdminHouseh
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Longitude
+              </label>
               <input
                 type="number"
                 step="any"
@@ -670,7 +811,9 @@ function HouseholdModal({ household, onSave, onClose }: { household: AdminHouseh
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Map Marker X</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Map Marker X
+              </label>
               <input
                 type="number"
                 step="any"
@@ -680,7 +823,9 @@ function HouseholdModal({ household, onSave, onClose }: { household: AdminHouseh
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Map Marker Y</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Map Marker Y
+              </label>
               <input
                 type="number"
                 step="any"
@@ -691,7 +836,9 @@ function HouseholdModal({ household, onSave, onClose }: { household: AdminHouseh
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Owner Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Owner Email
+            </label>
             <input
               type="email"
               value={ownerEmail}
@@ -702,7 +849,9 @@ function HouseholdModal({ household, onSave, onClose }: { household: AdminHouseh
 
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-medium text-gray-700">Residents</label>
+              <label className="block text-sm font-medium text-gray-700">
+                Residents
+              </label>
               <button
                 type="button"
                 onClick={addResident}
@@ -713,12 +862,17 @@ function HouseholdModal({ household, onSave, onClose }: { household: AdminHouseh
             </div>
             <div className="space-y-2">
               {residents.map((resident, index) => (
-                <div key={index} className="flex items-center space-x-2 p-2 bg-gray-50 rounded">
+                <div
+                  key={index}
+                  className="flex items-center space-x-2 p-2 bg-gray-50 rounded"
+                >
                   <input
                     type="text"
                     placeholder="First name"
                     value={resident.first_name}
-                    onChange={(e) => updateResident(index, 'first_name', e.target.value)}
+                    onChange={(e) =>
+                      updateResident(index, "first_name", e.target.value)
+                    }
                     className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
                     required
                   />
@@ -726,7 +880,9 @@ function HouseholdModal({ household, onSave, onClose }: { household: AdminHouseh
                     type="text"
                     placeholder="Last name"
                     value={resident.last_name}
-                    onChange={(e) => updateResident(index, 'last_name', e.target.value)}
+                    onChange={(e) =>
+                      updateResident(index, "last_name", e.target.value)
+                    }
                     className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
                     required
                   />
@@ -734,7 +890,9 @@ function HouseholdModal({ household, onSave, onClose }: { household: AdminHouseh
                     <input
                       type="checkbox"
                       checked={resident.is_primary}
-                      onChange={(e) => updateResident(index, 'is_primary', e.target.checked)}
+                      onChange={(e) =>
+                        updateResident(index, "is_primary", e.target.checked)
+                      }
                       className="mr-1"
                     />
                     Primary
@@ -763,7 +921,7 @@ function HouseholdModal({ household, onSave, onClose }: { household: AdminHouseh
               type="submit"
               className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
             >
-              {household ? 'Update' : 'Create'}
+              {household ? "Update" : "Create"}
             </button>
           </div>
         </form>
