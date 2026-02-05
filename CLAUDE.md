@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is the **Laguna Hills Homeowners Association (HOA) Information and Service Management System** - a web-based platform for managing HOA operations, resident services, and community engagement with integrated 2D mapping.
 
-**Status**: Concept/Planning phase - no source code exists yet.
+**Status**: Implementation complete - system is functional and running.
 
 ## Project Objectives
 
@@ -33,15 +33,67 @@ From the concept paper, the system aims to:
 - Amenity reservation system
 - Mobile-responsive design
 
-## Tech Stack (To Be Determined)
+## Tech Stack
 
-No source code exists yet. When setting up the project, consider:
+- **Frontend**: Vite + React 18 + TypeScript + Tailwind CSS + React Router v6
+- **Backend**: Cloudflare Workers + Hono framework
+- **Database**: D1 (SQLite) for data persistence, R2 for file storage
+- **Mapping**: Leaflet + React Leaflet for 2D maps
+- **Authentication**: JWT-based auth with jose library (Cloudflare Workers compatible)
+- **State Management**: Zustand
+- **UI Components**: shadcn/ui + Lucide icons (migrated from Heroicons)
+- **Icons**: Use `lucide-react` for all new icon work. Heroicons has been removed.
 
-- **Frontend**: React, Vue, or similar modern framework
-- **Backend**: Node.js/Express, Django, or Laravel
-- **Database**: PostgreSQL or MySQL for structured data
-- **Mapping**: Leaflet, Mapbox, or Google Maps API
-- **Authentication**: JWT-based auth with role-based access control
+## Development Setup
+
+### Running the Application
+
+```bash
+# Run both frontend and backend together
+npm run dev:all
+# or
+./dev.sh
+```
+
+- **Git worktrees**: Use `.worktrees/` directory for feature branch isolation (already gitignored).
+  ```bash
+  git worktree add .worktrees/feature-name -b feature/feature-name
+  ```
+
+### Database Migrations
+
+```bash
+# Run D1 migrations (local)
+npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0001_schema.sql --local
+```
+
+### Test Users
+
+- Admin: `admin@lagunahills.com` / `admin123`
+- Resident: `resident@lagunahills.com` / `resident123`
+
+## UI Components (shadcn/ui)
+
+- **Location**: `src/components/ui/`
+- **Utils**: `src/lib/utils.ts` exports `cn()` for className merging (clsx + tailwind-merge)
+- **Available**: Button, Card, Badge, Input, Label, RadioGroup, Select, Dialog, Tabs
+- **Theming**: CSS variables in `src/index.css` under `:root` for colors, radius, etc.
+
+## Important Gotchas
+
+- **API endpoints in `src/lib/api.ts`**: Do NOT include `/api` prefix in endpoint paths. `API_BASE = "/api"` is already prepended.
+  - ❌ `/api/auth/login` → becomes `/api/api/auth/login` (404)
+  - ✅ `/auth/login` → becomes `/api/auth/login` (correct)
+
+- **Cloudflare Workers JWT**: Use `jose` library, NOT `jsonwebtoken`. The latter requires Node.js crypto which isn't available in Workers.
+
+- **wrangler.jsonc**: Project uses JSONC format with `nodejs_compat` flag, not TOML.
+
+- **Debug page**: Visit `/debug` to see auth state and localStorage for troubleshooting.
+
+- **Missing vite-env.d.ts**: If TypeScript errors about `import.meta.env` occur, ensure `src/vite-env.d.ts` exists with `interface ImportMetaEnv`.
+
+- **Linter auto-formatting**: Prettier converts single quotes to double quotes on save. Expect formatting-only diffs.
 
 ## Documents in Repository
 
