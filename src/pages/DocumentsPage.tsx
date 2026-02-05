@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { api, DocumentsResponse } from "@/lib/api";
 import { format } from "date-fns";
-import { FileDown, FileText, Upload, Trash2, Eye } from "lucide-react";
+import {
+  DocumentArrowDownIcon,
+  DocumentIcon,
+  CloudArrowUpIcon,
+  TrashIcon,
+  EyeIcon,
+} from "@heroicons/react/24/outline";
 import type { DocumentCategory } from "@/types";
 
 const categoryColors: Record<DocumentCategory, string> = {
@@ -155,7 +161,7 @@ export function DocumentsPage() {
             onClick={() => setShowUploadForm(!showUploadForm)}
             className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
           >
-            <Upload className="w-5 h-5" />
+            <CloudArrowUpIcon className="w-5 h-5" />
             Upload Document
           </button>
         )}
@@ -264,7 +270,7 @@ export function DocumentsPage() {
                   </>
                 ) : (
                   <>
-                    <Upload className="w-5 h-5" />
+                    <CloudArrowUpIcon className="w-5 h-5" />
                     Upload
                   </>
                 )}
@@ -309,7 +315,7 @@ export function DocumentsPage() {
                       {format(new Date(document.created_at), "MMM d, yyyy")}
                     </p>
                   </div>
-                  <FileText className="w-12 h-12 text-gray-400 flex-shrink-0 ml-4" />
+                  <DocumentIcon className="w-12 h-12 text-gray-400 flex-shrink-0 ml-4" />
                 </div>
 
                 <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
@@ -317,7 +323,7 @@ export function DocumentsPage() {
                     onClick={() => handleDownload(document.id)}
                     className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium"
                   >
-                    <FileDown className="w-4 h-4" />
+                    <DocumentArrowDownIcon className="w-4 h-4" />
                     Download
                   </button>
                   {canPreview(document.title) && (
@@ -325,7 +331,7 @@ export function DocumentsPage() {
                       onClick={() => handlePreview(document.id, document.title)}
                       className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium"
                     >
-                      <Eye className="w-4 h-4" />
+                      <EyeIcon className="w-4 h-4" />
                       Preview
                     </button>
                   )}
@@ -335,7 +341,7 @@ export function DocumentsPage() {
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                       title="Delete document"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <TrashIcon className="w-4 h-4" />
                     </button>
                   )}
                 </div>
@@ -345,7 +351,7 @@ export function DocumentsPage() {
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow p-12 text-center">
-          <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <DocumentIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500">No documents found.</p>
           {selectedCategory !== "all" && (
             <button

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { api, ServiceRequestsResponse } from "@/lib/api";
 import { format } from "date-fns";
-import { Plus, Filter } from "lucide-react";
+import { PlusIcon, FunnelIcon } from "@heroicons/react/24/outline";
 import type {
   ServiceRequestStatus,
   ServiceRequestPriority,
@@ -87,7 +87,7 @@ export function ServiceRequestsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Service Requests</h1>
         <button className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-          <Plus className="w-5 h-5" />
+          <PlusIcon className="w-5 h-5" />
           New Request
         </button>
       </div>
@@ -98,7 +98,7 @@ export function ServiceRequestsPage() {
           onClick={() => setShowFilters(!showFilters)}
           className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
         >
-          <Filter className="w-5 h-5" />
+          <FunnelIcon className="w-5 h-5" />
           Filters
         </button>
 

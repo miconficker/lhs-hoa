@@ -7,7 +7,12 @@ import {
   differenceInHours,
   differenceInMinutes,
 } from "date-fns";
-import { Plus, Trash2, BarChart3, CheckCircle2 } from "lucide-react";
+import {
+  PlusIcon,
+  TrashIcon,
+  ChartBarIcon,
+  CheckCircleIcon,
+} from "@heroicons/react/24/outline";
 
 interface PollWithResults {
   id: string;
@@ -189,7 +194,7 @@ export function PollsPage() {
             onClick={() => setShowCreateForm(!showCreateForm)}
             className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
           >
-            <Plus className="w-5 h-5" />
+            <PlusIcon className="w-5 h-5" />
             New Poll
           </button>
         )}
@@ -272,7 +277,7 @@ export function PollsPage() {
                     <div className="flex items-center gap-2 mb-2">
                       {hasVoted && (
                         <span className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
-                          <CheckCircle2 className="w-3 h-3" />
+                          <CheckCircleIcon className="w-3 h-3" />
                           Voted
                         </span>
                       )}
@@ -302,7 +307,7 @@ export function PollsPage() {
                       className="ml-4 p-2 text-gray-400 hover:text-red-600"
                       title="Delete poll"
                     >
-                      <Trash2 className="w-5 h-5" />
+                      <TrashIcon className="w-5 h-5" />
                     </button>
                   )}
                 </div>
@@ -384,7 +389,7 @@ export function PollsPage() {
                       </>
                     ) : (
                       <div className="text-center py-4">
-                        <BarChart3 className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                        <ChartBarIcon className="w-8 h-8 mx-auto text-gray-400 mb-2" />
                         <p className="text-gray-500 text-sm">
                           No votes yet. Be the first to vote!
                         </p>
@@ -397,7 +402,7 @@ export function PollsPage() {
           })
         ) : (
           <div className="bg-white rounded-lg shadow p-12 text-center text-gray-500">
-            <BarChart3 className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <ChartBarIcon className="w-12 h-12 mx-auto mb-4 text-gray-400" />
             No active polls found.
           </div>
         )}

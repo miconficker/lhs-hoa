@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { api, EventsResponse } from "@/lib/api";
 import { format, isPast, isFuture } from "date-fns";
-import { Plus, Calendar, MapPin } from "lucide-react";
+import {
+  PlusIcon,
+  CalendarIcon,
+  MapPinIcon,
+} from "@heroicons/react/24/outline";
 
 export function EventsPage() {
   const { user } = useAuth();
@@ -76,7 +80,7 @@ export function EventsPage() {
               onClick={() => setShowCreateForm(!showCreateForm)}
               className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
             >
-              <Plus className="w-5 h-5" />
+              <PlusIcon className="w-5 h-5" />
               New Event
             </button>
           )}
@@ -158,7 +162,7 @@ export function EventsPage() {
             >
               <div className="bg-primary-50 p-4">
                 <div className="flex items-center gap-2 text-primary-700">
-                  <Calendar className="w-5 h-5" />
+                  <CalendarIcon className="w-5 h-5" />
                   <span className="font-semibold">
                     {format(new Date(event.event_date), "MMM d, yyyy")}
                   </span>
@@ -178,7 +182,7 @@ export function EventsPage() {
                 )}
                 {event.location && (
                   <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <MapPin className="w-4 h-4" />
+                    <MapPinIcon className="w-4 h-4" />
                     {event.location}
                   </div>
                 )}

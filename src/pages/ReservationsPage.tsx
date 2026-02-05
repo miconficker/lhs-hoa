@@ -9,7 +9,14 @@ import {
   eachDayOfInterval,
   parseISO,
 } from "date-fns";
-import { Calendar, Clock, Plus, X, Check, XCircle } from "lucide-react";
+import {
+  CalendarIcon,
+  ClockIcon,
+  PlusIcon,
+  XMarkIcon,
+  CheckIcon,
+  XCircleIcon,
+} from "@heroicons/react/24/outline";
 import type {
   AmenityType,
   ReservationSlot,
@@ -245,9 +252,9 @@ export function ReservationsPage() {
           className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
         >
           {showBookingForm ? (
-            <X className="w-5 h-5" />
+            <XMarkIcon className="w-5 h-5" />
           ) : (
-            <Plus className="w-5 h-5" />
+            <PlusIcon className="w-5 h-5" />
           )}
           {showBookingForm ? "Cancel" : "New Reservation"}
         </button>
@@ -256,16 +263,16 @@ export function ReservationsPage() {
       {/* Success/Error Messages */}
       {successMessage && (
         <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-lg flex items-center gap-2">
-          <Check className="w-5 h-5" />
+          <CheckIcon className="w-5 h-5" />
           {successMessage}
         </div>
       )}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg flex items-center gap-2">
-          <XCircle className="w-5 h-5" />
+          <XCircleIcon className="w-5 h-5" />
           {error}
           <button onClick={() => setError("")} className="ml-auto">
-            <X className="w-5 h-5" />
+            <XMarkIcon className="w-5 h-5" />
           </button>
         </div>
       )}
@@ -451,11 +458,11 @@ export function ReservationsPage() {
                     </div>
                     <div className="flex items-center gap-4 text-sm text-gray-600">
                       <span className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
+                        <CalendarIcon className="w-4 h-4" />
                         {format(new Date(reservation.date), "MMM d, yyyy")}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
+                        <ClockIcon className="w-4 h-4" />
                         {slotLabels[reservation.slot]}
                       </span>
                     </div>

@@ -2,7 +2,14 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { format } from "date-fns";
-import { Plus, X, QrCode, CreditCard, Banknote, Building } from "lucide-react";
+import {
+  PlusIcon,
+  XMarkIcon,
+  QrCodeIcon,
+  CreditCardIcon,
+  BanknotesIcon,
+  BuildingLibraryIcon,
+} from "@heroicons/react/24/outline";
 import type {
   Payment,
   PaymentMethod,
@@ -23,10 +30,10 @@ const statusLabels: Record<PaymentStatus, string> = {
 };
 
 const methodIcons: Record<PaymentMethod, React.ReactNode> = {
-  gcash: <QrCode className="w-5 h-5" />,
-  paymaya: <CreditCard className="w-5 h-5" />,
-  instapay: <Building className="w-5 h-5" />,
-  cash: <Banknote className="w-5 h-5" />,
+  gcash: <QrCodeIcon className="w-5 h-5" />,
+  paymaya: <CreditCardIcon className="w-5 h-5" />,
+  instapay: <BuildingLibraryIcon className="w-5 h-5" />,
+  cash: <BanknotesIcon className="w-5 h-5" />,
 };
 
 const methodLabels: Record<PaymentMethod, string> = {
@@ -123,7 +130,7 @@ export function PaymentsPage() {
     return (
       <div className="flex flex-col items-center justify-center p-8 bg-white rounded-lg">
         <div className="w-48 h-48 bg-gray-200 rounded-lg flex items-center justify-center mb-4">
-          <QrCode className="w-32 h-32 text-gray-400" />
+          <QrCodeIcon className="w-32 h-32 text-gray-400" />
         </div>
         <p className="text-gray-600 text-sm">Scan to pay with GCash</p>
         <p className="text-gray-500 text-xs mt-2">
@@ -150,7 +157,7 @@ export function PaymentsPage() {
           onClick={() => setShowNewPayment(true)}
           className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
         >
-          <Plus className="w-5 h-5" />
+          <PlusIcon className="w-5 h-5" />
           New Payment
         </button>
       </div>
@@ -178,7 +185,7 @@ export function PaymentsPage() {
             onClick={() => setError("")}
             className="ml-4 text-red-500 hover:text-red-700"
           >
-            <X className="w-5 h-5 inline" />
+            <XMarkIcon className="w-5 h-5 inline" />
           </button>
         </div>
       )}
@@ -242,7 +249,7 @@ export function PaymentsPage() {
                         }}
                         className="flex items-center gap-2 px-3 py-2 text-sm text-primary-600 border border-primary-600 rounded-lg hover:bg-primary-50"
                       >
-                        <QrCode className="w-4 h-4" />
+                        <QrCodeIcon className="w-4 h-4" />
                         View QR
                       </button>
                     )}
@@ -269,7 +276,7 @@ export function PaymentsPage() {
                 onClick={() => setShowNewPayment(false)}
                 className="text-gray-400 hover:text-gray-600"
               >
-                <X className="w-6 h-6" />
+                <XMarkIcon className="w-6 h-6" />
               </button>
             </div>
             <form onSubmit={handleCreatePayment} className="p-6 space-y-4">
@@ -361,7 +368,7 @@ export function PaymentsPage() {
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >
-                <X className="w-6 h-6" />
+                <XMarkIcon className="w-6 h-6" />
               </button>
             </div>
             <div className="p-6">

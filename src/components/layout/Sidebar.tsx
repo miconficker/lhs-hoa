@@ -1,67 +1,67 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Home,
-  Map,
-  ClipboardList,
-  Calendar,
-  CreditCard,
-  FileText,
-  MessageSquare,
-  BarChart3,
-  Settings,
-} from "lucide-react";
+  HomeIcon,
+  MapIcon,
+  ClipboardDocumentListIcon,
+  CalendarIcon,
+  CreditCardIcon,
+  DocumentIcon,
+  ChatBubbleLeftRightIcon,
+  ChartBarIcon,
+  CogIcon,
+} from "@heroicons/react/24/outline";
 
 const navItems = [
   {
     to: "/dashboard",
-    icon: Home,
+    icon: HomeIcon,
     label: "Dashboard",
     roles: ["admin", "resident", "staff"],
   },
   {
     to: "/map",
-    icon: Map,
+    icon: MapIcon,
     label: "Subdivision Map",
     roles: ["admin", "resident", "staff"],
   },
   {
     to: "/service-requests",
-    icon: ClipboardList,
+    icon: ClipboardDocumentListIcon,
     label: "Service Requests",
     roles: ["admin", "resident", "staff"],
   },
   {
     to: "/reservations",
-    icon: Calendar,
+    icon: CalendarIcon,
     label: "Amenity Reservations",
     roles: ["admin", "resident", "guest"],
   },
   {
     to: "/payments",
-    icon: CreditCard,
+    icon: CreditCardIcon,
     label: "Payments",
     roles: ["admin", "resident"],
   },
   {
     to: "/documents",
-    icon: FileText,
+    icon: DocumentIcon,
     label: "Documents",
     roles: ["admin", "resident", "staff"],
   },
   {
     to: "/announcements",
-    icon: MessageSquare,
+    icon: ChatBubbleLeftRightIcon,
     label: "Announcements",
     roles: ["admin", "resident", "staff", "guest"],
   },
   {
     to: "/polls",
-    icon: BarChart3,
+    icon: ChartBarIcon,
     label: "Polls",
     roles: ["admin", "resident", "staff", "guest"],
   },
-  { to: "/admin", icon: Settings, label: "Admin Panel", roles: ["admin"] },
+  { to: "/admin", icon: CogIcon, label: "Admin Panel", roles: ["admin"] },
 ];
 
 export function Sidebar() {

@@ -4,13 +4,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { api, DashboardStatsResponse } from "@/lib/api";
 import { format } from "date-fns";
 import {
-  Home,
-  ClipboardList,
-  Calendar,
-  DollarSign,
-  AlertTriangle,
-  Settings,
-} from "lucide-react";
+  HomeIcon,
+  ClipboardDocumentListIcon,
+  CalendarIcon,
+  CurrencyDollarIcon,
+  ExclamationTriangleIcon,
+  CogIcon,
+} from "@heroicons/react/24/outline";
 
 interface StatCardProps {
   title: string;
@@ -101,28 +101,28 @@ export function DashboardPage() {
             <StatCard
               title="Total Households"
               value={stats?.stats.households || 0}
-              icon={Home}
+              icon={HomeIcon}
               color="bg-blue-500"
               to="/map"
             />
             <StatCard
               title="Pending Requests"
               value={stats?.stats.pendingRequests || 0}
-              icon={ClipboardList}
+              icon={ClipboardDocumentListIcon}
               color="bg-yellow-500"
               to="/service-requests"
             />
             <StatCard
               title="Upcoming Reservations"
               value={stats?.stats.upcomingReservations || 0}
-              icon={Calendar}
+              icon={CalendarIcon}
               color="bg-green-500"
               to="/reservations"
             />
             <StatCard
               title="Unpaid Payments"
               value={stats?.stats.unpaidPayments || 0}
-              icon={DollarSign}
+              icon={CurrencyDollarIcon}
               color="bg-red-500"
               to="/payments"
             />
@@ -152,7 +152,7 @@ export function DashboardPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       {announcement.is_pinned && (
-                        <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                        <ExclamationTriangleIcon className="w-4 h-4 text-yellow-500" />
                       )}
                       <h3 className="text-lg font-medium text-gray-900">
                         {announcement.title}
@@ -206,28 +206,28 @@ export function DashboardPage() {
               to="/service-requests"
               className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <ClipboardList className="w-8 h-8 text-primary-600 mb-2" />
+              <ClipboardDocumentListIcon className="w-8 h-8 text-primary-600 mb-2" />
               <span className="text-sm font-medium">New Request</span>
             </Link>
             <Link
               to="/reservations"
               className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <Calendar className="w-8 h-8 text-primary-600 mb-2" />
+              <CalendarIcon className="w-8 h-8 text-primary-600 mb-2" />
               <span className="text-sm font-medium">Book Amenity</span>
             </Link>
             <Link
               to="/payments"
               className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <DollarSign className="w-8 h-8 text-primary-600 mb-2" />
+              <CurrencyDollarIcon className="w-8 h-8 text-primary-600 mb-2" />
               <span className="text-sm font-medium">Pay Dues</span>
             </Link>
             <Link
               to="/admin"
               className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <Settings className="w-8 h-8 text-primary-600 mb-2" />
+              <CogIcon className="w-8 h-8 text-primary-600 mb-2" />
               <span className="text-sm font-medium">Admin Panel</span>
             </Link>
           </div>

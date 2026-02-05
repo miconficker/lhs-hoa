@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { api, AnnouncementsResponse } from "@/lib/api";
 import { format } from "date-fns";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { PlusIcon, PencilIcon, TrashIcon } from "@heroicons/react/24/outline";
 import type { AnnouncementCategory } from "@/types";
 
 const categoryColors: Record<AnnouncementCategory, string> = {
@@ -73,7 +73,7 @@ export function AnnouncementsPage() {
             onClick={() => setShowCreateForm(!showCreateForm)}
             className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
           >
-            <Plus className="w-5 h-5" />
+            <PlusIcon className="w-5 h-5" />
             New Announcement
           </button>
         )}
@@ -196,10 +196,10 @@ export function AnnouncementsPage() {
                 {isAdmin && (
                   <div className="ml-4 flex gap-2">
                     <button className="p-2 text-gray-400 hover:text-gray-600">
-                      <Pencil className="w-5 h-5" />
+                      <PencilIcon className="w-5 h-5" />
                     </button>
                     <button className="p-2 text-gray-400 hover:text-red-600">
-                      <Trash2 className="w-5 h-5" />
+                      <TrashIcon className="w-5 h-5" />
                     </button>
                   </div>
                 )}
