@@ -99,3 +99,17 @@ npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0001_schema.sql --l
 
 - `Concept-Paper_2.2(2).docx` - Full project concept and requirements
 - `HOA Website Requirements.xlsx` - Detailed feature requirements
+
+## Lot Annotation Tool
+
+The project includes a visual tool for annotating SVG map lots with lot numbers.
+
+- **Access**: `/annotate` route (admin-only)
+- **Usage**: Click lots on map, enter lot/block numbers, export mapping JSON
+- **Storage**: `scripts/lot-mapping.json` + localStorage persistence
+- **Conversion**: Run `node scripts/svg-to-geojson.ts --mapping scripts/lot-mapping.json` to apply annotations to GeoJSON
+
+## Testing & Verification
+
+- **No test suite**: Project has 0 tests configured. Verify via: `npm run build` for TypeScript errors, manual testing via `npm run dev:all`.
+- **Worktree cleanup**: After merging, use `git worktree remove --force .worktrees/name` then `git branch -d feature/name`.
