@@ -14,14 +14,7 @@ import {
   LotFeatureProperties,
   BlockFeatureProperties,
 } from "@/types";
-import {
-  MapIcon,
-  HomeIcon,
-  BuildingOfficeIcon,
-  BuildingLibraryIcon,
-  EyeIcon,
-  EyeSlashIcon,
-} from "@heroicons/react/24/outline";
+import { Map, Home, Building, Landmark, Eye, EyeOff } from "lucide-react";
 
 // Fix for default marker icons in React Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -100,9 +93,9 @@ function MapControls({
               title={showBlocks ? "Hide blocks" : "Show blocks"}
             >
               {showBlocks ? (
-                <EyeIcon className="w-4 h-4 text-gray-600" />
+                <Eye className="w-4 h-4 text-gray-600" />
               ) : (
-                <EyeSlashIcon className="w-4 h-4 text-gray-400" />
+                <EyeOff className="w-4 h-4 text-gray-400" />
               )}
             </button>
           </label>
@@ -114,9 +107,9 @@ function MapControls({
               title={showLots ? "Hide lots" : "Show lots"}
             >
               {showLots ? (
-                <EyeIcon className="w-4 h-4 text-gray-600" />
+                <Eye className="w-4 h-4 text-gray-600" />
               ) : (
-                <EyeSlashIcon className="w-4 h-4 text-gray-400" />
+                <EyeOff className="w-4 h-4 text-gray-400" />
               )}
             </button>
           </label>
@@ -450,7 +443,7 @@ export function MapPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-600">
-          <MapIcon className="w-5 h-5" />
+          <Map className="w-5 h-5" />
           <span>{filteredHouseholds.length} households displayed</span>
         </div>
       </div>
@@ -496,7 +489,7 @@ export function MapPage() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-green-100 rounded-lg">
-              <HomeIcon className="w-6 h-6 text-green-600" />
+              <Home className="w-6 h-6 text-green-600" />
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
@@ -510,7 +503,7 @@ export function MapPage() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-blue-100 rounded-lg">
-              <BuildingOfficeIcon className="w-6 h-6 text-blue-600" />
+              <Building className="w-6 h-6 text-blue-600" />
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
@@ -524,7 +517,7 @@ export function MapPage() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-gray-100 rounded-lg">
-              <BuildingLibraryIcon className="w-6 h-6 text-gray-600" />
+              <Landmark className="w-6 h-6 text-gray-600" />
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
