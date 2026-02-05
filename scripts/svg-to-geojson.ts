@@ -716,7 +716,13 @@ for (let i = 0; i < args.length; i++) {
 // Resolve mapping path relative to script directory if provided
 if (mappingPath) {
   if (!path.isAbsolute(mappingPath)) {
-    mappingPath = path.join(__dirname, mappingPath);
+    // If path doesn't exist as-is, try resolving relative to script directory
+    if (!fs.existsSync(mappingPath)) {
+      const resolvedPath = path.join(__dirname, mappingPath);
+      if (fs.existsSync(resolvedPath)) {
+        mappingPath = resolvedPath;
+      }
+    }
   }
   console.log(`Using mapping file: ${mappingPath}`);
 }
