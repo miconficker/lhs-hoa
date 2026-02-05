@@ -1,16 +1,16 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { api, DashboardStatsResponse } from '@/lib/api';
-import { format } from 'date-fns';
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { api, DashboardStatsResponse } from "@/lib/api";
+import { format } from "date-fns";
 import {
-  HomeIcon,
-  ClipboardDocumentListIcon,
-  CalendarIcon,
-  CurrencyDollarIcon,
-  ExclamationTriangleIcon,
-  CogIcon,
-} from '@heroicons/react/24/outline';
+  Home,
+  ClipboardList,
+  Calendar,
+  DollarSign,
+  AlertTriangle,
+  Settings,
+} from "lucide-react";
 
 interface StatCardProps {
   title: string;
@@ -46,17 +46,17 @@ export function DashboardPage() {
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function loadStats() {
       setLoading(true);
-      setError('');
+      setError("");
 
       const result = await api.dashboard.getStats();
 
       if (result.error || !result.data) {
-        setError(result.error || 'Failed to load dashboard');
+        setError(result.error || "Failed to load dashboard");
       } else {
         setStats(result.data);
       }
@@ -83,7 +83,7 @@ export function DashboardPage() {
     );
   }
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'staff';
+  const isAdmin = user?.role === "admin" || user?.role === "staff";
 
   return (
     <div className="space-y-6">
@@ -101,35 +101,38 @@ export function DashboardPage() {
             <StatCard
               title="Total Households"
               value={stats?.stats.households || 0}
-              icon={HomeIcon}
+              icon={Home}
               color="bg-blue-500"
               to="/map"
             />
             <StatCard
               title="Pending Requests"
               value={stats?.stats.pendingRequests || 0}
-              icon={ClipboardDocumentListIcon}
+              icon={ClipboardList}
               color="bg-yellow-500"
               to="/service-requests"
             />
             <StatCard
               title="Upcoming Reservations"
               value={stats?.stats.upcomingReservations || 0}
-              icon={CalendarIcon}
+              icon={Calendar}
               color="bg-green-500"
               to="/reservations"
             />
             <StatCard
               title="Unpaid Payments"
               value={stats?.stats.unpaidPayments || 0}
-              icon={CurrencyDollarIcon}
+              icon={DollarSign}
               color="bg-red-500"
               to="/payments"
             />
           </>
         ) : (
           <div className="col-span-full">
-            <p className="text-gray-600">Welcome to the Laguna Hills HOA portal. Use the sidebar to navigate.</p>
+            <p className="text-gray-600">
+              Welcome to the Laguna Hills HOA portal. Use the sidebar to
+              navigate.
+            </p>
           </div>
         )}
       </div>
@@ -138,7 +141,9 @@ export function DashboardPage() {
       {stats?.recentAnnouncements && stats.recentAnnouncements.length > 0 && (
         <div className="bg-white rounded-lg shadow">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Recent Announcements</h2>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Recent Announcements
+            </h2>
           </div>
           <div className="divide-y divide-gray-200">
             {stats.recentAnnouncements.map((announcement) => (
@@ -147,23 +152,30 @@ export function DashboardPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       {announcement.is_pinned && (
-                        <ExclamationTriangleIcon className="w-4 h-4 text-yellow-500" />
+                        <AlertTriangle className="w-4 h-4 text-yellow-500" />
                       )}
-                      <h3 className="text-lg font-medium text-gray-900">{announcement.title}</h3>
+                      <h3 className="text-lg font-medium text-gray-900">
+                        {announcement.title}
+                      </h3>
                       {announcement.category && (
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          announcement.category === 'urgent' ? 'bg-red-100 text-red-700' :
-                          announcement.category === 'event' ? 'bg-blue-100 text-blue-700' :
-                          announcement.category === 'policy' ? 'bg-purple-100 text-purple-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            announcement.category === "urgent"
+                              ? "bg-red-100 text-red-700"
+                              : announcement.category === "event"
+                                ? "bg-blue-100 text-blue-700"
+                                : announcement.category === "policy"
+                                  ? "bg-purple-100 text-purple-700"
+                                  : "bg-gray-100 text-gray-700"
+                          }`}
+                        >
                           {announcement.category}
                         </span>
                       )}
                     </div>
                     <p className="text-gray-600 mt-1">{announcement.content}</p>
                     <p className="text-sm text-gray-400 mt-2">
-                      {format(new Date(announcement.created_at), 'MMM d, yyyy')}
+                      {format(new Date(announcement.created_at), "MMM d, yyyy")}
                     </p>
                   </div>
                 </div>
@@ -185,35 +197,37 @@ export function DashboardPage() {
       {isAdmin && (
         <div className="bg-white rounded-lg shadow">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Quick Actions
+            </h2>
           </div>
           <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
             <Link
               to="/service-requests"
               className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <ClipboardDocumentListIcon className="w-8 h-8 text-primary-600 mb-2" />
+              <ClipboardList className="w-8 h-8 text-primary-600 mb-2" />
               <span className="text-sm font-medium">New Request</span>
             </Link>
             <Link
               to="/reservations"
               className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <CalendarIcon className="w-8 h-8 text-primary-600 mb-2" />
+              <Calendar className="w-8 h-8 text-primary-600 mb-2" />
               <span className="text-sm font-medium">Book Amenity</span>
             </Link>
             <Link
               to="/payments"
               className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <CurrencyDollarIcon className="w-8 h-8 text-primary-600 mb-2" />
+              <DollarSign className="w-8 h-8 text-primary-600 mb-2" />
               <span className="text-sm font-medium">Pay Dues</span>
             </Link>
             <Link
               to="/admin"
               className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <CogIcon className="w-8 h-8 text-primary-600 mb-2" />
+              <Settings className="w-8 h-8 text-primary-600 mb-2" />
               <span className="text-sm font-medium">Admin Panel</span>
             </Link>
           </div>

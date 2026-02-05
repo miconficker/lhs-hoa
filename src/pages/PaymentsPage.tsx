@@ -1,41 +1,39 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { api } from '@/lib/api';
-import { format } from 'date-fns';
-import {
-  PlusIcon,
-  XMarkIcon,
-  QrCodeIcon,
-  CreditCardIcon,
-  BanknotesIcon,
-  BuildingLibraryIcon,
-} from '@heroicons/react/24/outline';
-import type { Payment, PaymentMethod, PaymentStatus, OutstandingBalance } from '@/types';
+import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/lib/api";
+import { format } from "date-fns";
+import { Plus, X, QrCode, CreditCard, Banknote, Building } from "lucide-react";
+import type {
+  Payment,
+  PaymentMethod,
+  PaymentStatus,
+  OutstandingBalance,
+} from "@/types";
 
 const statusColors: Record<PaymentStatus, string> = {
-  pending: 'bg-yellow-100 text-yellow-700',
-  completed: 'bg-green-100 text-green-700',
-  failed: 'bg-red-100 text-red-700',
+  pending: "bg-yellow-100 text-yellow-700",
+  completed: "bg-green-100 text-green-700",
+  failed: "bg-red-100 text-red-700",
 };
 
 const statusLabels: Record<PaymentStatus, string> = {
-  pending: 'Pending',
-  completed: 'Completed',
-  failed: 'Failed',
+  pending: "Pending",
+  completed: "Completed",
+  failed: "Failed",
 };
 
 const methodIcons: Record<PaymentMethod, React.ReactNode> = {
-  gcash: <QrCodeIcon className="w-5 h-5" />,
-  paymaya: <CreditCardIcon className="w-5 h-5" />,
-  instapay: <BuildingLibraryIcon className="w-5 h-5" />,
-  cash: <BanknotesIcon className="w-5 h-5" />,
+  gcash: <QrCode className="w-5 h-5" />,
+  paymaya: <CreditCard className="w-5 h-5" />,
+  instapay: <Building className="w-5 h-5" />,
+  cash: <Banknote className="w-5 h-5" />,
 };
 
 const methodLabels: Record<PaymentMethod, string> = {
-  gcash: 'GCash',
-  paymaya: 'PayMaya',
-  instapay: 'Instapay',
-  cash: 'Cash',
+  gcash: "GCash",
+  paymaya: "PayMaya",
+  instapay: "Instapay",
+  cash: "Cash",
 };
 
 export function PaymentsPage() {
@@ -43,14 +41,16 @@ export function PaymentsPage() {
   const [balance, setBalance] = useState<OutstandingBalance | null>(null);
   const [payments, setPayments] = useState<Payment[] | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [showNewPayment, setShowNewPayment] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
-  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(
+    null,
+  );
 
   // For demo purposes, use a fixed household ID
   // In production, this would come from user's household association
-  const householdId = user?.id || 'demo-household';
+  const householdId = user?.id || "demo-household";
 
   useEffect(() => {
     loadData();
@@ -58,7 +58,7 @@ export function PaymentsPage() {
 
   async function loadData() {
     setLoading(true);
-    setError('');
+    setError("");
 
     const [balanceResult, paymentsResult] = await Promise.all([
       api.payments.getBalance(householdId),
@@ -84,13 +84,13 @@ export function PaymentsPage() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
-    const amount = parseFloat(formData.get('amount') as string);
-    const method = formData.get('method') as PaymentMethod;
-    const period = formData.get('period') as string;
-    const referenceNumber = formData.get('referenceNumber') as string;
+    const amount = parseFloat(formData.get("amount") as string);
+    const method = formData.get("method") as PaymentMethod;
+    const period = formData.get("period") as string;
+    const referenceNumber = formData.get("referenceNumber") as string;
 
     if (!amount || !method || !period) {
-      setError('Please fill in all required fields');
+      setError("Please fill in all required fields");
       return;
     }
 
@@ -110,8 +110,8 @@ export function PaymentsPage() {
     setShowNewPayment(false);
 
     // Show QR modal for GCash
-    if (method === 'gcash') {
-      setSelectedMethod('gcash');
+    if (method === "gcash") {
+      setSelectedMethod("gcash");
       setShowQRModal(true);
     }
 
@@ -123,10 +123,12 @@ export function PaymentsPage() {
     return (
       <div className="flex flex-col items-center justify-center p-8 bg-white rounded-lg">
         <div className="w-48 h-48 bg-gray-200 rounded-lg flex items-center justify-center mb-4">
-          <QrCodeIcon className="w-32 h-32 text-gray-400" />
+          <QrCode className="w-32 h-32 text-gray-400" />
         </div>
         <p className="text-gray-600 text-sm">Scan to pay with GCash</p>
-        <p className="text-gray-500 text-xs mt-2">Amount: PHP {balance?.total_due.toFixed(2) || '0.00'}</p>
+        <p className="text-gray-500 text-xs mt-2">
+          Amount: PHP {balance?.total_due.toFixed(2) || "0.00"}
+        </p>
       </div>
     );
   }
@@ -148,7 +150,7 @@ export function PaymentsPage() {
           onClick={() => setShowNewPayment(true)}
           className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
         >
-          <PlusIcon className="w-5 h-5" />
+          <Plus className="w-5 h-5" />
           New Payment
         </button>
       </div>
@@ -157,11 +159,13 @@ export function PaymentsPage() {
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 rounded-lg shadow-lg p-6 text-white">
         <h2 className="text-lg font-semibold mb-2">Outstanding Balance</h2>
         <div className="flex items-baseline gap-2">
-          <span className="text-4xl font-bold">PHP {balance?.total_due.toFixed(2) || '0.00'}</span>
+          <span className="text-4xl font-bold">
+            PHP {balance?.total_due.toFixed(2) || "0.00"}
+          </span>
         </div>
         {balance && balance.periods_due.length > 0 && (
           <p className="text-primary-100 mt-2 text-sm">
-            Periods due: {balance.periods_due.join(', ')}
+            Periods due: {balance.periods_due.join(", ")}
           </p>
         )}
       </div>
@@ -171,10 +175,10 @@ export function PaymentsPage() {
         <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
           {error}
           <button
-            onClick={() => setError('')}
+            onClick={() => setError("")}
             className="ml-4 text-red-500 hover:text-red-700"
           >
-            <XMarkIcon className="w-5 h-5 inline" />
+            <X className="w-5 h-5 inline" />
           </button>
         </div>
       )}
@@ -182,7 +186,9 @@ export function PaymentsPage() {
       {/* Payment History */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Payment History</h3>
+          <h3 className="text-lg font-semibold text-gray-900">
+            Payment History
+          </h3>
         </div>
         {payments && payments.length > 0 ? (
           <div className="divide-y divide-gray-200">
@@ -205,10 +211,14 @@ export function PaymentsPage() {
                         </span>
                       </div>
                       <div className="text-sm text-gray-500">
-                        {methodLabels[payment.method]} • Period: {payment.period}
+                        {methodLabels[payment.method]} • Period:{" "}
+                        {payment.period}
                       </div>
                       <div className="text-xs text-gray-400 mt-1">
-                        {format(new Date(payment.created_at), 'MMM d, yyyy h:mm a')}
+                        {format(
+                          new Date(payment.created_at),
+                          "MMM d, yyyy h:mm a",
+                        )}
                       </div>
                       {payment.reference_number && (
                         <div className="text-xs text-gray-500">
@@ -217,23 +227,25 @@ export function PaymentsPage() {
                       )}
                       {payment.paid_at && (
                         <div className="text-xs text-green-600 mt-1">
-                          Paid on {format(new Date(payment.paid_at), 'MMM d, yyyy')}
+                          Paid on{" "}
+                          {format(new Date(payment.paid_at), "MMM d, yyyy")}
                         </div>
                       )}
                     </div>
                   </div>
-                  {payment.method === 'gcash' && payment.status === 'pending' && (
-                    <button
-                      onClick={() => {
-                        setSelectedMethod('gcash');
-                        setShowQRModal(true);
-                      }}
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-primary-600 border border-primary-600 rounded-lg hover:bg-primary-50"
-                    >
-                      <QrCodeIcon className="w-4 h-4" />
-                      View QR
-                    </button>
-                  )}
+                  {payment.method === "gcash" &&
+                    payment.status === "pending" && (
+                      <button
+                        onClick={() => {
+                          setSelectedMethod("gcash");
+                          setShowQRModal(true);
+                        }}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-primary-600 border border-primary-600 rounded-lg hover:bg-primary-50"
+                      >
+                        <QrCode className="w-4 h-4" />
+                        View QR
+                      </button>
+                    )}
                 </div>
               </div>
             ))}
@@ -250,12 +262,14 @@ export function PaymentsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Create Payment</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Create Payment
+              </h3>
               <button
                 onClick={() => setShowNewPayment(false)}
                 className="text-gray-400 hover:text-gray-600"
               >
-                <XMarkIcon className="w-6 h-6" />
+                <X className="w-6 h-6" />
               </button>
             </div>
             <form onSubmit={handleCreatePayment} className="p-6 space-y-4">
@@ -333,11 +347,13 @@ export function PaymentsPage() {
       )}
 
       {/* GCash QR Modal */}
-      {showQRModal && selectedMethod === 'gcash' && (
+      {showQRModal && selectedMethod === "gcash" && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-sm w-full">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">GCash Payment</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                GCash Payment
+              </h3>
               <button
                 onClick={() => {
                   setShowQRModal(false);
@@ -345,7 +361,7 @@ export function PaymentsPage() {
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >
-                <XMarkIcon className="w-6 h-6" />
+                <X className="w-6 h-6" />
               </button>
             </div>
             <div className="p-6">

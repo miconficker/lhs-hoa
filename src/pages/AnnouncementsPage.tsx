@@ -1,32 +1,33 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { api, AnnouncementsResponse } from '@/lib/api';
-import { format } from 'date-fns';
-import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
-import type { AnnouncementCategory } from '@/types';
+import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { api, AnnouncementsResponse } from "@/lib/api";
+import { format } from "date-fns";
+import { Plus, Pencil, Trash2 } from "lucide-react";
+import type { AnnouncementCategory } from "@/types";
 
 const categoryColors: Record<AnnouncementCategory, string> = {
-  event: 'bg-blue-100 text-blue-700',
-  urgent: 'bg-red-100 text-red-700',
-  info: 'bg-gray-100 text-gray-700',
-  policy: 'bg-purple-100 text-purple-700',
+  event: "bg-blue-100 text-blue-700",
+  urgent: "bg-red-100 text-red-700",
+  info: "bg-gray-100 text-gray-700",
+  policy: "bg-purple-100 text-purple-700",
 };
 
 const categoryLabels: Record<AnnouncementCategory, string> = {
-  event: 'Event',
-  urgent: 'Urgent',
-  info: 'Info',
-  policy: 'Policy',
+  event: "Event",
+  urgent: "Urgent",
+  info: "Info",
+  policy: "Policy",
 };
 
 export function AnnouncementsPage() {
   const { user } = useAuth();
-  const [announcements, setAnnouncements] = useState<AnnouncementsResponse | null>(null);
+  const [announcements, setAnnouncements] =
+    useState<AnnouncementsResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'staff';
+  const isAdmin = user?.role === "admin" || user?.role === "staff";
 
   useEffect(() => {
     loadAnnouncements();
@@ -34,7 +35,7 @@ export function AnnouncementsPage() {
 
   async function loadAnnouncements() {
     setLoading(true);
-    setError('');
+    setError("");
 
     const result = await api.announcements.list(50, 0);
 
@@ -72,7 +73,7 @@ export function AnnouncementsPage() {
             onClick={() => setShowCreateForm(!showCreateForm)}
             className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
           >
-            <PlusIcon className="w-5 h-5" />
+            <Plus className="w-5 h-5" />
             New Announcement
           </button>
         )}
@@ -84,7 +85,9 @@ export function AnnouncementsPage() {
           <h2 className="text-lg font-semibold mb-4">Create Announcement</h2>
           <form className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Title
+              </label>
               <input
                 type="text"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
@@ -92,7 +95,9 @@ export function AnnouncementsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Content
+              </label>
               <textarea
                 rows={4}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
@@ -101,7 +106,9 @@ export function AnnouncementsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Category
+                </label>
                 <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500">
                   <option value="info">Info</option>
                   <option value="urgent">Urgent</option>
@@ -110,7 +117,9 @@ export function AnnouncementsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Expires At</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Expires At
+                </label>
                 <input
                   type="datetime-local"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
@@ -118,8 +127,14 @@ export function AnnouncementsPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <input type="checkbox" id="pinned" className="rounded border-gray-300" />
-              <label htmlFor="pinned" className="text-sm text-gray-700">Pin to top</label>
+              <input
+                type="checkbox"
+                id="pinned"
+                className="rounded border-gray-300"
+              />
+              <label htmlFor="pinned" className="text-sm text-gray-700">
+                Pin to top
+              </label>
             </div>
             <div className="flex gap-2">
               <button
@@ -142,9 +157,13 @@ export function AnnouncementsPage() {
 
       {/* Announcements List */}
       <div className="space-y-4">
-        {announcements?.announcements && announcements.announcements.length > 0 ? (
+        {announcements?.announcements &&
+        announcements.announcements.length > 0 ? (
           announcements.announcements.map((announcement) => (
-            <div key={announcement.id} className="bg-white rounded-lg shadow p-6">
+            <div
+              key={announcement.id}
+              className="bg-white rounded-lg shadow p-6"
+            >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
@@ -154,25 +173,33 @@ export function AnnouncementsPage() {
                       </span>
                     )}
                     {announcement.category && (
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${categoryColors[announcement.category]}`}>
+                      <span
+                        className={`px-2 py-1 text-xs font-medium rounded-full ${categoryColors[announcement.category]}`}
+                      >
                         {categoryLabels[announcement.category]}
                       </span>
                     )}
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900">{announcement.title}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {announcement.title}
+                  </h3>
                   <p className="text-gray-600 mt-2">{announcement.content}</p>
                   <p className="text-sm text-gray-400 mt-4">
-                    {format(new Date(announcement.created_at), 'MMMM d, yyyy \'at\' h:mm a')}
-                    {announcement.expires_at && ` • Expires ${format(new Date(announcement.expires_at), 'MMM d, yyyy')}`}
+                    {format(
+                      new Date(announcement.created_at),
+                      "MMMM d, yyyy 'at' h:mm a",
+                    )}
+                    {announcement.expires_at &&
+                      ` • Expires ${format(new Date(announcement.expires_at), "MMM d, yyyy")}`}
                   </p>
                 </div>
                 {isAdmin && (
                   <div className="ml-4 flex gap-2">
                     <button className="p-2 text-gray-400 hover:text-gray-600">
-                      <PencilIcon className="w-5 h-5" />
+                      <Pencil className="w-5 h-5" />
                     </button>
                     <button className="p-2 text-gray-400 hover:text-red-600">
-                      <TrashIcon className="w-5 h-5" />
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 )}

@@ -1,48 +1,47 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { api, DocumentsResponse } from '@/lib/api';
-import { format } from 'date-fns';
-import {
-  DocumentArrowDownIcon,
-  DocumentIcon,
-  CloudArrowUpIcon,
-  TrashIcon,
-  EyeIcon,
-} from '@heroicons/react/24/outline';
-import type { DocumentCategory } from '@/types';
+import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { api, DocumentsResponse } from "@/lib/api";
+import { format } from "date-fns";
+import { FileDown, FileText, Upload, Trash2, Eye } from "lucide-react";
+import type { DocumentCategory } from "@/types";
 
 const categoryColors: Record<DocumentCategory, string> = {
-  rules: 'bg-blue-100 text-blue-700',
-  forms: 'bg-green-100 text-green-700',
-  minutes: 'bg-yellow-100 text-yellow-700',
-  policies: 'bg-purple-100 text-purple-700',
+  rules: "bg-blue-100 text-blue-700",
+  forms: "bg-green-100 text-green-700",
+  minutes: "bg-yellow-100 text-yellow-700",
+  policies: "bg-purple-100 text-purple-700",
 };
 
 const categoryLabels: Record<DocumentCategory, string> = {
-  rules: 'Rules & Regulations',
-  forms: 'Forms',
-  minutes: 'Meeting Minutes',
-  policies: 'Policies',
+  rules: "Rules & Regulations",
+  forms: "Forms",
+  minutes: "Meeting Minutes",
+  policies: "Policies",
 };
 
 const categoryIcons: Record<DocumentCategory, string> = {
-  rules: '📜',
-  forms: '📝',
-  minutes: '📋',
-  policies: '📖',
+  rules: "📜",
+  forms: "📝",
+  minutes: "📋",
+  policies: "📖",
 };
 
 export function DocumentsPage() {
   const { user } = useAuth();
   const [documents, setDocuments] = useState<DocumentsResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<DocumentCategory | 'all'>('all');
+  const [error, setError] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<
+    DocumentCategory | "all"
+  >("all");
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [previewDocument, setPreviewDocument] = useState<{ id: string; title: string } | null>(null);
+  const [previewDocument, setPreviewDocument] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'staff';
+  const isAdmin = user?.role === "admin" || user?.role === "staff";
 
   useEffect(() => {
     loadDocuments();
@@ -50,10 +49,10 @@ export function DocumentsPage() {
 
   async function loadDocuments() {
     setLoading(true);
-    setError('');
+    setError("");
 
     const result = await api.documents.list(
-      selectedCategory === 'all' ? undefined : selectedCategory
+      selectedCategory === "all" ? undefined : selectedCategory,
     );
 
     if (result.error) {
@@ -68,21 +67,21 @@ export function DocumentsPage() {
   async function handleUpload(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setUploading(true);
-    setError('');
+    setError("");
 
     const formData = new FormData(event.currentTarget);
-    const file = formData.get('file') as File;
-    const title = formData.get('title') as string;
-    const category = formData.get('category') as DocumentCategory | '';
+    const file = formData.get("file") as File;
+    const title = formData.get("title") as string;
+    const category = formData.get("category") as DocumentCategory | "";
 
     if (!file) {
-      setError('Please select a file');
+      setError("Please select a file");
       setUploading(false);
       return;
     }
 
     if (!title) {
-      setError('Please enter a title');
+      setError("Please enter a title");
       setUploading(false);
       return;
     }
@@ -107,11 +106,11 @@ export function DocumentsPage() {
 
   async function handleDownload(documentId: string) {
     const url = api.documents.getDownloadUrl(documentId);
-    window.open(url, '_blank');
+    window.open(url, "_blank");
   }
 
   async function handleDelete(documentId: string) {
-    if (!confirm('Are you sure you want to delete this document?')) {
+    if (!confirm("Are you sure you want to delete this document?")) {
       return;
     }
 
@@ -129,8 +128,8 @@ export function DocumentsPage() {
   }
 
   function canPreview(fileName: string): boolean {
-    const ext = fileName.split('.').pop()?.toLowerCase();
-    return ext === 'pdf';
+    const ext = fileName.split(".").pop()?.toLowerCase();
+    return ext === "pdf";
   }
 
   if (loading && !documents) {
@@ -147,14 +146,16 @@ export function DocumentsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Documents</h1>
-          <p className="text-gray-600 mt-1">View and download HOA documents, forms, and policies</p>
+          <p className="text-gray-600 mt-1">
+            View and download HOA documents, forms, and policies
+          </p>
         </div>
         {isAdmin && (
           <button
             onClick={() => setShowUploadForm(!showUploadForm)}
             className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
           >
-            <CloudArrowUpIcon className="w-5 h-5" />
+            <Upload className="w-5 h-5" />
             Upload Document
           </button>
         )}
@@ -163,29 +164,31 @@ export function DocumentsPage() {
       {/* Category Filters */}
       <div className="flex flex-wrap gap-2">
         <button
-          onClick={() => setSelectedCategory('all')}
+          onClick={() => setSelectedCategory("all")}
           className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            selectedCategory === 'all'
-              ? 'bg-primary-600 text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-50'
+            selectedCategory === "all"
+              ? "bg-primary-600 text-white"
+              : "bg-white text-gray-700 hover:bg-gray-50"
           }`}
         >
           All Documents
         </button>
-        {(['rules', 'forms', 'minutes', 'policies'] as DocumentCategory[]).map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat)}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              selectedCategory === cat
-                ? 'bg-primary-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <span className="mr-1">{categoryIcons[cat]}</span>
-            {categoryLabels[cat]}
-          </button>
-        ))}
+        {(["rules", "forms", "minutes", "policies"] as DocumentCategory[]).map(
+          (cat) => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                selectedCategory === cat
+                  ? "bg-primary-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <span className="mr-1">{categoryIcons[cat]}</span>
+              {categoryLabels[cat]}
+            </button>
+          ),
+        )}
       </div>
 
       {/* Upload Form */}
@@ -194,7 +197,9 @@ export function DocumentsPage() {
           <h2 className="text-lg font-semibold mb-4">Upload Document</h2>
           <form onSubmit={handleUpload} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Title
+              </label>
               <input
                 type="text"
                 name="title"
@@ -204,7 +209,9 @@ export function DocumentsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Category
+              </label>
               <select
                 name="category"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
@@ -217,7 +224,9 @@ export function DocumentsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">File</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                File
+              </label>
               <input
                 type="file"
                 name="file"
@@ -255,7 +264,7 @@ export function DocumentsPage() {
                   </>
                 ) : (
                   <>
-                    <CloudArrowUpIcon className="w-5 h-5" />
+                    <Upload className="w-5 h-5" />
                     Upload
                   </>
                 )}
@@ -276,13 +285,18 @@ export function DocumentsPage() {
       {documents?.documents && documents.documents.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {documents.documents.map((document) => (
-            <div key={document.id} className="bg-white rounded-lg shadow hover:shadow-md transition-shadow">
+            <div
+              key={document.id}
+              className="bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+            >
               <div className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-3">
                       {document.category && (
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${categoryColors[document.category]}`}>
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${categoryColors[document.category]}`}
+                        >
                           {categoryLabels[document.category]}
                         </span>
                       )}
@@ -291,10 +305,11 @@ export function DocumentsPage() {
                       {document.title}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      Uploaded {format(new Date(document.created_at), 'MMM d, yyyy')}
+                      Uploaded{" "}
+                      {format(new Date(document.created_at), "MMM d, yyyy")}
                     </p>
                   </div>
-                  <DocumentIcon className="w-12 h-12 text-gray-400 flex-shrink-0 ml-4" />
+                  <FileText className="w-12 h-12 text-gray-400 flex-shrink-0 ml-4" />
                 </div>
 
                 <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
@@ -302,7 +317,7 @@ export function DocumentsPage() {
                     onClick={() => handleDownload(document.id)}
                     className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium"
                   >
-                    <DocumentArrowDownIcon className="w-4 h-4" />
+                    <FileDown className="w-4 h-4" />
                     Download
                   </button>
                   {canPreview(document.title) && (
@@ -310,7 +325,7 @@ export function DocumentsPage() {
                       onClick={() => handlePreview(document.id, document.title)}
                       className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium"
                     >
-                      <EyeIcon className="w-4 h-4" />
+                      <Eye className="w-4 h-4" />
                       Preview
                     </button>
                   )}
@@ -320,7 +335,7 @@ export function DocumentsPage() {
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                       title="Delete document"
                     >
-                      <TrashIcon className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   )}
                 </div>
@@ -330,11 +345,11 @@ export function DocumentsPage() {
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow p-12 text-center">
-          <DocumentIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500">No documents found.</p>
-          {selectedCategory !== 'all' && (
+          {selectedCategory !== "all" && (
             <button
-              onClick={() => setSelectedCategory('all')}
+              onClick={() => setSelectedCategory("all")}
               className="mt-4 text-primary-600 hover:text-primary-700 font-medium"
             >
               View all documents
@@ -355,8 +370,18 @@ export function DocumentsPage() {
                 onClick={() => setPreviewDocument(null)}
                 className="text-gray-400 hover:text-gray-600"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>

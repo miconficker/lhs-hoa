@@ -1,27 +1,67 @@
-import { NavLink } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { NavLink } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import {
-  HomeIcon,
-  MapIcon,
-  ClipboardDocumentListIcon,
-  CalendarIcon,
-  CreditCardIcon,
-  DocumentIcon,
-  ChatBubbleLeftRightIcon,
-  ChartBarIcon,
-  CogIcon,
-} from '@heroicons/react/24/outline';
+  Home,
+  Map,
+  ClipboardList,
+  Calendar,
+  CreditCard,
+  FileText,
+  MessageSquare,
+  BarChart3,
+  Settings,
+} from "lucide-react";
 
 const navItems = [
-  { to: '/dashboard', icon: HomeIcon, label: 'Dashboard', roles: ['admin', 'resident', 'staff'] },
-  { to: '/map', icon: MapIcon, label: 'Subdivision Map', roles: ['admin', 'resident', 'staff'] },
-  { to: '/service-requests', icon: ClipboardDocumentListIcon, label: 'Service Requests', roles: ['admin', 'resident', 'staff'] },
-  { to: '/reservations', icon: CalendarIcon, label: 'Amenity Reservations', roles: ['admin', 'resident', 'guest'] },
-  { to: '/payments', icon: CreditCardIcon, label: 'Payments', roles: ['admin', 'resident'] },
-  { to: '/documents', icon: DocumentIcon, label: 'Documents', roles: ['admin', 'resident', 'staff'] },
-  { to: '/announcements', icon: ChatBubbleLeftRightIcon, label: 'Announcements', roles: ['admin', 'resident', 'staff', 'guest'] },
-  { to: '/polls', icon: ChartBarIcon, label: 'Polls', roles: ['admin', 'resident', 'staff', 'guest'] },
-  { to: '/admin', icon: CogIcon, label: 'Admin Panel', roles: ['admin'] },
+  {
+    to: "/dashboard",
+    icon: Home,
+    label: "Dashboard",
+    roles: ["admin", "resident", "staff"],
+  },
+  {
+    to: "/map",
+    icon: Map,
+    label: "Subdivision Map",
+    roles: ["admin", "resident", "staff"],
+  },
+  {
+    to: "/service-requests",
+    icon: ClipboardList,
+    label: "Service Requests",
+    roles: ["admin", "resident", "staff"],
+  },
+  {
+    to: "/reservations",
+    icon: Calendar,
+    label: "Amenity Reservations",
+    roles: ["admin", "resident", "guest"],
+  },
+  {
+    to: "/payments",
+    icon: CreditCard,
+    label: "Payments",
+    roles: ["admin", "resident"],
+  },
+  {
+    to: "/documents",
+    icon: FileText,
+    label: "Documents",
+    roles: ["admin", "resident", "staff"],
+  },
+  {
+    to: "/announcements",
+    icon: MessageSquare,
+    label: "Announcements",
+    roles: ["admin", "resident", "staff", "guest"],
+  },
+  {
+    to: "/polls",
+    icon: BarChart3,
+    label: "Polls",
+    roles: ["admin", "resident", "staff", "guest"],
+  },
+  { to: "/admin", icon: Settings, label: "Admin Panel", roles: ["admin"] },
 ];
 
 export function Sidebar() {
@@ -45,8 +85,8 @@ export function Sidebar() {
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                 isActive
-                  ? 'bg-primary-50 text-primary-700 font-medium'
-                  : 'text-gray-700 hover:bg-gray-100'
+                  ? "bg-primary-50 text-primary-700 font-medium"
+                  : "text-gray-700 hover:bg-gray-100"
               }`
             }
           >

@@ -1,18 +1,18 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { api, EventsResponse } from '@/lib/api';
-import { format, isPast, isFuture } from 'date-fns';
-import { PlusIcon, CalendarIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { api, EventsResponse } from "@/lib/api";
+import { format, isPast, isFuture } from "date-fns";
+import { Plus, Calendar, MapPin } from "lucide-react";
 
 export function EventsPage() {
   const { user } = useAuth();
   const [events, setEvents] = useState<EventsResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [showUpcoming, setShowUpcoming] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'staff';
+  const isAdmin = user?.role === "admin" || user?.role === "staff";
 
   useEffect(() => {
     loadEvents();
@@ -20,7 +20,7 @@ export function EventsPage() {
 
   async function loadEvents() {
     setLoading(true);
-    setError('');
+    setError("");
 
     const result = await api.events.list(showUpcoming);
 
@@ -33,8 +33,10 @@ export function EventsPage() {
     setLoading(false);
   }
 
-  const upcomingEvents = events?.events?.filter(e => isFuture(new Date(e.event_date))) || [];
-  const pastEvents = events?.events?.filter(e => isPast(new Date(e.event_date))) || [];
+  const upcomingEvents =
+    events?.events?.filter((e) => isFuture(new Date(e.event_date))) || [];
+  const pastEvents =
+    events?.events?.filter((e) => isPast(new Date(e.event_date))) || [];
 
   if (loading) {
     return (
@@ -59,13 +61,13 @@ export function EventsPage() {
         <div className="flex gap-2">
           <button
             onClick={() => setShowUpcoming(!showUpcoming)}
-            className={`px-4 py-2 rounded-lg ${showUpcoming ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+            className={`px-4 py-2 rounded-lg ${showUpcoming ? "bg-primary-600 text-white" : "bg-gray-200 text-gray-700"}`}
           >
             Upcoming
           </button>
           <button
             onClick={() => setShowUpcoming(!showUpcoming)}
-            className={`px-4 py-2 rounded-lg ${!showUpcoming ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+            className={`px-4 py-2 rounded-lg ${!showUpcoming ? "bg-primary-600 text-white" : "bg-gray-200 text-gray-700"}`}
           >
             Past
           </button>
@@ -74,7 +76,7 @@ export function EventsPage() {
               onClick={() => setShowCreateForm(!showCreateForm)}
               className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
             >
-              <PlusIcon className="w-5 h-5" />
+              <Plus className="w-5 h-5" />
               New Event
             </button>
           )}
@@ -87,7 +89,9 @@ export function EventsPage() {
           <h2 className="text-lg font-semibold mb-4">Create Event</h2>
           <form className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Title
+              </label>
               <input
                 type="text"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
@@ -95,7 +99,9 @@ export function EventsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description
+              </label>
               <textarea
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
@@ -104,14 +110,18 @@ export function EventsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date & Time</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date & Time
+                </label>
                 <input
                   type="datetime-local"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Location
+                </label>
                 <input
                   type="text"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
@@ -142,26 +152,33 @@ export function EventsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {(showUpcoming ? upcomingEvents : pastEvents).length > 0 ? (
           (showUpcoming ? upcomingEvents : pastEvents).map((event) => (
-            <div key={event.id} className="bg-white rounded-lg shadow overflow-hidden">
+            <div
+              key={event.id}
+              className="bg-white rounded-lg shadow overflow-hidden"
+            >
               <div className="bg-primary-50 p-4">
                 <div className="flex items-center gap-2 text-primary-700">
-                  <CalendarIcon className="w-5 h-5" />
+                  <Calendar className="w-5 h-5" />
                   <span className="font-semibold">
-                    {format(new Date(event.event_date), 'MMM d, yyyy')}
+                    {format(new Date(event.event_date), "MMM d, yyyy")}
                   </span>
                   <span className="text-sm">
-                    {format(new Date(event.event_date), 'h:mm a')}
+                    {format(new Date(event.event_date), "h:mm a")}
                   </span>
                 </div>
               </div>
               <div className="p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{event.title}</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {event.title}
+                </h3>
                 {event.description && (
-                  <p className="text-gray-600 text-sm mb-3">{event.description}</p>
+                  <p className="text-gray-600 text-sm mb-3">
+                    {event.description}
+                  </p>
                 )}
                 {event.location && (
                   <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <MapPinIcon className="w-4 h-4" />
+                    <MapPin className="w-4 h-4" />
                     {event.location}
                   </div>
                 )}
@@ -170,7 +187,7 @@ export function EventsPage() {
           ))
         ) : (
           <div className="col-span-full bg-white rounded-lg shadow p-12 text-center text-gray-500">
-            No {showUpcoming ? 'upcoming' : 'past'} events found.
+            No {showUpcoming ? "upcoming" : "past"} events found.
           </div>
         )}
       </div>
