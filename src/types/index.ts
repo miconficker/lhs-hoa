@@ -251,3 +251,17 @@ export interface MyStats {
   unpaidPayments: number;
   totalDue: number;
 }
+
+// Lot Annotation
+export interface LotMapping {
+  path_id: string;
+  lot_number: string;
+  block_number?: string;
+  annotated_at?: string;
+}
+
+export interface LotMappingFile {
+  version: string;
+  created_at: string;
+  mappings: LotMapping[];
+}

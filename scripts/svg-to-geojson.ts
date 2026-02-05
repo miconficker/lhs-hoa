@@ -8,11 +8,28 @@
  *
  * Input: LAGUNA-HILLS-MAP.svg
  * Output: public/data/{lots,blocks,streets}.geojson
+ *
+ * Options:
+ *   --mapping <path>   Path to lot-mapping.json file to apply lot numbers
  */
 
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
+// Lot mapping types
+interface LotMapping {
+  path_id: string;
+  lot_number: string;
+  block_number?: string;
+  annotated_at?: string;
+}
+
+interface LotMappingFile {
+  version: string;
+  created_at: string;
+  mappings: LotMapping[];
+}
 
 // GeoJSON type definitions
 interface GeoJSONGeometry {
@@ -511,6 +528,7 @@ function calculatePathLength(points: Point[]): number {
 function pathToGeoJSONFeature(
   path: PathData,
   type: 'Polygon' | 'LineString',
+  lotMappings?: Map<string, LotMapping>,
 ): GeoJSONFeature {
   const transformedPoints = path.points.map((p) => applyTransform(p.x, p.y));
 
@@ -534,14 +552,26 @@ function pathToGeoJSONFeature(
 
   const area = type === 'Polygon' ? calculateArea(transformedPoints) : null;
 
+  // Apply mapping if available and this is a lot
+  let lotNumber: string | null = null;
+  let blockNumber: string | null = null;
+
+  if (type === 'Polygon' && lotMappings) {
+    const mapping = lotMappings.get(path.id);
+    if (mapping) {
+      lotNumber = mapping.lot_number;
+      blockNumber = mapping.block_number || null;
+    }
+  }
+
   return {
     type: 'Feature',
     id: path.id,
     geometry,
     properties: {
       path_id: path.id,
-      lot_number: null, // To be filled manually
-      block_number: null, // To be filled manually
+      lot_number: lotNumber,
+      block_number: blockNumber,
       area_sqm: area,
       status: 'vacant', // Default status
     },
@@ -561,9 +591,41 @@ function createFeatureCollection(
 }
 
 /**
+ * Load lot mappings from a JSON file
+ */
+function loadLotMappings(mappingPath: string): Map<string, LotMapping> {
+  if (!fs.existsSync(mappingPath)) {
+    console.warn(`Mapping file not found: ${mappingPath}`);
+    return new Map();
+  }
+
+  try {
+    const content = fs.readFileSync(mappingPath, 'utf-8');
+    const mappingFile = JSON.parse(content) as LotMappingFile;
+
+    if (!mappingFile.mappings || !Array.isArray(mappingFile.mappings)) {
+      console.warn('Invalid mapping file format');
+      return new Map();
+    }
+
+    // Create a map for quick lookup by path_id
+    const mappingMap = new Map<string, LotMapping>();
+    for (const mapping of mappingFile.mappings) {
+      mappingMap.set(mapping.path_id, mapping);
+    }
+
+    console.log(`✓ Loaded ${mappingMap.size} lot mappings from ${mappingPath}`);
+    return mappingMap;
+  } catch (err) {
+    console.warn(`Error loading mapping file: ${(err as Error).message}`);
+    return new Map();
+  }
+}
+
+/**
  * Main conversion function
  */
-function convertSvgToGeoJSON(): void {
+function convertSvgToGeoJSON(mappingPath?: string): void {
   console.log('Starting SVG to GeoJSON conversion...');
   console.log('='.repeat(50));
 
@@ -581,6 +643,9 @@ function convertSvgToGeoJSON(): void {
   const svgContent = fs.readFileSync(svgPath, 'utf-8');
   console.log(`✓ Loaded SVG file (${svgContent.length} bytes)`);
 
+  // Load lot mappings if provided
+  const lotMappings = mappingPath ? loadLotMappings(mappingPath) : new Map();
+
   // Extract paths
   const paths = extractPaths(svgContent);
   console.log(`✓ Extracted ${paths.length} paths from SVG`);
@@ -590,7 +655,7 @@ function convertSvgToGeoJSON(): void {
   console.log(`✓ Classified ${lots.length} lots, ${streets.length} streets`);
 
   // Convert to GeoJSON features
-  const lotFeatures = lots.map((p) => pathToGeoJSONFeature(p, 'Polygon'));
+  const lotFeatures = lots.map((p) => pathToGeoJSONFeature(p, 'Polygon', lotMappings));
   const streetFeatures = streets.map((p) => pathToGeoJSONFeature(p, 'LineString'));
   const blockFeatures = blocks.map((p) => pathToGeoJSONFeature(p, 'Polygon'));
 
@@ -637,4 +702,23 @@ function convertSvgToGeoJSON(): void {
 }
 
 // Run the conversion
-convertSvgToGeoJSON();
+// Parse CLI arguments for --mapping option
+const args = process.argv.slice(2);
+let mappingPath: string | undefined;
+
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--mapping' && i + 1 < args.length) {
+    mappingPath = args[i + 1];
+    break;
+  }
+}
+
+// Resolve mapping path relative to script directory if provided
+if (mappingPath) {
+  if (!path.isAbsolute(mappingPath)) {
+    mappingPath = path.join(__dirname, mappingPath);
+  }
+  console.log(`Using mapping file: ${mappingPath}`);
+}
+
+convertSvgToGeoJSON(mappingPath);

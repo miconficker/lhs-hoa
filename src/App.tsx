@@ -14,6 +14,7 @@ import { PollsPage } from "./pages/PollsPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { AdminPanelPage } from "./pages/AdminPanelPage";
 import { DebugPage } from "./pages/DebugPage";
+import { AnnotateLotsPage } from "./pages/AnnotateLotsPage";
 import { useAuth } from "./hooks/useAuth";
 
 function App() {
@@ -53,6 +54,14 @@ function App() {
           <Route path="events" element={<EventsPage />} />
           <Route path="polls" element={<PollsPage />} />
           <Route path="debug" element={<DebugPage />} />
+          <Route
+            path="annotate"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AnnotateLotsPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="admin"
             element={

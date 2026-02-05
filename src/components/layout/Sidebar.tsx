@@ -10,6 +10,7 @@ import {
   MessageSquare,
   BarChart,
   Settings,
+  Edit3,
 } from "lucide-react";
 
 const navItems = [
@@ -60,6 +61,12 @@ const navItems = [
     icon: BarChart,
     label: "Polls",
     roles: ["admin", "resident", "staff", "guest"],
+  },
+  {
+    to: "/annotate",
+    icon: Edit3,
+    label: "Annotate Lots",
+    roles: ["admin"],
   },
   { to: "/admin", icon: Settings, label: "Admin Panel", roles: ["admin"] },
 ];
