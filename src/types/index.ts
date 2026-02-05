@@ -1,5 +1,5 @@
 // User & Auth
-export type UserRole = 'admin' | 'resident' | 'staff' | 'guest';
+export type UserRole = "admin" | "resident" | "staff" | "guest";
 
 export interface User {
   id: string;
@@ -44,9 +44,18 @@ export interface Resident {
 }
 
 // Service Requests
-export type ServiceRequestStatus = 'pending' | 'in-progress' | 'completed' | 'rejected';
-export type ServiceRequestPriority = 'low' | 'normal' | 'high' | 'urgent';
-export type ServiceRequestCategory = 'plumbing' | 'electrical' | 'common-area' | 'security' | 'other';
+export type ServiceRequestStatus =
+  | "pending"
+  | "in-progress"
+  | "completed"
+  | "rejected";
+export type ServiceRequestPriority = "low" | "normal" | "high" | "urgent";
+export type ServiceRequestCategory =
+  | "plumbing"
+  | "electrical"
+  | "common-area"
+  | "security"
+  | "other";
 
 export interface ServiceRequest {
   id: string;
@@ -62,9 +71,9 @@ export interface ServiceRequest {
 }
 
 // Reservations
-export type AmenityType = 'clubhouse' | 'pool' | 'basketball-court';
-export type ReservationSlot = 'AM' | 'PM';
-export type ReservationStatus = 'pending' | 'confirmed' | 'cancelled';
+export type AmenityType = "clubhouse" | "pool" | "basketball-court";
+export type ReservationSlot = "AM" | "PM";
+export type ReservationStatus = "pending" | "confirmed" | "cancelled";
 
 export interface Reservation {
   id: string;
@@ -85,7 +94,7 @@ export interface AmenityAvailability {
 }
 
 // Announcements & Events
-export type AnnouncementCategory = 'event' | 'urgent' | 'info' | 'policy';
+export type AnnouncementCategory = "event" | "urgent" | "info" | "policy";
 
 export interface Announcement {
   id: string;
@@ -108,8 +117,8 @@ export interface Event {
 }
 
 // Payments
-export type PaymentMethod = 'gcash' | 'paymaya' | 'instapay' | 'cash';
-export type PaymentStatus = 'pending' | 'completed' | 'failed';
+export type PaymentMethod = "gcash" | "paymaya" | "instapay" | "cash";
+export type PaymentStatus = "pending" | "completed" | "failed";
 
 export interface Payment {
   id: string;
@@ -131,7 +140,7 @@ export interface OutstandingBalance {
 }
 
 // Documents
-export type DocumentCategory = 'rules' | 'forms' | 'minutes' | 'policies';
+export type DocumentCategory = "rules" | "forms" | "minutes" | "policies";
 
 export interface Document {
   id: string;
@@ -169,7 +178,7 @@ export interface PollWithResults extends Poll {
 // Map
 export interface MapHousehold extends Household {
   residents: string[]; // Names
-  status: 'owned' | 'rented' | 'vacant';
+  status: "owned" | "rented" | "vacant";
 }
 
 export interface MapAmenity {
@@ -180,6 +189,40 @@ export interface MapAmenity {
   longitude: number;
   icon: string;
 }
+
+// GeoJSON Map Features
+export interface LotFeatureProperties {
+  path_id: string;
+  lot_number: string | null;
+  block_number: string | null;
+  area_sqm: number | null;
+  status: "owned" | "rented" | "vacant";
+  household_id?: string;
+  residents?: string;
+}
+
+export interface StreetFeatureProperties {
+  path_id: string;
+  name?: string;
+}
+
+export interface BlockFeatureProperties {
+  block_number: string;
+  lot_count: number;
+  area_sqm?: number | null;
+}
+
+export type LotFeature = GeoJSON.Feature<GeoJSON.Polygon, LotFeatureProperties>;
+
+export type StreetFeature = GeoJSON.Feature<
+  GeoJSON.LineString,
+  StreetFeatureProperties
+>;
+
+export type BlockFeature = GeoJSON.Feature<
+  GeoJSON.Polygon,
+  BlockFeatureProperties
+>;
 
 // API Response wrapper
 export interface ApiResponse<T> {

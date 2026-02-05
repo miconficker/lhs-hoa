@@ -229,9 +229,9 @@ function LotsGeoJSON({ data, filter }: LotsGeoJSONProps) {
   if (!data) return null;
 
   const style = (
-    feature: GeoJSON.Feature<GeoJSON.Geometry, LotFeatureProperties>,
+    feature?: GeoJSON.Feature<GeoJSON.Geometry, LotFeatureProperties>,
   ) => {
-    const status = feature.properties?.status || "vacant";
+    const status = feature?.properties?.status || "vacant";
     return {
       color:
         status === "owned"
