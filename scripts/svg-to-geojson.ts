@@ -56,12 +56,12 @@ const __dirname = path.dirname(__filename);
 const SVG_WIDTH = 2304;
 const SVG_HEIGHT = 3456;
 
-// The paths in the SVG have transform matrix applied, but the PNG export
-// already has this baked in. So we don't apply the transform - we just
-// flip Y coordinate since SVG Y goes down but image Y goes up.
+// No transformation needed - the PNG was exported from the SVG,
+// so coordinates match exactly. Using L.CRS.Simple in Leaflet
+// with the same bounds preserves this alignment.
 const SCALE_X = 1;
-const SCALE_Y = -1;
-const TRANSLATE_Y = SVG_HEIGHT;
+const SCALE_Y = 1;
+const TRANSLATE_Y = 0;
 
 interface Point {
   x: number;
