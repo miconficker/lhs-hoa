@@ -11,6 +11,8 @@ import type {
   Poll,
   PollWithResults,
   Document,
+  LotOwnershipList,
+  LotStatus,
 } from "@/types";
 
 const API_BASE = "/api";
@@ -136,6 +138,18 @@ export async function apiUpload<T>(
     console.error("JSON parse error:", e, "Response text:", text);
     return { error: "Invalid response from server" };
   }
+}
+
+// Helper functions for common API requests
+async function apiGet<T>(endpoint: string): Promise<ApiResponse<T>> {
+  return apiRequest<T>(endpoint, { method: "GET" });
+}
+
+async function apiPut<T>(endpoint: string, body: any): Promise<ApiResponse<T>> {
+  return apiRequest<T>(endpoint, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
 }
 
 interface LoginCredentials {
@@ -737,5 +751,39 @@ export const api = {
       }),
     // Stats
     getStats: () => apiRequest<AdminStatsResponse>("/admin/stats"),
+    // Lot Ownership
+    getLotsWithOwnership: (): Promise<ApiResponse<LotOwnershipList>> =>
+      apiGet<LotOwnershipList>("/admin/lots/ownership"),
+    assignLotOwner: (
+      lotId: string,
+      ownerId: string,
+    ): Promise<ApiResponse<{ success: boolean }>> =>
+      apiPut<{ success: boolean }>(`/admin/lots/${lotId}/owner`, {
+        owner_user_id: ownerId,
+      }),
+    updateLotStatus: (
+      lotId: string,
+      status: LotStatus,
+    ): Promise<ApiResponse<{ success: boolean }>> =>
+      apiPut<{ success: boolean }>(`/admin/lots/${lotId}/status`, {
+        lot_status: status,
+      }),
+    updateLotSize: (
+      lotId: string,
+      size: number | null,
+    ): Promise<ApiResponse<{ success: boolean }>> =>
+      apiPut<{ success: boolean }>(`/admin/lots/${lotId}/size`, {
+        lot_size_sqm: size,
+      }),
+    getHomeowners: (): Promise<ApiResponse<User[]>> =>
+      apiGet<User[]>("/admin/homeowners"),
+    batchAssignOwner: (
+      lotIds: string[],
+      ownerId: string,
+    ): Promise<ApiResponse<{ success: boolean; count: number }>> =>
+      apiPut<{ success: boolean; count: number }>("/admin/lots/batch/owner", {
+        lot_ids: lotIds,
+        owner_user_id: ownerId,
+      }),
   },
 };
