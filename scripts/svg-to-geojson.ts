@@ -89,23 +89,26 @@ interface PathData {
   isClosed: boolean;
   rawPath: string;
   hasTransform: boolean;  // True if path has its own transform attribute
+  subpaths?: Point[][];  // Multiple subpaths for polygons with holes/islands
 }
 
 /**
  * Parse SVG path data to extract coordinates
  * Supports both absolute (M, L, H, V, C, Z) and relative (m, l, h, v, c, z) commands
  * Also supports repeated implicit commands (e.g., "L 10 10 20 20")
+ * Returns an array of subpaths (for polygons with holes/islands)
  */
-function parsePathData(d: string): Point[] {
-  const points: Point[] = [];
+function parsePathData(d: string): Point[][] {
+  const subpaths: Point[][] = [];
+  let currentPath: Point[] = [];
   let currentX = 0;
   let currentY = 0;
   let startX = 0;
   let startY = 0;
   let startSet = false;
+  let pathStarted = false;
 
   // Tokenize: split into commands and numbers
-  // This regex matches commands (M, m, L, l, etc.) and numbers (including negative and decimals)
   const tokens = d.match(/[MmLlHhVvCcSsQqTtAaZz]|[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/g) || [];
 
   let i = 0;
@@ -117,10 +120,21 @@ function parsePathData(d: string): Point[] {
     i++; // Move to next token
 
     switch (cmd.toLowerCase()) {
-      case 'm': // moveto
-      case 'l': // lineto
+      case 'm': // moveto - starts a new subpath
         {
-          const isFirst = cmd.toLowerCase() === 'm' && !startSet;
+          // If we already have a path started, save it and start a new one
+          if (pathStarted && currentPath.length > 0) {
+            subpaths.push(currentPath);
+            currentPath = [];
+            startSet = false;
+            // Reset coordinates for absolute moveto, keep for relative
+            if (cmd === 'M') {
+              currentX = 0;
+              currentY = 0;
+            }
+          }
+
+          pathStarted = true;
           while (i < tokens.length && !isNaN(parseFloat(tokens[i]))) {
             const dx = parseFloat(tokens[i++]);
             const dy = parseFloat(tokens[i++]);
@@ -133,13 +147,32 @@ function parsePathData(d: string): Point[] {
               currentY = dy;
             }
 
-            points.push({ x: currentX, y: currentY });
+            currentPath.push({ x: currentX, y: currentY });
 
-            if (isFirst && !startSet) {
+            if (!startSet) {
               startX = currentX;
               startY = currentY;
               startSet = true;
             }
+          }
+        }
+        break;
+
+      case 'l': // lineto
+        {
+          while (i < tokens.length && !isNaN(parseFloat(tokens[i]))) {
+            const dx = parseFloat(tokens[i++]);
+            const dy = parseFloat(tokens[i++]);
+
+            if (isRelative) {
+              currentX += dx;
+              currentY += dy;
+            } else {
+              currentX = dx;
+              currentY = dy;
+            }
+
+            currentPath.push({ x: currentX, y: currentY });
           }
         }
         break;
@@ -153,7 +186,7 @@ function parsePathData(d: string): Point[] {
             } else {
               currentX = dx;
             }
-            points.push({ x: currentX, y: currentY });
+            currentPath.push({ x: currentX, y: currentY });
           }
         }
         break;
@@ -167,7 +200,7 @@ function parsePathData(d: string): Point[] {
             } else {
               currentY = dy;
             }
-            points.push({ x: currentX, y: currentY });
+            currentPath.push({ x: currentX, y: currentY });
           }
         }
         break;
@@ -189,7 +222,7 @@ function parsePathData(d: string): Point[] {
               currentX = dx;
               currentY = dy;
             }
-            points.push({ x: currentX, y: currentY });
+            currentPath.push({ x: currentX, y: currentY });
           }
         }
         break;
@@ -199,12 +232,10 @@ function parsePathData(d: string): Point[] {
       case 't': // smooth quadratic bezier
       case 'a': // elliptical arc
         {
-          // For these, skip to the end point (usually last pair of numbers)
-          // This is a simplification - we should properly parse these
           const numArgs = cmd.toLowerCase() === 'a' ? 7 : cmd.toLowerCase() === 's' || cmd.toLowerCase() === 'q' ? 4 : 2;
           while (i + numArgs - 1 < tokens.length && !isNaN(parseFloat(tokens[i]))) {
             for (let j = 0; j < numArgs - 2; j++) {
-              i++; // Skip control points
+              i++;
             }
             const dx = parseFloat(tokens[i++]);
             const dy = parseFloat(tokens[i++]);
@@ -216,24 +247,35 @@ function parsePathData(d: string): Point[] {
               currentX = dx;
               currentY = dy;
             }
-            points.push({ x: currentX, y: currentY });
+            currentPath.push({ x: currentX, y: currentY });
           }
         }
         break;
 
       case 'z': // close path
         {
-          if (startSet) {
-            points.push({ x: startX, y: startY });
+          if (startSet && currentPath.length > 0) {
+            currentPath.push({ x: startX, y: startY });
             currentX = startX;
             currentY = startY;
+            // Don't reset startSet - the next subpath will use 'm' to set new start
           }
         }
         break;
     }
   }
 
-  return points;
+  // Add the last subpath if it exists
+  if (currentPath.length > 0) {
+    subpaths.push(currentPath);
+  }
+
+  // If no subpaths were created, return empty array
+  if (subpaths.length === 0) {
+    return [[]];
+  }
+
+  return subpaths;
 }
 
 /**
@@ -278,14 +320,15 @@ function calculateArea(points: Point[]): number {
 /**
  * Check if a path forms a closed polygon
  * A path is closed if it starts and ends at the same point (within tolerance)
+ * Now accepts multiple subpaths (Point[][]) and checks if the first subpath is closed
  */
-function isClosedPolygon(points: Point[]): boolean {
-  if (points.length < 4) return false; // Need at least 4 points (3 unique + closing)
+function isClosedPolygon(subpaths: Point[][]): boolean {
+  if (subpaths.length === 0 || subpaths[0].length < 4) return false;
 
+  const points = subpaths[0];
   const first = points[0];
   const last = points[points.length - 1];
 
-  // Check if first and last points are the same
   const tolerance = 0.1;
   return (
     Math.abs(first.x - last.x) < tolerance &&
@@ -327,10 +370,13 @@ function extractPaths(svgContent: string, groupId?: string): PathData[] {
     const hasTransform = /transform\s*=/i.test(fullElement);
 
     try {
-      const points = parsePathData(d);
+      const subpaths = parsePathData(d);
 
-      // Check if path is closed
-      const closed = isClosedPolygon(points);
+      // Check if path is closed (check first subpath)
+      const closed = isClosedPolygon(subpaths);
+
+      // Flatten subpaths into points for backward compatibility
+      const points = subpaths.flat();
 
       paths.push({
         id,
@@ -338,6 +384,7 @@ function extractPaths(svgContent: string, groupId?: string): PathData[] {
         isClosed: closed,
         rawPath: d,
         hasTransform,
+        subpaths: subpaths.length > 1 ? subpaths : undefined,
       });
     } catch (e) {
       console.warn(`Failed to parse path ${id}: ${(e as Error).message}`);
@@ -358,10 +405,13 @@ function extractPaths(svgContent: string, groupId?: string): PathData[] {
     const hasTransform = /transform\s*=/i.test(fullElement);
 
     try {
-      const points = parsePathData(d);
+      const subpaths = parsePathData(d);
 
-      // Check if path is closed
-      const closed = isClosedPolygon(points);
+      // Check if path is closed (check first subpath)
+      const closed = isClosedPolygon(subpaths);
+
+      // Flatten subpaths into points for backward compatibility
+      const points = subpaths.flat();
 
       paths.push({
         id,
@@ -369,6 +419,7 @@ function extractPaths(svgContent: string, groupId?: string): PathData[] {
         isClosed: closed,
         rawPath: d,
         hasTransform,
+        subpaths: subpaths.length > 1 ? subpaths : undefined,
       });
     } catch (e) {
       console.warn(`Failed to parse path ${id}: ${(e as Error).message}`);
@@ -399,19 +450,34 @@ function pathToGeoJSONFeature(
   type: 'Polygon' | 'LineString',
   lotMappings?: Map<string, LotMapping>,
 ): GeoJSONFeature {
-  const transformedPoints = path.points.map((p) => applyTransform(p.x, p.y, path.hasTransform));
-
   let geometry: GeoJSONGeometry;
 
+  // Check if this path has multiple subpaths (e.g., block with island)
+  const hasMultipleSubpaths = path.subpaths && path.subpaths.length > 1;
+
   if (type === 'Polygon') {
-    // For polygons, coordinates are [ [[x,y], [x,y], ...] ]
-    const coords = transformedPoints.map((p) => [p.x, p.y] as [number, number]);
-    geometry = {
-      type: 'Polygon',
-      coordinates: [coords],
-    };
+    if (hasMultipleSubpaths) {
+      // Create MultiPolygon for paths with multiple subpaths (e.g., block with island)
+      const polygons = path.subpaths.map(subpath => {
+        const transformedSubpath = subpath.map((p) => applyTransform(p.x, p.y, path.hasTransform));
+        return [transformedSubpath.map((p) => [p.x, p.y] as [number, number])];
+      });
+      geometry = {
+        type: 'MultiPolygon',
+        coordinates: polygons,
+      };
+    } else {
+      // Single polygon
+      const transformedPoints = path.points.map((p) => applyTransform(p.x, p.y, path.hasTransform));
+      const coords = transformedPoints.map((p) => [p.x, p.y] as [number, number]);
+      geometry = {
+        type: 'Polygon',
+        coordinates: [coords],
+      };
+    }
   } else {
     // For linestrings, coordinates are [ [x,y], [x,y], ... ]
+    const transformedPoints = path.points.map((p) => applyTransform(p.x, p.y, path.hasTransform));
     const coords = transformedPoints.map((p) => [p.x, p.y] as [number, number]);
     geometry = {
       type: 'LineString',
@@ -419,16 +485,27 @@ function pathToGeoJSONFeature(
     };
   }
 
-  const area = type === 'Polygon' ? calculateArea(transformedPoints) : null;
+  // Calculate area from first subpath (for filtering)
+  const transformedFirstPath = (path.subpaths?.[0] || path.points).map((p) => applyTransform(p.x, p.y, path.hasTransform));
+  const area = type === 'Polygon' ? calculateArea(transformedFirstPath) : null;
 
-  // Parse lot and block numbers from path ID (e.g., "B01-L01")
+  // Parse lot and block numbers from path ID
+  // Lots: "B01-L01", Blocks: "Block 02"
   let lotNumber: string | null = null;
   let blockNumber: string | null = null;
+  let featureId = path.id;
 
-  const idMatch = path.id.match(/^B(\d+)-L(\d+)$/i);
+  const idMatch = path.id.match(/^B(\d+)-L(\d+)(?:-.*)?$/i);
   if (idMatch) {
     blockNumber = idMatch[1].padStart(2, '0');
     lotNumber = idMatch[2].padStart(2, '0');
+  } else {
+    // Check if this is a block: "Block 02" -> block_number = "02", id = "block-02"
+    const blockMatch = path.id.match(/^Block\s*(\d+)$/i);
+    if (blockMatch) {
+      blockNumber = blockMatch[1].padStart(2, '0');
+      featureId = `block-${blockNumber}`;
+    }
   }
 
   // Apply mapping if available and this is a lot
@@ -453,7 +530,7 @@ function pathToGeoJSONFeature(
 
   return {
     type: 'Feature',
-    id: path.id,
+    id: featureId,
     geometry,
     properties,
   };
@@ -526,7 +603,12 @@ function convertSvgToGeoJSON(mappingPath?: string): void {
 
   // Extract from specific groups
   const lots = extractPaths(svgContent, 'lots')
-    .filter(p => p.isClosed && calculateArea(p.points.map(pt => applyTransform(pt.x, pt.y, p.hasTransform))) > 50);
+    .filter(p => {
+      // Use first subpath for area calculation if available
+      const pathToCheck = p.subpaths?.[0] || p.points;
+      const transformedPath = pathToCheck.map(pt => applyTransform(pt.x, pt.y, p.hasTransform));
+      return p.isClosed && calculateArea(transformedPath) > 50;
+    });
   const blocks = extractPaths(svgContent, 'blocks')
     .filter(p => p.isClosed);
   const perimeter = extractPaths(svgContent, 'perimeter')
