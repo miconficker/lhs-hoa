@@ -15,7 +15,14 @@ import {
   BlockFeatureProperties,
   LotStatus,
 } from "@/types";
-import { Map, Home, Building, Landmark, Eye, EyeOff } from "lucide-react";
+import {
+  Home,
+  Building,
+  Landmark,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 // Fix for default marker icons in React Leaflet
@@ -38,124 +45,6 @@ const mapBounds: LatLngBoundsExpression = [
   [0, 0],
   [MAP_HEIGHT, MAP_WIDTH],
 ];
-
-interface MapControlsProps {
-  filter: "all" | LotStatus;
-  onFilterChange: (filter: "all" | LotStatus) => void;
-  showLots: boolean;
-  showBlocks: boolean;
-  onToggleLots: () => void;
-  onToggleBlocks: () => void;
-}
-
-function MapControls({
-  filter,
-  onFilterChange,
-  showLots,
-  showBlocks,
-  onToggleLots,
-  onToggleBlocks,
-}: MapControlsProps) {
-  return (
-    <div className="absolute top-4 right-4 z-[1000] bg-white rounded-lg shadow-lg p-4 w-56">
-      <h3 className="text-sm font-semibold text-gray-700 mb-3">Map Controls</h3>
-
-      <div className="mb-4">
-        <h4 className="text-xs font-medium text-gray-500 mb-2">
-          Filter by Status
-        </h4>
-        <div className="flex flex-col gap-2">
-          {(["all", "built", "vacant_lot", "under_construction"] as const).map(
-            (status) => (
-              <label
-                key={status}
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                <input
-                  type="radio"
-                  name="status-filter"
-                  value={status}
-                  checked={filter === status}
-                  onChange={() => onFilterChange(status)}
-                  className="w-4 h-4 text-primary-600 focus:ring-primary-500"
-                />
-                <span className="text-sm text-gray-600">
-                  {status === "all"
-                    ? "All"
-                    : status === "built"
-                      ? "Built"
-                      : status === "vacant_lot"
-                        ? "Vacant Lot"
-                        : "Under Construction"}
-                </span>
-              </label>
-            ),
-          )}
-        </div>
-      </div>
-
-      <div>
-        <h4 className="text-xs font-medium text-gray-500 mb-2">Layers</h4>
-        <div className="flex flex-col gap-2">
-          <label className="flex items-center justify-between cursor-pointer">
-            <span className="text-sm text-gray-600">Block Boundaries</span>
-            <button
-              onClick={onToggleBlocks}
-              className="p-1 hover:bg-gray-100 rounded"
-              title={showBlocks ? "Hide blocks" : "Show blocks"}
-            >
-              {showBlocks ? (
-                <Eye className="w-4 h-4 text-gray-600" />
-              ) : (
-                <EyeOff className="w-4 h-4 text-gray-400" />
-              )}
-            </button>
-          </label>
-          <label className="flex items-center justify-between cursor-pointer">
-            <span className="text-sm text-gray-600">Lot Boundaries</span>
-            <button
-              onClick={onToggleLots}
-              className="p-1 hover:bg-gray-100 rounded"
-              title={showLots ? "Hide lots" : "Show lots"}
-            >
-              {showLots ? (
-                <Eye className="w-4 h-4 text-gray-600" />
-              ) : (
-                <EyeOff className="w-4 h-4 text-gray-400" />
-              )}
-            </button>
-          </label>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface MapLegendProps {
-  className?: string;
-}
-
-function MapLegend({ className = "" }: MapLegendProps) {
-  return (
-    <div className={`bg-white rounded-lg shadow p-4 ${className}`}>
-      <h3 className="text-sm font-semibold text-gray-700 mb-3">Legend</h3>
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-green-500 border border-green-600"></div>
-          <span className="text-sm text-gray-600">Built</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-orange-500 border border-orange-600"></div>
-          <span className="text-sm text-gray-600">Under Construction</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-gray-400 border border-gray-500"></div>
-          <span className="text-sm text-gray-600">Vacant Lot</span>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 interface HouseholdMarkerProps {
   household: MapHousehold;
@@ -410,8 +299,9 @@ export function MapPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"all" | LotStatus>("all");
-  const [showLots, setShowLots] = useState(true); // Enable for debugging
+  const [showLots, setShowLots] = useState(true);
   const [showBlocks, setShowBlocks] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     async function loadData() {
@@ -475,110 +365,221 @@ export function MapPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Subdivision Map</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            View household locations and lot boundaries across the subdivision
-          </p>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Map className="w-5 h-5" />
-          <span>{filteredHouseholds.length} households displayed</span>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="relative h-[800px] w-full">
-          <MapContainer
-            crs={L.CRS.Simple}
+    <div className="fixed top-16 left-64 right-0 bottom-0 z-40">
+      {/* Fullscreen Map */}
+      <div className="absolute inset-0">
+        <MapContainer
+          crs={L.CRS.Simple}
+          bounds={mapBounds}
+          style={{ height: "100%", width: "100%" }}
+        >
+          <ImageOverlay
+            url="/LAGUNA-HILLS-MAP.svg.2026_01_23_14_02_46.0.png"
             bounds={mapBounds}
-            style={{ height: "100%", width: "100%" }}
-          >
-            {/* Base map image - PNG */}
-            <ImageOverlay
-              url="/LAGUNA-HILLS-MAP.svg.2026_01_23_14_02_46.0.png"
-              bounds={mapBounds}
-              opacity={1}
-            />
-
-            {/* Block boundaries overlay */}
-            {showBlocks && <BlocksGeoJSON data={blocksData} />}
-
-            {/* Lot boundaries overlay */}
-            {showLots && <LotsGeoJSON data={lotsData} filter={filter} />}
-
-            {/* Household markers */}
-            {filteredHouseholds.map((household) => (
-              <HouseholdMarker key={household.id} household={household} />
-            ))}
-          </MapContainer>
-
-          <MapControls
-            filter={filter}
-            onFilterChange={setFilter}
-            showLots={showLots}
-            showBlocks={showBlocks}
-            onToggleLots={() => setShowLots(!showLots)}
-            onToggleBlocks={() => setShowBlocks(!showBlocks)}
+            opacity={1}
           />
-        </div>
+
+          {showBlocks && <BlocksGeoJSON data={blocksData} />}
+          {showLots && <LotsGeoJSON data={lotsData} filter={filter} />}
+
+          {filteredHouseholds.map((household) => (
+            <HouseholdMarker key={household.id} household={household} />
+          ))}
+        </MapContainer>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Home className="w-6 h-6 text-green-600" />
+      {/* Floating Toggle Button */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="absolute top-4 right-4 z-[9999] bg-white rounded-full shadow-xl p-3 hover:bg-gray-50 transition-all duration-300 border-2 border-gray-200"
+        title={sidebarOpen ? "Hide panel" : "Show panel"}
+        aria-label="Toggle sidebar"
+      >
+        {sidebarOpen ? (
+          <ChevronRight className="w-6 h-6 text-gray-700" />
+        ) : (
+          <ChevronLeft className="w-6 h-6 text-gray-700" />
+        )}
+      </button>
+
+      {/* Collapsible Sidebar */}
+      <div
+        className={`absolute top-0 right-0 h-full bg-white shadow-2xl z-[9500] transition-transform duration-300 ease-in-out ${
+          sidebarOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+        style={{ width: "100%", maxWidth: "320px" }}
+      >
+        <div className="h-full flex flex-col">
+          {/* Header */}
+          <div className="p-4 border-b border-gray-200 flex-shrink-0">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1 className="text-lg font-bold text-gray-900">
+                  Subdivision Map
+                </h1>
+                <p className="text-xs text-gray-500">
+                  {filteredHouseholds.length} households
+                </p>
+              </div>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="p-2 hover:bg-gray-100 rounded-full"
+                aria-label="Close sidebar"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {lotsData?.features.filter(
-                  (f: any) => f.properties?.status === "built",
-                ).length || 0}
-              </p>
-              <p className="text-sm text-gray-600">Built Lots</p>
+
+            {/* Map Controls */}
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Filter by Status
+                </h4>
+                <div className="flex flex-col gap-2">
+                  {(
+                    [
+                      "all",
+                      "built",
+                      "vacant_lot",
+                      "under_construction",
+                    ] as const
+                  ).map((status) => (
+                    <label
+                      key={status}
+                      className="flex items-center gap-2 cursor-pointer text-sm"
+                    >
+                      <input
+                        type="radio"
+                        name="status-filter"
+                        value={status}
+                        checked={filter === status}
+                        onChange={() => setFilter(status)}
+                        className="w-4 h-4 text-primary-600"
+                      />
+                      <span className="text-gray-700">
+                        {status === "all"
+                          ? "All"
+                          : status === "built"
+                            ? "Built"
+                            : status === "vacant_lot"
+                              ? "Vacant Lot"
+                              : "Under Construction"}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Layers
+                </h4>
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center justify-between cursor-pointer text-sm p-2 hover:bg-gray-50 rounded">
+                    <span className="text-gray-700">Block Boundaries</span>
+                    <input
+                      type="checkbox"
+                      checked={showBlocks}
+                      onChange={() => setShowBlocks(!showBlocks)}
+                      className="w-4 h-4 text-primary-600"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between cursor-pointer text-sm p-2 hover:bg-gray-50 rounded">
+                    <span className="text-gray-700">Lot Boundaries</span>
+                    <input
+                      type="checkbox"
+                      checked={showLots}
+                      onChange={() => setShowLots(!showLots)}
+                      className="w-4 h-4 text-primary-600"
+                    />
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <Building className="w-6 h-6 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {lotsData?.features.filter(
-                  (f: any) => f.properties?.status === "under_construction",
-                ).length || 0}
-              </p>
-              <p className="text-sm text-gray-600">Under Construction</p>
-            </div>
-          </div>
-        </div>
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Stats */}
+            <div className="space-y-3">
+              <div className="bg-gradient-to-br from-green-50 to-green-100/50 rounded-xl p-4 border border-green-200">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-500 rounded-lg">
+                    <Home className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {lotsData?.features.filter(
+                        (f: any) => f.properties?.status === "built",
+                      ).length || 0}
+                    </p>
+                    <p className="text-sm text-gray-600">Built</p>
+                  </div>
+                </div>
+              </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-gray-100 rounded-lg">
-              <Landmark className="w-6 h-6 text-gray-600" />
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 rounded-xl p-4 border border-orange-200">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-500 rounded-lg">
+                    <Building className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {lotsData?.features.filter(
+                        (f: any) =>
+                          f.properties?.status === "under_construction",
+                      ).length || 0}
+                    </p>
+                    <p className="text-sm text-gray-600">Under Construction</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gray-500 rounded-lg">
+                    <Landmark className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {lotsData?.features.filter(
+                        (f: any) =>
+                          f.properties?.status === "vacant_lot" ||
+                          !f.properties?.status,
+                      ).length || 0}
+                    </p>
+                    <p className="text-sm text-gray-600">Vacant</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">
-                {lotsData?.features.filter(
-                  (f: any) =>
-                    f.properties?.status === "vacant_lot" ||
-                    !f.properties?.status,
-                ).length || 0}
-              </p>
-              <p className="text-sm text-gray-600">Vacant Lots</p>
+
+            {/* Legend */}
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                Legend
+              </h3>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded bg-green-500 border-2 border-green-600"></div>
+                  <span className="text-sm text-gray-700">Built</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded bg-orange-500 border-2 border-orange-600"></div>
+                  <span className="text-sm text-gray-700">
+                    Under Construction
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded bg-gray-400 border-2 border-gray-500"></div>
+                  <span className="text-sm text-gray-700">Vacant Lot</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      <MapLegend />
     </div>
   );
 }
