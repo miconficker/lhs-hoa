@@ -632,3 +632,270 @@ adminRouter.get('/stats', async (c) => {
     },
   });
 });
+
+// =============================================================================
+// ADMIN: Lot Ownership Management
+// =============================================================================
+
+/**
+ * GET /api/admin/lots/ownership
+ * Get all lots with ownership information (admin only)
+ */
+adminRouter.get('/lots/ownership', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    // Get lots with owner information
+    const lots = await c.env.DB.prepare(`
+      SELECT
+        h.id as lot_id,
+        h.block as block_number,
+        h.lot as lot_number,
+        h.address,
+        h.owner_id as owner_user_id,
+        h.lot_status,
+        h.lot_size_sqm,
+        u.email as owner_email
+      FROM households h
+      LEFT JOIN users u ON h.owner_id = u.id
+      ORDER BY
+        CAST(h.block AS INTEGER) ASC,
+        CAST(h.lot AS INTEGER) ASC
+    `).all();
+
+    return c.json({ lots: lots.results || [] });
+  } catch (error) {
+    console.error('Error fetching lot ownership:', error);
+    return c.json({ error: 'Failed to fetch lot ownership' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/lots/:lotId/owner
+ * Assign or change owner for a lot (admin only)
+ */
+adminRouter.put('/lots/:lotId/owner', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const lotId = c.req.param('lotId');
+
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON' }, 400);
+  }
+  const { owner_user_id } = body;
+
+  if (!owner_user_id) {
+    return c.json({ error: 'owner_user_id is required' }, 400);
+  }
+
+  try {
+    // Verify lot exists
+    const lot = await c.env.DB.prepare(
+      'SELECT id FROM households WHERE id = ?'
+    ).bind(lotId).first();
+
+    if (!lot) {
+      return c.json({ error: 'Lot not found' }, 404);
+    }
+
+    // Verify owner exists
+    const owner = await c.env.DB.prepare(
+      'SELECT id, role FROM users WHERE id = ?'
+    ).bind(owner_user_id).first();
+
+    if (!owner) {
+      return c.json({ error: 'Owner not found' }, 404);
+    }
+
+    // Update lot owner
+    await c.env.DB.prepare(
+      'UPDATE households SET owner_id = ? WHERE id = ?'
+    ).bind(owner_user_id, lotId).run();
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Error updating lot owner:', error);
+    return c.json({ error: 'Failed to update lot owner' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/lots/:lotId/status
+ * Update lot status (admin only)
+ */
+adminRouter.put('/lots/:lotId/status', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const lotId = c.req.param('lotId');
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON' }, 400);
+  }
+  const { lot_status } = body;
+
+  if (!lot_status || !['built', 'vacant_lot', 'under_construction'].includes(lot_status)) {
+    return c.json({ error: 'Invalid lot_status' }, 400);
+  }
+
+  // Verify lot exists
+  const lot = await c.env.DB.prepare(
+    'SELECT id FROM households WHERE id = ?'
+  ).bind(lotId).first();
+
+  if (!lot) {
+    return c.json({ error: 'Lot not found' }, 404);
+  }
+
+  try {
+    await c.env.DB.prepare(
+      'UPDATE households SET lot_status = ? WHERE id = ?'
+    ).bind(lot_status, lotId).run();
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Error updating lot status:', error);
+    return c.json({ error: 'Failed to update lot status' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/lots/:lotId/size
+ * Update lot size (admin only)
+ */
+adminRouter.put('/lots/:lotId/size', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const lotId = c.req.param('lotId');
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON' }, 400);
+  }
+  const { lot_size_sqm } = body;
+
+  // Verify lot exists
+  const lot = await c.env.DB.prepare(
+    'SELECT id FROM households WHERE id = ?'
+  ).bind(lotId).first();
+
+  if (!lot) {
+    return c.json({ error: 'Lot not found' }, 404);
+  }
+
+  // Allow null (clearing the value)
+  if (lot_size_sqm !== null && lot_size_sqm !== undefined && (typeof lot_size_sqm !== 'number' || lot_size_sqm < 0)) {
+    return c.json({ error: 'Invalid lot_size_sqm' }, 400);
+  }
+
+  try {
+    await c.env.DB.prepare(
+      'UPDATE households SET lot_size_sqm = ? WHERE id = ?'
+    ).bind(lot_size_sqm ?? null, lotId).run();
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Error updating lot size:', error);
+    return c.json({ error: 'Failed to update lot size' }, 500);
+  }
+});
+
+/**
+ * GET /api/admin/homeowners
+ * Get list of all homeowners for dropdown (admin only)
+ */
+adminRouter.get('/homeowners', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    // Get all users with resident role, plus developer account
+    const homeowners = await c.env.DB.prepare(`
+      SELECT
+        id,
+        email,
+        role
+      FROM users
+      WHERE role IN ('resident', 'admin')
+      ORDER BY role DESC, email ASC
+    `).all();
+
+    return c.json({ homeowners: homeowners.results || [] });
+  } catch (error) {
+    console.error('Error fetching homeowners:', error);
+    return c.json({ error: 'Failed to fetch homeowners' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/lots/batch/owner
+ * Batch assign owner to multiple lots (admin only)
+ */
+adminRouter.put('/lots/batch/owner', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  // Note: D1 doesn't support transactions, so batch updates are done with Promise.all
+  // If some updates fail partway through, partial updates may occur
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON' }, 400);
+  }
+  const { lot_ids, owner_user_id } = body;
+
+  if (!Array.isArray(lot_ids) || lot_ids.length === 0) {
+    return c.json({ error: 'lot_ids must be a non-empty array' }, 400);
+  }
+
+  if (!owner_user_id) {
+    return c.json({ error: 'owner_user_id is required' }, 400);
+  }
+
+  try {
+    // Verify owner exists
+    const owner = await c.env.DB.prepare(
+      'SELECT id FROM users WHERE id = ?'
+    ).bind(owner_user_id).first();
+
+    if (!owner) {
+      return c.json({ error: 'Owner not found' }, 404);
+    }
+
+    // Batch update using individual statements (SQLite doesn't support array in IN clause with binding)
+    const results = await Promise.all(
+      lot_ids.map(lotId =>
+        c.env.DB.prepare('UPDATE households SET owner_id = ? WHERE id = ?')
+          .bind(owner_user_id, lotId)
+          .run()
+      )
+    );
+
+    return c.json({ success: true, count: lot_ids.length });
+  } catch (error) {
+    console.error('Error batch updating lot owner:', error);
+    return c.json({ error: 'Failed to batch update lot owner' }, 500);
+  }
+});
