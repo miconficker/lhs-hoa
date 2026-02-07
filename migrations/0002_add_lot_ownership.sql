@@ -1,5 +1,6 @@
 -- Migration: Add lot ownership fields to households table
 -- Date: 2025-02-07
+-- Last updated: 2025-02-07 - Set developer owner password
 
 -- This migration is idempotent:
 -- - ALTER TABLE ADD COLUMN will fail if column exists (expected in SQLite)
@@ -20,11 +21,12 @@ ALTER TABLE households ADD COLUMN lot_status TEXT DEFAULT 'vacant_lot' CHECK (lo
 -- Add lot_size_sqm column (using REAL for consistency with other numeric fields)
 ALTER TABLE households ADD COLUMN lot_size_sqm REAL;
 
--- Create developer owner account if not exists
--- Using bcrypt hash for 'admin123' - should be changed after first login
+-- Create developer owner account
+-- Email: developer@lagunahills.com
+-- Password: devOwner2025! (CHANGE AFTER FIRST LOGIN)
 INSERT OR IGNORE INTO users (id, email, role, password_hash)
 VALUES ('developer-owner', 'developer@lagunahills.com', 'admin',
-        '$2a$10$e6/xBWul5zvn1Zu307X0p.ivJGWVUOcm5t1dHOjq697Len3f5q5tu');
+        '$2b$10$W1cH2hmDxtOjoMj8XGwqie6u4LvrqBNjEfFbH9YaCv9rTsk563SE.');
 
 -- Create index on lot_status for filtering
 CREATE INDEX IF NOT EXISTS idx_households_lot_status ON households(lot_status);
