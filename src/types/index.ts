@@ -1,6 +1,9 @@
 // User & Auth
 export type UserRole = "admin" | "resident" | "staff" | "guest";
 
+// Lot Status enum
+export type LotStatus = "built" | "vacant_lot" | "under_construction";
+
 export interface User {
   id: string;
   email: string;
@@ -29,7 +32,9 @@ export interface Household {
   longitude?: number;
   map_marker_x?: number;
   map_marker_y?: number;
-  owner_id?: string;
+  owner_user_id?: string; // UPDATED: Can be null (using existing owner_id in DB)
+  lot_status?: LotStatus; // NEW: built, vacant_lot, under_construction
+  lot_size_sqm?: number; // NEW: Lot size in m² (nullable)
   created_at: string;
 }
 
@@ -42,6 +47,29 @@ export interface Resident {
   is_primary: boolean;
   created_at: string;
 }
+
+// New: Household with owner information populated
+export interface HouseholdWithOwner extends Household {
+  owner_name?: string; // Populated by JOIN
+  owner_email?: string;
+  owner_role?: UserRole;
+}
+
+// New: Lot ownership data for admin
+export interface LotOwnership {
+  lot_id: string;
+  lot_number: string;
+  block_number: string;
+  owner_user_id: string;
+  owner_name: string;
+  owner_email: string;
+  lot_status: LotStatus;
+  lot_size_sqm?: number;
+  address?: string;
+}
+
+// New: Array of lot ownership for admin list
+export type LotOwnershipList = LotOwnership[];
 
 // Service Requests
 export type ServiceRequestStatus =
@@ -196,7 +224,10 @@ export interface LotFeatureProperties {
   lot_number: string | null;
   block_number: string | null;
   area_sqm: number | null;
-  status: "owned" | "rented" | "vacant";
+  status: LotStatus; // CHANGED: now uses LotStatus type
+  owner_user_id?: string; // NEW
+  owner_name?: string; // NEW: only included for admin users
+  lot_size_sqm?: number; // NEW
   household_id?: string;
   residents?: string;
 }
