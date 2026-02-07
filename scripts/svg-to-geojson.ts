@@ -73,12 +73,10 @@ const __dirname = path.dirname(__filename);
 const SVG_WIDTH = 2304;
 const SVG_HEIGHT = 3456;
 
-// No transformation needed - the PNG was exported from the SVG,
-// so coordinates match exactly. Using L.CRS.Simple in Leaflet
-// with the same bounds preserves this alignment.
+// Flip Y-axis to convert from SVG (Y=0 at top) to Leaflet L.CRS.Simple (Y=0 at bottom)
 const SCALE_X = 1;
-const SCALE_Y = 1;
-const TRANSLATE_Y = 0;
+const SCALE_Y = -1;  // Flip Y axis
+const TRANSLATE_Y = SVG_HEIGHT;  // Shift to align after flip
 
 interface Point {
   x: number;
