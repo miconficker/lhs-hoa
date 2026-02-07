@@ -6,8 +6,15 @@
  * for use with Leaflet's ImageOverlay. The pixel coordinates are preserved
  * as-is (no GPS conversion) since the map will be overlaid on the image.
  *
- * Input: LAGUNA-HILLS-MAP.svg
- * Output: public/data/{lots,blocks,streets}.geojson
+ * The SVG uses groups with specific IDs:
+ * - "lots": Individual lot polygons (ids like "B01-L01")
+ * - "blocks": Block boundary polygons
+ * - "perimeter": Perimeter boundary
+ * - "streets": Street lines (if present)
+ * - "common-areas": Common area polygons (if present)
+ *
+ * Input: LAGUNA-HILLS-MAP-v2.svg
+ * Output: public/data/{lots,blocks,perimeter,streets,common-areas}.geojson
  *
  * Options:
  *   --mapping <path>   Path to lot-mapping.json file to apply lot numbers
@@ -42,6 +49,16 @@ interface GeoJSONFeature {
   id?: string;
   geometry: GeoJSONGeometry;
   properties: Record<string, any>;
+}
+
+interface LotFeatureProperties {
+  path_id: string;
+  lot_number: string | null;
+  block_number: string | null;
+  area_sqm: number | null;
+  status: string;
+  owner_user_id: string;
+  lot_size_sqm: number | null;
 }
 
 interface GeoJSONFeatureCollection {
@@ -268,15 +285,30 @@ function isClosedPolygon(points: Point[]): boolean {
 
 /**
  * Extract all path elements from the SVG
+ * If groupId is specified, only extract paths within that group
  */
-function extractPaths(svgContent: string): PathData[] {
+function extractPaths(svgContent: string, groupId?: string): PathData[] {
   const paths: PathData[] = [];
 
-  // Regex to match path elements
-  const pathRegex = /<path[^>]*\sid="([^"]+)"[^>]*\sd="([^"]+)"/g;
+  // If groupId specified, only look within that group
+  let searchContent = svgContent;
+  if (groupId) {
+    // Match <g id="groupId">...</g>
+    const groupRegex = new RegExp(`<g[^>]*\\sid=["']${groupId}["'][^>]*>([\\s\\S]*?)</g>`, 'i');
+    const groupMatch = groupRegex.exec(svgContent);
+    if (!groupMatch) {
+      console.warn(`Group ${groupId} not found in SVG`);
+      return [];
+    }
+    searchContent = groupMatch[1];
+  }
+
+  // Regex to match path elements with id and d attributes in any order
+  // This regex captures both id and d regardless of their order
+  const pathRegex = /<path[^>]*\sid=["']([^"']+)["'][^>]*\sd=["']([^"']+)["'][^>]*>/gi;
   let match;
 
-  while ((match = pathRegex.exec(svgContent)) !== null) {
+  while ((match = pathRegex.exec(searchContent)) !== null) {
     const id = match[1];
     const d = match[2];
 
@@ -297,216 +329,33 @@ function extractPaths(svgContent: string): PathData[] {
     }
   }
 
+  // Also try the reverse order (d before id) for compatibility
+  const pathRegexReverse = /<path[^>]*\sd=["']([^"']+)["'][^>]*\sid=["']([^"']+)["'][^>]*>/gi;
+  while ((match = pathRegexReverse.exec(searchContent)) !== null) {
+    const d = match[1];
+    const id = match[2];
+
+    // Skip if we already got this path (avoid duplicates)
+    if (paths.find(p => p.id === id)) continue;
+
+    try {
+      const points = parsePathData(d);
+
+      // Check if path is closed
+      const closed = isClosedPolygon(points);
+
+      paths.push({
+        id,
+        points,
+        isClosed: closed,
+        rawPath: d,
+      });
+    } catch (e) {
+      console.warn(`Failed to parse path ${id}: ${(e as Error).message}`);
+    }
+  }
+
   return paths;
-}
-
-/**
- * Classify paths into lots (closed polygons), streets (open polylines), and blocks
- */
-function classifyPaths(paths: PathData[]): {
-  lots: PathData[];
-  streets: PathData[];
-  blocks: PathData[];
-} {
-  const lots: PathData[] = [];
-  const streets: PathData[] = [];
-
-  for (const path of paths) {
-    // Skip very small paths (likely artifacts)
-    if (path.points.length < 3) continue;
-
-    // Transform points for area calculation
-    const transformedPoints = path.points.map((p) => applyTransform(p.x, p.y));
-
-    // Check for closed polygons
-    if (path.isClosed) {
-      const area = calculateArea(transformedPoints);
-
-      // Filter by area - lot polygons should have reasonable area
-      // Adjust this threshold based on actual lot sizes
-      if (area > 500) {
-        lots.push({
-          ...path,
-          points: transformedPoints, // Store transformed points
-        });
-      }
-    } else if (path.points.length >= 2) {
-      // Open paths are streets or boundaries
-      // Filter out very short paths (likely artifacts)
-      const length = calculatePathLength(transformedPoints);
-      if (length > 10) {
-        streets.push(path);
-      }
-    }
-  }
-
-  // Generate blocks by clustering lots based on proximity
-  const blocks = generateBlocksFromLots(lots);
-
-  return { lots, streets, blocks };
-}
-
-/**
- * Generate blocks by clustering lots based on proximity
- */
-function generateBlocksFromLots(lots: PathData[]): PathData[] {
-  if (lots.length === 0) return [];
-
-  // Calculate centroids for each lot
-  const lotCentroids: Array<{ lot: PathData; centroid: Point }> = lots.map((lot) => ({
-    lot,
-    centroid: calculateCentroid(lot.points),
-  }));
-
-  // Group lots into blocks using simple distance-based clustering
-  const BLOCK_DISTANCE_THRESHOLD = 150; // Distance threshold for grouping lots into blocks
-  const visited = new Set<number>();
-  const blocks: PathData[] = [];
-  let blockNumber = 1;
-
-  for (let i = 0; i < lotCentroids.length; i++) {
-    if (visited.has(i)) continue;
-
-    // Start a new block with this lot
-    const blockLots: PathData[] = [lotCentroids[i].lot];
-    visited.add(i);
-
-    // Find all lots within threshold distance (BFS clustering)
-    const queue = [i];
-    while (queue.length > 0) {
-      const currentIdx = queue.shift()!;
-      const currentCentroid = lotCentroids[currentIdx].centroid;
-
-      for (let j = 0; j < lotCentroids.length; j++) {
-        if (visited.has(j)) continue;
-
-        const distance = Math.sqrt(
-          Math.pow(lotCentroids[j].centroid.x - currentCentroid.x, 2) +
-            Math.pow(lotCentroids[j].centroid.y - currentCentroid.y, 2),
-        );
-
-        if (distance <= BLOCK_DISTANCE_THRESHOLD) {
-          visited.add(j);
-          blockLots.push(lotCentroids[j].lot);
-          queue.push(j);
-        }
-      }
-    }
-
-    // Generate block polygon from the lots in this block
-    if (blockLots.length >= 2) {
-      const blockPolygon = createBlockPolygon(blockLots, blockNumber);
-      if (blockPolygon) {
-        blocks.push(blockPolygon);
-        blockNumber++;
-      }
-    }
-  }
-
-  return blocks;
-}
-
-/**
- * Calculate the centroid (center point) of a polygon
- */
-function calculateCentroid(points: Point[]): Point {
-  let cx = 0;
-  let cy = 0;
-  const A = calculateArea(points);
-  const n = points.length;
-
-  for (let i = 0; i < n; i++) {
-    const j = (i + 1) % n;
-    const cross = points[i].x * points[j].y - points[j].x * points[i].y;
-    cx += (points[i].x + points[j].x) * cross;
-    cy += (points[i].y + points[j].y) * cross;
-  }
-
-  cx /= 6 * A;
-  cy /= 6 * A;
-
-  return { x: cx, y: cy };
-}
-
-/**
- * Create a block polygon from a group of lots
- * This creates a convex hull around all the lots in the block
- */
-function createBlockPolygon(lots: PathData[], blockNumber: number): PathData | null {
-  if (lots.length === 0) return null;
-
-  // Collect all points from all lots
-  const allPoints: Point[] = [];
-  for (const lot of lots) {
-    allPoints.push(...lot.points);
-  }
-
-  // Compute convex hull to get the block boundary
-  const hullPoints = convexHull(allPoints);
-
-  if (hullPoints.length < 3) return null;
-
-  return {
-    id: `block-${blockNumber}`,
-    points: hullPoints,
-    isClosed: true,
-    rawPath: '',
-  };
-}
-
-/**
- * Compute convex hull using Graham scan algorithm
- */
-function convexHull(points: Point[]): Point[] {
-  if (points.length < 3) return points;
-
-  // Remove duplicate points
-  const unique = Array.from(
-    new Map(points.map((p) => [`${p.x},${p.y}`, p])).values(),
-  );
-
-  if (unique.length < 3) return unique;
-
-  // Sort points by x-coordinate (then by y)
-  const sorted = [...unique].sort((a, b) => a.x - b.x || a.y - b.y);
-
-  // Build lower hull
-  const lower: Point[] = [];
-  for (const p of sorted) {
-    while (
-      lower.length >= 2 &&
-      crossProduct(lower[lower.length - 2], lower[lower.length - 1], p) <= 0
-    ) {
-      lower.pop();
-    }
-    lower.push(p);
-  }
-
-  // Build upper hull
-  const upper: Point[] = [];
-  for (let i = sorted.length - 1; i >= 0; i--) {
-    const p = sorted[i];
-    while (
-      upper.length >= 2 &&
-      crossProduct(upper[upper.length - 2], upper[upper.length - 1], p) <= 0
-    ) {
-      upper.pop();
-    }
-    upper.push(p);
-  }
-
-  // Concatenate hulls (remove last point of each to avoid duplication)
-  lower.pop();
-  upper.pop();
-
-  return [...lower, ...upper];
-}
-
-/**
- * Cross product for orientation testing
- */
-function crossProduct(o: Point, a: Point, b: Point): number {
-  return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
 }
 
 /**
@@ -552,29 +401,41 @@ function pathToGeoJSONFeature(
 
   const area = type === 'Polygon' ? calculateArea(transformedPoints) : null;
 
-  // Apply mapping if available and this is a lot
+  // Parse lot and block numbers from path ID (e.g., "B01-L01")
   let lotNumber: string | null = null;
   let blockNumber: string | null = null;
 
-  if (type === 'Polygon' && lotMappings) {
+  const idMatch = path.id.match(/^B(\d+)-L(\d+)$/i);
+  if (idMatch) {
+    blockNumber = idMatch[1].padStart(2, '0');
+    lotNumber = idMatch[2].padStart(2, '0');
+  }
+
+  // Apply mapping if available and this is a lot
+  if (lotMappings && lotMappings.has(path.id)) {
     const mapping = lotMappings.get(path.id);
     if (mapping) {
       lotNumber = mapping.lot_number;
-      blockNumber = mapping.block_number || null;
+      blockNumber = mapping.block_number || blockNumber;
     }
   }
+
+  // Add placeholder fields for new database columns
+  const properties: LotFeatureProperties = {
+    path_id: path.id,
+    lot_number: lotNumber,
+    block_number: blockNumber,
+    area_sqm: area,
+    status: 'vacant_lot',  // Default status
+    owner_user_id: 'developer-owner',  // Default owner
+    lot_size_sqm: null,  // No size data yet
+  };
 
   return {
     type: 'Feature',
     id: path.id,
     geometry,
-    properties: {
-      path_id: path.id,
-      lot_number: lotNumber,
-      block_number: blockNumber,
-      area_sqm: area,
-      status: 'vacant', // Default status
-    },
+    properties,
   };
 }
 
@@ -630,10 +491,7 @@ function convertSvgToGeoJSON(mappingPath?: string): void {
   console.log('='.repeat(50));
 
   // Read SVG file
-  const svgPath = path.join(
-    __dirname,
-    '../LAGUNA-HILLS-MAP.svg.2026_01_23_14_02_46.0.svg',
-  );
+  const svgPath = path.join(__dirname, '../LAGUNA-HILLS-MAP-v2.svg');
 
   if (!fs.existsSync(svgPath)) {
     console.error(`SVG file not found: ${svgPath}`);
@@ -646,23 +504,20 @@ function convertSvgToGeoJSON(mappingPath?: string): void {
   // Load lot mappings if provided
   const lotMappings = mappingPath ? loadLotMappings(mappingPath) : new Map();
 
-  // Extract paths
-  const paths = extractPaths(svgContent);
-  console.log(`✓ Extracted ${paths.length} paths from SVG`);
+  // Extract from specific groups
+  const lots = extractPaths(svgContent, 'lots')
+    .filter(p => p.isClosed && calculateArea(p.points.map(pt => applyTransform(pt.x, pt.y))) > 500);
+  const blocks = extractPaths(svgContent, 'blocks')
+    .filter(p => p.isClosed);
+  const perimeter = extractPaths(svgContent, 'perimeter')
+    .filter(p => p.isClosed);
 
-  // Classify paths
-  const { lots, streets, blocks } = classifyPaths(paths);
-  console.log(`✓ Classified ${lots.length} lots, ${streets.length} streets`);
+  console.log(`✓ Extracted ${lots.length} lots, ${blocks.length} blocks, ${perimeter.length} perimeter paths`);
 
-  // Convert to GeoJSON features
-  const lotFeatures = lots.map((p) => pathToGeoJSONFeature(p, 'Polygon', lotMappings));
-  const streetFeatures = streets.map((p) => pathToGeoJSONFeature(p, 'LineString'));
-  const blockFeatures = blocks.map((p) => pathToGeoJSONFeature(p, 'Polygon'));
-
-  // Create GeoJSON collections
-  const lotsGeoJSON = createFeatureCollection(lotFeatures);
-  const streetsGeoJSON = createFeatureCollection(streetFeatures);
-  const blocksGeoJSON = createFeatureCollection(blockFeatures);
+  // Convert to GeoJSON with lot mappings applied to lots
+  const lotsGeoJSON = createFeatureCollection(lots.map(p => pathToGeoJSONFeature(p, 'Polygon', lotMappings)));
+  const blocksGeoJSON = createFeatureCollection(blocks.map(p => pathToGeoJSONFeature(p, 'Polygon')));
+  const perimeterGeoJSON = createFeatureCollection(perimeter.map(p => pathToGeoJSONFeature(p, 'Polygon')));
 
   // Ensure output directory exists
   const outputDir = path.join(__dirname, '../public/data');
@@ -670,35 +525,43 @@ function convertSvgToGeoJSON(mappingPath?: string): void {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
-  // Write output files
-  const lotsPath = path.join(outputDir, 'lots.geojson');
-  const streetsPath = path.join(outputDir, 'streets.geojson');
-  const blocksPath = path.join(outputDir, 'blocks.geojson');
-
-  fs.writeFileSync(lotsPath, JSON.stringify(lotsGeoJSON, null, 2));
-  fs.writeFileSync(streetsPath, JSON.stringify(streetsGeoJSON, null, 2));
-  fs.writeFileSync(blocksPath, JSON.stringify(blocksGeoJSON, null, 2));
+  // Write all files
+  fs.writeFileSync(path.join(outputDir, 'lots.geojson'), JSON.stringify(lotsGeoJSON, null, 2));
+  if (blocks.length > 0) {
+    fs.writeFileSync(path.join(outputDir, 'blocks.geojson'), JSON.stringify(blocksGeoJSON, null, 2));
+  }
+  if (perimeter.length > 0) {
+    fs.writeFileSync(path.join(outputDir, 'perimeter.geojson'), JSON.stringify(perimeterGeoJSON, null, 2));
+  }
 
   console.log('\nConversion complete!');
   console.log('='.repeat(50));
   console.log(`Output files:`);
-  console.log(`  - ${lotsPath} (${lotFeatures.length} features)`);
-  console.log(`  - ${streetsPath} (${streetFeatures.length} features)`);
-  console.log(`  - ${blocksPath} (${blockFeatures.length} features)`);
+  console.log(`  - ${path.join(outputDir, 'lots.geojson')} (${lotsGeoJSON.features.length} features)`);
+  if (blocks.length > 0) {
+    console.log(`  - ${path.join(outputDir, 'blocks.geojson')} (${blocksGeoJSON.features.length} features)`);
+  }
+  if (perimeter.length > 0) {
+    console.log(`  - ${path.join(outputDir, 'perimeter.geojson')} (${perimeterGeoJSON.features.length} features)`);
+  }
 
   // Summary statistics
   console.log('\n--- Summary ---');
   console.log(`SVG dimensions: ${SVG_WIDTH}x${SVG_HEIGHT}`);
-  console.log(`Total paths processed: ${paths.length}`);
-  console.log(`Lots (closed polygons): ${lotFeatures.length}`);
-  console.log(`Streets (open polylines): ${streetFeatures.length}`);
+  console.log(`Lots: ${lotsGeoJSON.features.length}`);
+  if (blocks.length > 0) {
+    console.log(`Blocks: ${blocksGeoJSON.features.length}`);
+  }
+  if (perimeter.length > 0) {
+    console.log(`Perimeter: ${perimeterGeoJSON.features.length}`);
+  }
 
   // Calculate total lot area
-  const totalArea = lotFeatures.reduce((sum, f) => {
+  const totalArea = lotsGeoJSON.features.reduce((sum, f) => {
     return sum + ((f.properties.area_sqm as number) || 0);
   }, 0);
   console.log(`Total lot area: ${totalArea.toFixed(2)} square pixels`);
-  console.log(`Average lot area: ${(totalArea / lotFeatures.length || 0).toFixed(2)} square pixels`);
+  console.log(`Average lot area: ${(totalArea / lotsGeoJSON.features.length || 0).toFixed(2)} square pixels`);
 }
 
 // Run the conversion
