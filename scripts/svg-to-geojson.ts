@@ -88,6 +88,7 @@ interface PathData {
   points: Point[];
   isClosed: boolean;
   rawPath: string;
+  hasTransform: boolean;  // True if path has its own transform attribute
 }
 
 /**
@@ -239,8 +240,19 @@ function parsePathData(d: string): Point[] {
  * Apply the SVG transform matrix to convert coordinates to pixel space
  * The transform is: matrix(1.3333333, 0, 0, -1.3333333, 0, 3456)
  * This maps the SVG coordinate space to the pixel coordinate space
+ *
+ * For paths that already have a transform attribute in the SVG, we only
+ * apply the scale (1.3333) without the Y-flip, since the SVG transform
+ * already handles the flip.
  */
-function applyTransform(x: number, y: number): Point {
+function applyTransform(x: number, y: number, hasTransform: boolean = false): Point {
+  if (hasTransform) {
+    // Path already has transform in SVG - only apply scale, no Y-flip
+    return {
+      x: x * Math.abs(SCALE_X),
+      y: y * Math.abs(SCALE_X),  // Just use the scale (1.3333), no flip
+    };
+  }
   return {
     x: x * SCALE_X,
     y: y * SCALE_Y + TRANSLATE_Y,
@@ -301,14 +313,18 @@ function extractPaths(svgContent: string, groupId?: string): PathData[] {
     searchContent = groupMatch[1];
   }
 
-  // Regex to match path elements with id and d attributes in any order
-  // This regex captures both id and d regardless of their order
-  const pathRegex = /<path[^>]*\sid=["']([^"']+)["'][^>]*\sd=["']([^"']+)["'][^>]*>/gi;
+  // Regex to match complete path elements and extract id and d attributes
+  // This captures the full path element to check for transform attribute
+  const pathRegex = /<path[^>]*\sid=["']([^"']+)["'][^>]*\sd=["']([^"']+)["'][^>]*\/>/gi;
   let match;
 
   while ((match = pathRegex.exec(searchContent)) !== null) {
+    const fullElement = match[0];
     const id = match[1];
     const d = match[2];
+
+    // Check if path has a transform attribute (these are pre-transformed in SVG)
+    const hasTransform = /transform\s*=/i.test(fullElement);
 
     try {
       const points = parsePathData(d);
@@ -321,6 +337,7 @@ function extractPaths(svgContent: string, groupId?: string): PathData[] {
         points,
         isClosed: closed,
         rawPath: d,
+        hasTransform,
       });
     } catch (e) {
       console.warn(`Failed to parse path ${id}: ${(e as Error).message}`);
@@ -328,13 +345,17 @@ function extractPaths(svgContent: string, groupId?: string): PathData[] {
   }
 
   // Also try the reverse order (d before id) for compatibility
-  const pathRegexReverse = /<path[^>]*\sd=["']([^"']+)["'][^>]*\sid=["']([^"']+)["'][^>]*>/gi;
+  const pathRegexReverse = /<path[^>]*\sd=["']([^"']+)["'][^>]*\sid=["']([^"']+)["'][^>]*\/>/gi;
   while ((match = pathRegexReverse.exec(searchContent)) !== null) {
+    const fullElement = match[0];
     const d = match[1];
     const id = match[2];
 
     // Skip if we already got this path (avoid duplicates)
     if (paths.find(p => p.id === id)) continue;
+
+    // Check if path has a transform attribute
+    const hasTransform = /transform\s*=/i.test(fullElement);
 
     try {
       const points = parsePathData(d);
@@ -347,6 +368,7 @@ function extractPaths(svgContent: string, groupId?: string): PathData[] {
         points,
         isClosed: closed,
         rawPath: d,
+        hasTransform,
       });
     } catch (e) {
       console.warn(`Failed to parse path ${id}: ${(e as Error).message}`);
@@ -377,7 +399,7 @@ function pathToGeoJSONFeature(
   type: 'Polygon' | 'LineString',
   lotMappings?: Map<string, LotMapping>,
 ): GeoJSONFeature {
-  const transformedPoints = path.points.map((p) => applyTransform(p.x, p.y));
+  const transformedPoints = path.points.map((p) => applyTransform(p.x, p.y, path.hasTransform));
 
   let geometry: GeoJSONGeometry;
 
@@ -504,7 +526,7 @@ function convertSvgToGeoJSON(mappingPath?: string): void {
 
   // Extract from specific groups
   const lots = extractPaths(svgContent, 'lots')
-    .filter(p => p.isClosed && calculateArea(p.points.map(pt => applyTransform(pt.x, pt.y))) > 500);
+    .filter(p => p.isClosed && calculateArea(p.points.map(pt => applyTransform(pt.x, pt.y, p.hasTransform))) > 50);
   const blocks = extractPaths(svgContent, 'blocks')
     .filter(p => p.isClosed);
   const perimeter = extractPaths(svgContent, 'perimeter')
