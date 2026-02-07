@@ -13,8 +13,10 @@ import {
   MapHousehold,
   LotFeatureProperties,
   BlockFeatureProperties,
+  LotStatus,
 } from "@/types";
 import { Map, Home, Building, Landmark, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 // Fix for default marker icons in React Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -38,8 +40,8 @@ const mapBounds: LatLngBoundsExpression = [
 ];
 
 interface MapControlsProps {
-  filter: "all" | "owned" | "rented" | "vacant";
-  onFilterChange: (filter: "all" | "owned" | "rented" | "vacant") => void;
+  filter: "all" | LotStatus;
+  onFilterChange: (filter: "all" | LotStatus) => void;
   showLots: boolean;
   showBlocks: boolean;
   onToggleLots: () => void;
@@ -63,22 +65,32 @@ function MapControls({
           Filter by Status
         </h4>
         <div className="flex flex-col gap-2">
-          {(["all", "owned", "rented", "vacant"] as const).map((status) => (
-            <label
-              key={status}
-              className="flex items-center gap-2 cursor-pointer"
-            >
-              <input
-                type="radio"
-                name="status-filter"
-                value={status}
-                checked={filter === status}
-                onChange={() => onFilterChange(status)}
-                className="w-4 h-4 text-primary-600 focus:ring-primary-500"
-              />
-              <span className="text-sm text-gray-600 capitalize">{status}</span>
-            </label>
-          ))}
+          {(["all", "built", "vacant_lot", "under_construction"] as const).map(
+            (status) => (
+              <label
+                key={status}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <input
+                  type="radio"
+                  name="status-filter"
+                  value={status}
+                  checked={filter === status}
+                  onChange={() => onFilterChange(status)}
+                  className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                />
+                <span className="text-sm text-gray-600">
+                  {status === "all"
+                    ? "All"
+                    : status === "built"
+                      ? "Built"
+                      : status === "vacant_lot"
+                        ? "Vacant Lot"
+                        : "Under Construction"}
+                </span>
+              </label>
+            ),
+          )}
         </div>
       </div>
 
@@ -125,20 +137,20 @@ interface MapLegendProps {
 
 function MapLegend({ className = "" }: MapLegendProps) {
   return (
-    <div className={`bg-white rounded-lg shadow-lg p-4 ${className}`}>
+    <div className={`bg-white rounded-lg shadow p-4 ${className}`}>
       <h3 className="text-sm font-semibold text-gray-700 mb-3">Legend</h3>
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded bg-green-500 border border-green-600"></div>
-          <span className="text-sm text-gray-600">Owned</span>
+          <span className="text-sm text-gray-600">Built</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-blue-500 border border-blue-600"></div>
-          <span className="text-sm text-gray-600">Rented</span>
+          <div className="w-4 h-4 rounded bg-orange-500 border border-orange-600"></div>
+          <span className="text-sm text-gray-600">Under Construction</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded bg-gray-400 border border-gray-500"></div>
-          <span className="text-sm text-gray-600">Vacant</span>
+          <span className="text-sm text-gray-600">Vacant Lot</span>
         </div>
       </div>
     </div>
@@ -222,30 +234,31 @@ function HouseholdMarker({ household }: HouseholdMarkerProps) {
 
 interface LotsGeoJSONProps {
   data: GeoJSON.FeatureCollection | null;
-  filter: "all" | "owned" | "rented" | "vacant";
+  filter: "all" | LotStatus;
 }
 
 function LotsGeoJSON({ data, filter }: LotsGeoJSONProps) {
+  const { user } = useAuth();
+
   if (!data) return null;
 
   const style = (
     feature?: GeoJSON.Feature<GeoJSON.Geometry, LotFeatureProperties>,
   ) => {
-    const status = feature?.properties?.status || "vacant";
+    const props = feature?.properties;
+    let fillColor = "#9ca3af"; // default gray
+    if (props?.status === "built") fillColor = "#22c55e"; // green
+    if (props?.status === "under_construction") fillColor = "#f59e0b"; // orange
+
     return {
       color:
-        status === "owned"
-          ? "#16a34a"
-          : status === "rented"
-            ? "#2563eb"
-            : "#6b7280",
+        fillColor === "#9ca3af"
+          ? "#6b7280"
+          : fillColor === "#22c55e"
+            ? "#16a34a"
+            : "#d97706",
       weight: 2,
-      fillColor:
-        status === "owned"
-          ? "#22c55e"
-          : status === "rented"
-            ? "#3b82f6"
-            : "#9ca3af",
+      fillColor,
       fillOpacity: 0.3,
     };
   };
@@ -254,7 +267,7 @@ function LotsGeoJSON({ data, filter }: LotsGeoJSONProps) {
     feature: GeoJSON.Feature<GeoJSON.Geometry, LotFeatureProperties>,
   ) => {
     if (filter === "all") return true;
-    return (feature.properties?.status || "vacant") === filter;
+    return (feature.properties?.status || "vacant_lot") === filter;
   };
 
   const onEachFeature = (
@@ -274,27 +287,56 @@ function LotsGeoJSON({ data, filter }: LotsGeoJSONProps) {
 
     const props = feature.properties;
     if (props) {
+      const isAdmin = user?.role === "admin";
+      const ownerInfo = isAdmin
+        ? `
+        <p class="text-sm text-gray-600">
+          Owner: ${props.owner_user_id || "developer-owner"}
+        </p>
+      `
+        : "";
+
+      const editLink = isAdmin
+        ? `
+        <a href="/admin/lots" class="text-xs text-blue-600 hover:text-blue-800">
+          Edit Ownership →
+        </a>
+      `
+        : "";
+
       const popupContent = `
         <div class="p-2 min-w-[200px]">
           <h3 class="font-semibold text-gray-900 mb-1">
             ${
-              props.lot_number && props.block_number
+              props.block_number && props.lot_number
                 ? `Block ${props.block_number}, Lot ${props.lot_number}`
                 : props.path_id || "Unnamed Lot"
             }
           </h3>
+          ${ownerInfo}
           <div class="flex items-center gap-2 mb-2">
             <span class="px-2 py-1 text-xs font-medium rounded-full ${
-              props.status === "owned"
+              props.status === "built"
                 ? "bg-green-100 text-green-700"
-                : props.status === "rented"
-                  ? "bg-blue-100 text-blue-700"
+                : props.status === "under_construction"
+                  ? "bg-orange-100 text-orange-700"
                   : "bg-gray-100 text-gray-700"
             }">
-              ${props.status.charAt(0).toUpperCase() + props.status.slice(1)}
+              ${
+                props.status === "built"
+                  ? "Built"
+                  : props.status === "under_construction"
+                    ? "Under Construction"
+                    : "Vacant Lot"
+              }
             </span>
           </div>
-          ${props.area_sqm ? `<p class="text-xs text-gray-500">Area: ${Math.round(props.area_sqm).toLocaleString()} px²</p>` : ""}
+          ${
+            props.lot_size_sqm
+              ? `<p class="text-xs text-gray-500">Size: ${Math.round(props.lot_size_sqm)} m²</p>`
+              : ""
+          }
+          ${editLink}
         </div>
       `;
       layer.bindPopup(popupContent);
@@ -367,9 +409,7 @@ export function MapPage() {
     useState<GeoJSON.FeatureCollection | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [filter, setFilter] = useState<"all" | "owned" | "rented" | "vacant">(
-    "all",
-  );
+  const [filter, setFilter] = useState<"all" | LotStatus>("all");
   const [showLots, setShowLots] = useState(true); // Enable for debugging
   const [showBlocks, setShowBlocks] = useState(false);
 
@@ -412,9 +452,10 @@ export function MapPage() {
     loadData();
   }, []);
 
-  const filteredHouseholds = households.filter((h) => {
-    if (filter === "all") return true;
-    return h.status === filter;
+  const filteredHouseholds = households.filter(() => {
+    // For now, show all households regardless of lot status filter
+    // since household status and lot status are different concepts
+    return true;
   });
 
   if (loading) {
@@ -493,23 +534,27 @@ export function MapPage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                {households.filter((h) => h.status === "owned").length}
+                {lotsData?.features.filter(
+                  (f: any) => f.properties?.status === "built",
+                ).length || 0}
               </p>
-              <p className="text-sm text-gray-600">Owned Units</p>
+              <p className="text-sm text-gray-600">Built Lots</p>
             </div>
           </div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Building className="w-6 h-6 text-blue-600" />
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <Building className="w-6 h-6 text-orange-600" />
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                {households.filter((h) => h.status === "rented").length}
+                {lotsData?.features.filter(
+                  (f: any) => f.properties?.status === "under_construction",
+                ).length || 0}
               </p>
-              <p className="text-sm text-gray-600">Rented Units</p>
+              <p className="text-sm text-gray-600">Under Construction</p>
             </div>
           </div>
         </div>
@@ -521,9 +566,13 @@ export function MapPage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                {households.filter((h) => h.status === "vacant").length}
+                {lotsData?.features.filter(
+                  (f: any) =>
+                    f.properties?.status === "vacant_lot" ||
+                    !f.properties?.status,
+                ).length || 0}
               </p>
-              <p className="text-sm text-gray-600">Vacant Units</p>
+              <p className="text-sm text-gray-600">Vacant Lots</p>
             </div>
           </div>
         </div>
