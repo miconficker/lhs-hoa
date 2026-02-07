@@ -658,7 +658,8 @@ adminRouter.get('/lots/ownership', async (c) => {
         h.owner_id as owner_user_id,
         h.lot_status,
         h.lot_size_sqm,
-        u.email as owner_email
+        u.email as owner_email,
+        u.email as owner_name
       FROM households h
       LEFT JOIN users u ON h.owner_id = u.id
       ORDER BY

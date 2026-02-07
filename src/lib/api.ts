@@ -752,8 +752,9 @@ export const api = {
     // Stats
     getStats: () => apiRequest<AdminStatsResponse>("/admin/stats"),
     // Lot Ownership
-    getLotsWithOwnership: (): Promise<ApiResponse<LotOwnershipList>> =>
-      apiGet<LotOwnershipList>("/admin/lots/ownership"),
+    getLotsWithOwnership: (): Promise<
+      ApiResponse<{ lots: LotOwnershipList }>
+    > => apiGet<{ lots: LotOwnershipList }>("/admin/lots/ownership"),
     assignLotOwner: (
       lotId: string,
       ownerId: string,
@@ -775,8 +776,8 @@ export const api = {
       apiPut<{ success: boolean }>(`/admin/lots/${lotId}/size`, {
         lot_size_sqm: size,
       }),
-    getHomeowners: (): Promise<ApiResponse<User[]>> =>
-      apiGet<User[]>("/admin/homeowners"),
+    getHomeowners: (): Promise<ApiResponse<{ homeowners: User[] }>> =>
+      apiGet<{ homeowners: User[] }>("/admin/homeowners"),
     batchAssignOwner: (
       lotIds: string[],
       ownerId: string,

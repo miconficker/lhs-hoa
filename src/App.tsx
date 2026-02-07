@@ -15,6 +15,7 @@ import { DocumentsPage } from "./pages/DocumentsPage";
 import { AdminPanelPage } from "./pages/AdminPanelPage";
 import { DebugPage } from "./pages/DebugPage";
 import { AnnotateLotsPage } from "./pages/AnnotateLotsPage";
+import { AdminLotsPage } from "./pages/AdminLotsPage";
 import { useAuth } from "./hooks/useAuth";
 
 function App() {
@@ -67,6 +68,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <AdminPanelPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="admin/lots"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AdminLotsPage />
               </ProtectedRoute>
             }
           />

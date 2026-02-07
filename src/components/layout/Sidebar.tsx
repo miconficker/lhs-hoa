@@ -11,6 +11,7 @@ import {
   BarChart,
   Settings,
   Edit3,
+  Building2,
 } from "lucide-react";
 
 const navItems = [
@@ -66,6 +67,12 @@ const navItems = [
     to: "/annotate",
     icon: Edit3,
     label: "Annotate Lots",
+    roles: ["admin"],
+  },
+  {
+    to: "/admin/lots",
+    icon: Building2,
+    label: "Lot Management",
     roles: ["admin"],
   },
   { to: "/admin", icon: Settings, label: "Admin Panel", roles: ["admin"] },
