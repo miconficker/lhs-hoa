@@ -1,8 +1,259 @@
 import { useState, useEffect } from "react";
 import { api, type AdminUser, type AdminHousehold } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import type { LotOwnership, LotStatus, User } from "@/types";
 
-type Tab = "users" | "households" | "import" | "settings";
+type Tab = "users" | "households" | "lots" | "import" | "settings";
+
+interface AdminLotsTabProps {
+  lots: LotOwnership[];
+  homeowners: User[];
+  onRefresh: () => void;
+}
+
+function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
+  const [filterOwner, setFilterOwner] = useState<string>("");
+  const [filterStatus, setFilterStatus] = useState<string>("");
+  const [filterBlock, setFilterBlock] = useState<string>("");
+  const [editingLot, setEditingLot] = useState<LotOwnership | null>(null);
+
+  const filteredLots = lots.filter((lot) => {
+    if (filterOwner && lot.owner_user_id !== filterOwner) return false;
+    if (filterStatus && lot.lot_status !== filterStatus) return false;
+    if (filterBlock && lot.block_number !== filterBlock) return false;
+    return true;
+  });
+
+  async function handleSave() {
+    if (!editingLot) return;
+
+    try {
+      await Promise.all([
+        api.admin.assignLotOwner(editingLot.lot_id, editingLot.owner_user_id),
+        api.admin.updateLotStatus(editingLot.lot_id, editingLot.lot_status),
+        editingLot.lot_size_sqm !== undefined &&
+          api.admin.updateLotSize(editingLot.lot_id, editingLot.lot_size_sqm),
+      ]);
+
+      setEditingLot(null);
+      onRefresh();
+    } catch (error) {
+      console.error("Error saving lot:", error);
+      alert("Failed to save");
+    }
+  }
+
+  const blocks = Array.from(
+    new Set(lots.map((l) => l.block_number).filter(Boolean)),
+  ).sort((a, b) => parseInt(a || "0") - parseInt(b || "0"));
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-4 items-center">
+        <select
+          value={filterBlock}
+          onChange={(e) => setFilterBlock(e.target.value)}
+          className="px-3 py-2 border rounded-lg text-sm"
+        >
+          <option value="">All Blocks</option>
+          {blocks.map((b) => (
+            <option key={b} value={b}>
+              Block {b}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className="px-3 py-2 border rounded-lg text-sm"
+        >
+          <option value="">All Statuses</option>
+          <option value="built">Built</option>
+          <option value="vacant_lot">Vacant Lot</option>
+          <option value="under_construction">Under Construction</option>
+        </select>
+
+        <select
+          value={filterOwner}
+          onChange={(e) => setFilterOwner(e.target.value)}
+          className="px-3 py-2 border rounded-lg text-sm"
+        >
+          <option value="">All Owners</option>
+          {homeowners.map((h) => (
+            <option key={h.id} value={h.id}>
+              {h.email}
+            </option>
+          ))}
+        </select>
+
+        <span className="text-sm text-gray-600">
+          Showing {filteredLots.length} of {lots.length} lots
+        </span>
+      </div>
+
+      <div className="bg-white rounded-lg shadow overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Block
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Lot
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Status
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Owner
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Size (m²)
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {filteredLots.map((lot) => (
+              <tr key={lot.lot_id}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {lot.block_number || "—"}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {lot.lot_number || "—"}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      lot.lot_status === "built"
+                        ? "bg-green-100 text-green-700"
+                        : lot.lot_status === "under_construction"
+                          ? "bg-orange-100 text-orange-700"
+                          : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {lot.lot_status === "built"
+                      ? "Built"
+                      : lot.lot_status === "under_construction"
+                        ? "Under Construction"
+                        : "Vacant Lot"}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {lot.owner_name || "Unknown"}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  {lot.lot_size_sqm || "—"}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <button
+                    onClick={() => setEditingLot(lot)}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    Edit
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {editingLot && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Edit Lot - {editingLot.block_number}, {editingLot.lot_number}
+            </h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Owner
+                </label>
+                <select
+                  value={editingLot.owner_user_id}
+                  onChange={(e) =>
+                    setEditingLot({
+                      ...editingLot,
+                      owner_user_id: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  {homeowners.map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  value={editingLot.lot_status}
+                  onChange={(e) =>
+                    setEditingLot({
+                      ...editingLot,
+                      lot_status: e.target.value as LotStatus,
+                    })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="built">Built</option>
+                  <option value="vacant_lot">Vacant Lot</option>
+                  <option value="under_construction">Under Construction</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Size (m²)
+                </label>
+                <input
+                  type="number"
+                  value={editingLot.lot_size_sqm || ""}
+                  onChange={(e) =>
+                    setEditingLot({
+                      ...editingLot,
+                      lot_size_sqm: e.target.value
+                        ? parseFloat(e.target.value)
+                        : undefined,
+                    })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <button
+                  onClick={handleSave}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setEditingLot(null)}
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function AdminPanelPage() {
   const { user } = useAuth();
@@ -20,6 +271,10 @@ export function AdminPanelPage() {
   const [editingHousehold, setEditingHousehold] =
     useState<AdminHousehold | null>(null);
 
+  // Lots state
+  const [lots, setLots] = useState<LotOwnership[]>([]);
+  const [homeowners, setHomeowners] = useState<User[]>([]);
+
   // Import state
   const [importData, setImportData] = useState("");
   const [importResult, setImportResult] = useState<{
@@ -34,8 +289,31 @@ export function AdminPanelPage() {
   useEffect(() => {
     if (activeTab === "users") loadUsers();
     if (activeTab === "households") loadHouseholds();
+    if (activeTab === "lots") loadLots();
     if (activeTab === "settings") loadStats();
   }, [activeTab]);
+
+  const loadLots = async () => {
+    setLoading(true);
+    try {
+      const [lotsResult, homeownersResult] = await Promise.all([
+        api.admin.getLotsWithOwnership(),
+        api.admin.getHomeowners(),
+      ]);
+
+      if (lotsResult.data) {
+        setLots(lotsResult.data.lots);
+      }
+
+      if (homeownersResult.data) {
+        setHomeowners(homeownersResult.data.homeowners);
+      }
+    } catch (error) {
+      console.error("Error loading lots:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadUsers = async () => {
     setLoading(true);
@@ -144,6 +422,7 @@ export function AdminPanelPage() {
   const tabs = [
     { id: "users" as Tab, label: "Users", icon: "👥" },
     { id: "households" as Tab, label: "Households", icon: "🏠" },
+    { id: "lots" as Tab, label: "Lots", icon: "🏘️" },
     { id: "import" as Tab, label: "Import", icon: "📥" },
     { id: "settings" as Tab, label: "Stats", icon: "📊" },
   ];
@@ -361,6 +640,14 @@ export function AdminPanelPage() {
               </div>
             )}
           </div>
+        )}
+
+        {activeTab === "lots" && (
+          <AdminLotsTab
+            lots={lots}
+            homeowners={homeowners}
+            onRefresh={loadLots}
+          />
         )}
 
         {activeTab === "import" && (
