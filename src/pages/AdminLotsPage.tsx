@@ -4,7 +4,7 @@ import { LatLngBoundsExpression } from "leaflet";
 import L from "leaflet";
 import { api } from "@/lib/api";
 import { LotOwnership, LotStatus, User, LotFeatureProperties } from "@/types";
-import { Map, Save, X } from "lucide-react";
+import { Map, Save, X, Link2, Unlink } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 // Fix for default marker icons
@@ -43,6 +43,7 @@ export function AdminLotsPage() {
   const [highlightOwnerId, setHighlightOwnerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showMergeModal, setShowMergeModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -144,6 +145,40 @@ export function AdminLotsPage() {
     setSaving(false);
   }
 
+  async function handleMerge() {
+    if (selectedLots.size < 2) return;
+
+    const lotArray = Array.from(selectedLots);
+    const primaryLotId = lotArray[0];
+
+    setSaving(true);
+    try {
+      await api.admin.mergeHouseholds(primaryLotId, lotArray.slice(1));
+      setShowMergeModal(false);
+      setSelectedLots(new Set());
+      await loadData();
+    } catch (error) {
+      console.error("Error merging lots:", error);
+      alert("Failed to merge lots");
+    }
+    setSaving(false);
+  }
+
+  async function handleUnmerge(lotId: string) {
+    if (!confirm("Unmerge this lot? It will become a separate household."))
+      return;
+
+    setSaving(true);
+    try {
+      await api.admin.unmergeHousehold(lotId);
+      await loadData();
+    } catch (error) {
+      console.error("Error unmerging lot:", error);
+      alert("Failed to unmerge lot");
+    }
+    setSaving(false);
+  }
+
   function getLotStyle(feature?: GeoJSON.Feature<any, any>) {
     if (!feature) return {};
 
@@ -219,6 +254,16 @@ export function AdminLotsPage() {
             >
               Assign to {selectedLots.size} lots
             </button>
+            {selectedLots.size >= 2 && (
+              <button
+                onClick={() => setShowMergeModal(true)}
+                disabled={saving}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                <Link2 className="w-4 h-4" />
+                Merge {selectedLots.size} lots
+              </button>
+            )}
             <button
               onClick={() => setSelectedLots(new Set())}
               className="px-4 py-2 text-gray-600 hover:text-gray-800 text-sm"
@@ -407,6 +452,15 @@ export function AdminLotsPage() {
                     {saving ? "Saving..." : "Save"}
                   </button>
                   <button
+                    onClick={() => handleUnmerge(selectedLot.lot_id)}
+                    disabled={saving}
+                    className="px-4 py-2 border border-purple-200 text-purple-700 rounded-lg hover:bg-purple-50 disabled:opacity-50 flex items-center gap-2"
+                    title="Unmerge this lot from its household group"
+                  >
+                    <Unlink className="w-4 h-4" />
+                    Unmerge
+                  </button>
+                  <button
                     onClick={() => setSelectedLot(null)}
                     className="px-4 py-2 border rounded-lg hover:bg-gray-50"
                   >
@@ -457,6 +511,37 @@ export function AdminLotsPage() {
           </div>
         </div>
       </div>
+
+      {/* Merge Modal */}
+      {showMergeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <Link2 className="w-5 h-5 text-purple-600" />
+              Merge Lots
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Merge {selectedLots.size} lots into one household. The first
+              selected lot will be the primary lot.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowMergeModal(false)}
+                className="px-4 py-2 text-gray-700 border rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleMerge}
+                disabled={saving}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+              >
+                {saving ? "Merging..." : "Confirm Merge"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
