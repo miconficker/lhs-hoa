@@ -117,6 +117,12 @@ const navItems = [
     label: "Common Areas",
     roles: ["admin"],
   },
+  {
+    to: "/admin/pass-management",
+    icon: Badge,
+    label: "Pass Management",
+    roles: ["admin"],
+  },
   { to: "/admin", icon: Settings, label: "Admin Panel", roles: ["admin"] },
 ];
 
