@@ -1,13 +1,20 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { api, CreatePollInput } from "@/lib/api";
+import { api, CreatePollInput, type AdminUser } from "@/lib/api";
 import {
   format,
   differenceInDays,
   differenceInHours,
   differenceInMinutes,
 } from "date-fns";
-import { Plus, Trash2, BarChart, CheckCircle } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  BarChart,
+  CheckCircle,
+  UserCheck,
+  X,
+} from "lucide-react";
 
 interface PollWithResults {
   id: string;
@@ -24,6 +31,12 @@ interface VoteStatus {
   [pollId: string]: boolean;
 }
 
+interface InPersonVoteModal {
+  pollId: string;
+  pollQuestion: string;
+  options: string[];
+}
+
 export function PollsPage() {
   const { user } = useAuth();
   const [polls, setPolls] = useState<PollWithResults[]>([]);
@@ -34,6 +47,19 @@ export function PollsPage() {
   const [selectedOptions, setSelectedOptions] = useState<{
     [pollId: string]: string;
   }>({});
+  const [showInPersonVoteModal, setShowInPersonVoteModal] =
+    useState<InPersonVoteModal | null>(null);
+  const [homeowners, setHomeowners] = useState<AdminUser[]>([]);
+  const [inPersonVoteForm, setInPersonVoteForm] = useState({
+    household_id: "",
+    selected_option: "",
+    voted_at: new Date().toISOString().slice(0, 16),
+    witness: "",
+  });
+  const [voteSuccess, setVoteSuccess] = useState("");
+  const [votedHouseholds, setVotedHouseholds] = useState<Set<string>>(
+    new Set(),
+  );
 
   const isAdmin = user?.role === "admin";
   // For demo purposes, use user ID as household ID
@@ -42,6 +68,9 @@ export function PollsPage() {
 
   useEffect(() => {
     loadPolls();
+    if (isAdmin) {
+      loadHomeowners();
+    }
   }, []);
 
   async function loadPolls() {
@@ -73,6 +102,13 @@ export function PollsPage() {
     }
 
     setLoading(false);
+  }
+
+  async function loadHomeowners() {
+    const result = await api.admin.getHomeowners();
+    if (result.data) {
+      setHomeowners(result.data.homeowners);
+    }
   }
 
   async function handleVote(pollId: string) {
@@ -138,6 +174,71 @@ export function PollsPage() {
       setShowCreateForm(false);
       await loadPolls();
     }
+  }
+
+  function openInPersonVoteModal(poll: PollWithResults) {
+    setShowInPersonVoteModal({
+      pollId: poll.id,
+      pollQuestion: poll.question,
+      options: poll.options,
+    });
+    setInPersonVoteForm({
+      household_id: "",
+      selected_option: "",
+      voted_at: new Date().toISOString().slice(0, 16),
+      witness: "",
+    });
+    setError("");
+    setVoteSuccess("");
+  }
+
+  async function handleRecordInPersonVote(e: React.FormEvent) {
+    e.preventDefault();
+    if (!showInPersonVoteModal) return;
+
+    const { household_id, selected_option, voted_at, witness } =
+      inPersonVoteForm;
+
+    if (!household_id || !selected_option) {
+      setError("Please select a homeowner and an option");
+      return;
+    }
+
+    // Check if household has already voted
+    if (votedHouseholds.has(household_id)) {
+      setError("This household has already voted on this poll");
+      return;
+    }
+
+    const result = await api.admin.recordInPersonVote(
+      showInPersonVoteModal.pollId,
+      {
+        household_id,
+        selected_option,
+        voted_at: new Date(voted_at).toISOString(),
+        witness: witness || undefined,
+      },
+    );
+
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+
+    setVoteSuccess("Vote recorded successfully!");
+    setVotedHouseholds(new Set([...votedHouseholds, household_id]));
+    setInPersonVoteForm({
+      household_id: "",
+      selected_option: "",
+      voted_at: new Date().toISOString().slice(0, 16),
+      witness: "",
+    });
+
+    // Reload polls after a short delay
+    setTimeout(async () => {
+      await loadPolls();
+      setVoteSuccess("");
+    }, 1500);
   }
 
   function getTimeRemaining(endsAt: string): string {
@@ -296,15 +397,26 @@ export function PollsPage() {
                         ` • ${poll.total_votes} vote${poll.total_votes !== 1 ? "s" : ""}`}
                     </p>
                   </div>
-                  {isAdmin && (
-                    <button
-                      onClick={() => handleDeletePoll(poll.id)}
-                      className="ml-4 p-2 text-gray-400 hover:text-red-600"
-                      title="Delete poll"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isAdmin && (
+                      <button
+                        onClick={() => openInPersonVoteModal(poll)}
+                        className="p-2 text-gray-400 hover:text-primary-600"
+                        title="Record in-person vote"
+                      >
+                        <UserCheck className="w-5 h-5" />
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleDeletePoll(poll.id)}
+                        className="p-2 text-gray-400 hover:text-red-600"
+                        title="Delete poll"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Voting Interface */}
@@ -402,6 +514,171 @@ export function PollsPage() {
           </div>
         )}
       </div>
+
+      {/* In-Person Vote Recording Modal */}
+      {showInPersonVoteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Record In-Person Vote
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  {showInPersonVoteModal.pollQuestion}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowInPersonVoteModal(null);
+                  setError("");
+                  setVoteSuccess("");
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {error && (
+              <div className="mx-6 mt-4 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
+            {voteSuccess && (
+              <div className="mx-6 mt-4 bg-green-50 border border-green-200 text-green-700 p-3 rounded-lg text-sm">
+                {voteSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleRecordInPersonVote} className="p-6 space-y-4">
+              {/* Homeowner Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Homeowner *
+                </label>
+                <select
+                  value={inPersonVoteForm.household_id}
+                  onChange={(e) =>
+                    setInPersonVoteForm({
+                      ...inPersonVoteForm,
+                      household_id: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  required
+                >
+                  <option value="">Select homeowner</option>
+                  {homeowners
+                    .filter((h) => !votedHouseholds.has(h.id))
+                    .map((h) => (
+                      <option key={h.id} value={h.id}>
+                        {h.email}{" "}
+                        {h.household_count
+                          ? `(${h.household_count} lot${h.household_count > 1 ? "s" : ""})`
+                          : "(1 lot)"}
+                      </option>
+                    ))}
+                </select>
+                {inPersonVoteForm.household_id && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    This vote will represent{" "}
+                    {homeowners.find(
+                      (h) => h.id === inPersonVoteForm.household_id,
+                    )?.household_count || 1}{" "}
+                    lot(s)
+                  </p>
+                )}
+              </div>
+
+              {/* Option Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Selected Option *
+                </label>
+                <select
+                  value={inPersonVoteForm.selected_option}
+                  onChange={(e) =>
+                    setInPersonVoteForm({
+                      ...inPersonVoteForm,
+                      selected_option: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  required
+                >
+                  <option value="">Select option</option>
+                  {showInPersonVoteModal.options.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Vote Date/Time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Voted At *
+                </label>
+                <input
+                  type="datetime-local"
+                  value={inPersonVoteForm.voted_at}
+                  onChange={(e) =>
+                    setInPersonVoteForm({
+                      ...inPersonVoteForm,
+                      voted_at: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  required
+                />
+              </div>
+
+              {/* Witness */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Witness
+                </label>
+                <input
+                  type="text"
+                  value={inPersonVoteForm.witness}
+                  onChange={(e) =>
+                    setInPersonVoteForm({
+                      ...inPersonVoteForm,
+                      witness: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  placeholder="Optional"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowInPersonVoteModal(null);
+                    setError("");
+                    setVoteSuccess("");
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                >
+                  Record Vote
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

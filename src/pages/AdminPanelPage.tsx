@@ -384,7 +384,9 @@ export function AdminPanelPage() {
   };
 
   const handleUpdateHousehold = async (id: string, data: any) => {
+    console.log("[AdminPanel] Updating household:", id, "with data:", data);
     const response = await api.admin.updateHousehold(id, data);
+    console.log("[AdminPanel] Update response:", response);
     if (response.error) {
       alert(response.error);
       return;
@@ -1022,8 +1024,10 @@ function HouseholdModal({
       longitude: longitude ? parseFloat(longitude) : undefined,
       map_marker_x: mapMarkerX ? parseFloat(mapMarkerX) : undefined,
       map_marker_y: mapMarkerY ? parseFloat(mapMarkerY) : undefined,
+      owner_email: ownerEmail || undefined,
       residents,
     };
+    console.log("[HouseholdModal] Submitting household data:", data);
     onSave(data);
   };
 

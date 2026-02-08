@@ -74,7 +74,7 @@ let out = svg.replace('</svg>', labels + '</svg>');
 // Modify the existing stroke-width in the style attribute for block paths
 out = out.replace(
   /(id=["']Block \d+["'][^>]*style="[^"]*stroke-width:)1\.33333/g,
-  '$12'
+  '$15'
 );
 
 fs.writeFileSync('LAGUNA-HILLS-MAP-labeled.svg', out);

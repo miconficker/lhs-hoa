@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export function Header() {
   const { user, clearAuth } = useAuth();
@@ -24,6 +25,7 @@ export function Header() {
           <nav className="flex items-center gap-4">
             {user ? (
               <>
+                <NotificationBell />
                 <span className="text-sm text-gray-600">
                   {user.email} ({user.role})
                 </span>

@@ -11,6 +11,7 @@ import { reservationsRouter } from './routes/reservations';
 import { pollsRouter } from './routes/polls';
 import { documentsRouter } from './routes/documents';
 import { adminRouter } from './routes/admin';
+import { notificationsRouter } from './routes/notifications';
 
 type Env = {
   DB: D1Database;
@@ -40,6 +41,7 @@ app.route('/api/payments', paymentsRouter);
 app.route('/api/reservations', reservationsRouter);
 app.route('/api/polls', pollsRouter);
 app.route('/api/documents', documentsRouter);
+app.route('/api/notifications', notificationsRouter);
 app.route('/api/admin', adminRouter);
 
 export default app;
