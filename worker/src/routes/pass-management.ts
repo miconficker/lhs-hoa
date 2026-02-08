@@ -9,21 +9,16 @@ type Env = {
 
 // Enums for validation
 enum EmployeeType {
-  MAID = 'maid',
   DRIVER = 'driver',
-  GARDENER = 'gardener',
-  COOK = 'cook',
-  NANNY = 'nanny',
-  CONSTRUCTION = 'construction',
+  HOUSEKEEPER = 'housekeeper',
+  CARETAKER = 'caretaker',
   OTHER = 'other'
 }
 
 enum PassType {
-  DAILY = 'daily',
-  WEEKLY = 'weekly',
-  MONTHLY = 'monthly',
-  QUARTERLY = 'quarterly',
-  YEARLY = 'yearly'
+  STICKER = 'sticker',
+  RFID = 'rfid',
+  BOTH = 'both'
 }
 
 enum EmployeeStatus {
