@@ -44,6 +44,6 @@ app.route('/api/polls', pollsRouter);
 app.route('/api/documents', documentsRouter);
 app.route('/api/notifications', notificationsRouter);
 app.route('/api/admin', adminRouter);
-app.route('/api/pass-management', passManagementRouter);
+app.route('/api/pass-requests', passManagementRouter);
 
 export default app;
