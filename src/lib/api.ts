@@ -24,6 +24,25 @@ import type {
   NotificationResponse,
   BulkNotificationResponse,
   AdminNotificationsResponse,
+  EmployeesResponse,
+  EmployeeResponse,
+  VehiclesResponse,
+  VehicleResponse,
+  PassFeesResponse,
+  PassFeesUpdateResponse,
+  CreateEmployeeInput,
+  UpdateEmployeeInput,
+  CreateVehicleInput,
+  UpdateVehicleInput,
+  AssignRFIDInput,
+  AssignStickerInput,
+  RecordPaymentInput,
+  UpdateEmployeeStatusInput,
+  UpdateVehicleStatusInput,
+  PassStats,
+  EmployeeStatus,
+  VehicleStatus,
+  VehiclePaymentStatus,
 } from "@/types";
 
 const API_BASE = "/api";
@@ -985,6 +1004,116 @@ export const api = {
         },
       ),
     // Get list of users for admin dropdowns - already defined above in admin object
+    // Pass Management
+    passManagement: {
+      // Stats
+      getStats: () =>
+        apiRequest<{ stats: PassStats }>("/admin/pass-management/stats"),
+      // Employee Management
+      employees: {
+        list: (filters?: {
+          status?: EmployeeStatus;
+          household_id?: string;
+        }) => {
+          const params = new URLSearchParams();
+          if (filters?.status) params.append("status", filters.status);
+          if (filters?.household_id)
+            params.append("household_id", filters.household_id);
+          const query = params.toString();
+          return apiRequest<EmployeesResponse>(
+            `/admin/pass-management/employees${query ? "?" + query : ""}`,
+          );
+        },
+        get: (id: string) =>
+          apiRequest<EmployeeResponse>(
+            `/admin/pass-management/employees/${id}`,
+          ),
+        updateStatus: (id: string, input: UpdateEmployeeStatusInput) =>
+          apiRequest<EmployeeResponse>(
+            `/admin/pass-management/employees/${id}/status`,
+            {
+              method: "PUT",
+              body: JSON.stringify(input),
+            },
+          ),
+        delete: (id: string) =>
+          apiRequest<{ success: boolean }>(
+            `/admin/pass-management/employees/${id}`,
+            {
+              method: "DELETE",
+            },
+          ),
+      },
+      // Vehicle Management
+      vehicles: {
+        list: (filters?: {
+          status?: VehicleStatus;
+          payment_status?: VehiclePaymentStatus;
+          household_id?: string;
+        }) => {
+          const params = new URLSearchParams();
+          if (filters?.status) params.append("status", filters.status);
+          if (filters?.payment_status)
+            params.append("payment_status", filters.payment_status);
+          if (filters?.household_id)
+            params.append("household_id", filters.household_id);
+          const query = params.toString();
+          return apiRequest<VehiclesResponse>(
+            `/admin/pass-management/vehicles${query ? "?" + query : ""}`,
+          );
+        },
+        get: (id: string) =>
+          apiRequest<VehicleResponse>(`/admin/pass-management/vehicles/${id}`),
+        assignRFID: (id: string, input: AssignRFIDInput) =>
+          apiRequest<VehicleResponse>(
+            `/admin/pass-management/vehicles/${id}/rfid`,
+            {
+              method: "PUT",
+              body: JSON.stringify(input),
+            },
+          ),
+        assignSticker: (id: string, input: AssignStickerInput) =>
+          apiRequest<VehicleResponse>(
+            `/admin/pass-management/vehicles/${id}/sticker`,
+            {
+              method: "PUT",
+              body: JSON.stringify(input),
+            },
+          ),
+        recordPayment: (id: string, input: RecordPaymentInput) =>
+          apiRequest<VehicleResponse>(
+            `/admin/pass-management/vehicles/${id}/payment`,
+            {
+              method: "PUT",
+              body: JSON.stringify(input),
+            },
+          ),
+        updateStatus: (id: string, input: UpdateVehicleStatusInput) =>
+          apiRequest<VehicleResponse>(
+            `/admin/pass-management/vehicles/${id}/status`,
+            {
+              method: "PUT",
+              body: JSON.stringify(input),
+            },
+          ),
+        delete: (id: string) =>
+          apiRequest<{ success: boolean }>(
+            `/admin/pass-management/vehicles/${id}`,
+            {
+              method: "DELETE",
+            },
+          ),
+      },
+      // Pass Fee Management
+      fees: {
+        list: () => apiRequest<PassFeesResponse>("/admin/pass-management/fees"),
+        update: (input: { sticker_fee?: number; rfid_fee?: number }) =>
+          apiRequest<PassFeesUpdateResponse>("/admin/pass-management/fees", {
+            method: "PUT",
+            body: JSON.stringify(input),
+          }),
+      },
+    },
   },
   notifications: {
     list: (params?: {
@@ -1053,5 +1182,64 @@ export const api = {
         `/notifications/admin/all${queryString ? "?" + queryString : ""}`,
       );
     },
+  },
+  passRequests: {
+    // Employee Pass Requests (for residents)
+    employees: {
+      list: (householdId: string) =>
+        apiRequest<EmployeesResponse>(
+          `/pass-requests/employees/${householdId}`,
+        ),
+      get: (id: string) =>
+        apiRequest<EmployeeResponse>(`/pass-requests/employees/${id}`),
+      create: (input: CreateEmployeeInput) => {
+        const formData = new FormData();
+        formData.append("household_id", input.household_id);
+        formData.append("full_name", input.full_name);
+        formData.append("employee_type", input.employee_type);
+        if (input.photo) {
+          formData.append("photo", input.photo);
+        }
+        if (input.expiry_date) {
+          formData.append("expiry_date", input.expiry_date);
+        }
+        return apiUpload<EmployeeResponse>(
+          "/pass-requests/employees",
+          formData,
+        );
+      },
+      update: (id: string, input: UpdateEmployeeInput) =>
+        apiRequest<EmployeeResponse>(`/pass-requests/employees/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(input),
+        }),
+      delete: (id: string) =>
+        apiRequest<{ success: boolean }>(`/pass-requests/employees/${id}`, {
+          method: "DELETE",
+        }),
+    },
+    // Vehicle Pass Requests (for residents)
+    vehicles: {
+      list: (householdId: string) =>
+        apiRequest<VehiclesResponse>(`/pass-requests/vehicles/${householdId}`),
+      get: (id: string) =>
+        apiRequest<VehicleResponse>(`/pass-requests/vehicles/${id}`),
+      create: (input: CreateVehicleInput) =>
+        apiRequest<VehicleResponse>("/pass-requests/vehicles", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      update: (id: string, input: UpdateVehicleInput) =>
+        apiRequest<VehicleResponse>(`/pass-requests/vehicles/${id}`, {
+          method: "PUT",
+          body: JSON.stringify(input),
+        }),
+      delete: (id: string) =>
+        apiRequest<{ success: boolean }>(`/pass-requests/vehicles/${id}`, {
+          method: "DELETE",
+        }),
+    },
+    // Get current pass fees (public endpoint)
+    getFees: () => apiRequest<PassFeesResponse>("/pass-requests/fees"),
   },
 };
