@@ -12,6 +12,7 @@ import { pollsRouter } from './routes/polls';
 import { documentsRouter } from './routes/documents';
 import { adminRouter } from './routes/admin';
 import { notificationsRouter } from './routes/notifications';
+import { passManagementRouter } from './routes/pass-management';
 
 type Env = {
   DB: D1Database;
@@ -43,5 +44,6 @@ app.route('/api/polls', pollsRouter);
 app.route('/api/documents', documentsRouter);
 app.route('/api/notifications', notificationsRouter);
 app.route('/api/admin', adminRouter);
+app.route('/api/pass-management', passManagementRouter);
 
 export default app;
