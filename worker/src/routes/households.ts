@@ -211,6 +211,7 @@ householdsRouter.get('/my-lots', async (c) => {
  * GET /api/households/lots
  * Get all lots with public information only (lot_status, lot_type)
  * For map display - non-admin users see limited info
+ * Includes owner_user_id only for lots owned by the current user (for highlighting)
  * NOTE: This route MUST come before /:id to prevent 'lots' being matched as an id
  */
 householdsRouter.get('/lots', async (c) => {
@@ -228,12 +229,13 @@ householdsRouter.get('/lots', async (c) => {
         h.lot_status,
         h.lot_type,
         h.lot_label,
-        h.lot_description
+        h.lot_description,
+        CASE WHEN h.owner_id = ? THEN ? ELSE NULL END as owner_user_id
       FROM households h
       ORDER BY
         CAST(h.block AS INTEGER) ASC,
         CAST(h.lot AS INTEGER) ASC
-    `).all();
+    `).bind(authUser.userId, authUser.userId).all();
 
     return c.json({ lots: lots.results || [] });
   } catch (error) {

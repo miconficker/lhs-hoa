@@ -25,7 +25,7 @@ export function CommonAreasPage() {
   async function loadCommonLots() {
     setLoading(true);
     try {
-      const result = await api.households.getLots();
+      const result = await api.admin.getLotsWithOwnership();
       if (result.data?.lots) {
         // Filter to only community/utility/open_space
         const commonLots = result.data.lots.filter(

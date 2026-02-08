@@ -145,6 +145,35 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
 
   if (!data) return null;
 
+  // Generate a consistent color for each owner based on their ID
+  const getOwnerColor = (ownerId: string | undefined): string => {
+    if (!ownerId) return "#9ca3af"; // gray for unowned
+
+    // List of distinct colors for different owners
+    const colors = [
+      "#22c55e", // green
+      "#3b82f6", // blue
+      "#ef4444", // red
+      "#f59e0b", // amber
+      "#8b5cf6", // purple
+      "#ec4899", // pink
+      "#14b8a6", // teal
+      "#f97316", // orange
+      "#06b6d4", // cyan
+      "#84cc16", // lime
+      "#6366f1", // indigo
+      "#eab308", // yellow
+    ];
+
+    // Simple hash to get consistent color index
+    let hash = 0;
+    for (let i = 0; i < ownerId.length; i++) {
+      hash = ownerId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+  };
+
   const style = (
     feature?: GeoJSON.Feature<GeoJSON.Geometry, LotFeatureProperties>,
   ) => {
@@ -154,6 +183,7 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
     // Get ownership data for this lot
     const ownershipData = lotsOwnership?.get(lotId || "");
     const lotType = ownershipData?.lot_type;
+    const ownerId = ownershipData?.owner_user_id;
     const isMerged = ownershipData?.household_group_id;
     const isCommunityLot =
       lotType === "community" ||
@@ -161,10 +191,8 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
       lotType === "open_space";
 
     let fillColor = "#9ca3af"; // default gray
-    if (props?.status === "built") fillColor = "#22c55e"; // green
-    if (props?.status === "under_construction") fillColor = "#f59e0b"; // orange
 
-    // For community/utility/open space lots, use teal/cyan color
+    // For community/utility/open space lots, use specific colors
     if (isCommunityLot) {
       fillColor =
         lotType === "utility"
@@ -172,6 +200,9 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
           : lotType === "open_space"
             ? "#14b8a6" // teal for open space
             : "#8b5cf6"; // purple for community
+    } else if (ownerId) {
+      // For private lots, color by owner
+      fillColor = getOwnerColor(ownerId);
     }
 
     // For merged lots, use same color across group (shade of purple)
@@ -179,21 +210,26 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
       fillColor = ownershipData?.is_primary_lot ? "#8b5cf6" : "#a78bfa";
     }
 
+    // Map fill color to border color
+    const borderColors: Record<string, string> = {
+      "#9ca3af": "#6b7280", // gray
+      "#22c55e": "#16a34a", // green
+      "#3b82f6": "#2563eb", // blue
+      "#ef4444": "#dc2626", // red
+      "#f59e0b": "#d97706", // amber
+      "#8b5cf6": "#7c3aed", // purple
+      "#ec4899": "#db2777", // pink
+      "#14b8a6": "#0d9488", // teal
+      "#f97316": "#ea580c", // orange
+      "#06b6d4": "#0891b2", // cyan
+      "#84cc16": "#65a30d", // lime
+      "#6366f1": "#4f46e5", // indigo
+      "#eab308": "#ca8a04", // yellow
+      "#a78bfa": "#8b5cf6", // light purple
+    };
+
     return {
-      color:
-        fillColor === "#9ca3af"
-          ? "#6b7280"
-          : fillColor === "#22c55e"
-            ? "#16a34a"
-            : fillColor === "#f59e0b"
-              ? "#d97706"
-              : fillColor === "#8b5cf6"
-                ? "#7c3aed"
-                : fillColor === "#14b8a6"
-                  ? "#0d9488"
-                  : fillColor === "#f97316"
-                    ? "#ea580c"
-                    : "#8b5cf6",
+      color: borderColors[fillColor] || "#6b7280",
       weight: 2,
       fillColor,
       fillOpacity: 0.3,
@@ -398,7 +434,7 @@ export function MapPage() {
         }
 
         // Load lot ownership data from database (not GeoJSON)
-        // For admin users, get detailed ownership info; for others, just basic lot info
+        // For admin users, get detailed ownership info; for others, get their lots highlighted
         if (user?.role === "admin") {
           const ownershipResult = await api.admin.getLotsWithOwnership();
           if (ownershipResult.data?.lots) {
@@ -418,12 +454,13 @@ export function MapPage() {
             setLotsOwnership(ownershipMap);
           }
         } else {
-          // For non-admin users, get basic lot info
+          // For non-admin users, get basic lot info (owner_user_id only for their own lots)
           const lotsResult = await api.households.getLots();
           if (lotsResult.data?.lots) {
             const ownershipMap = new Map();
             lotsResult.data.lots.forEach((lot) => {
               ownershipMap.set(lot.lot_id, {
+                owner_user_id: lot.owner_user_id, // Only set for user's own lots
                 lot_status: lot.lot_status,
                 lot_type: lot.lot_type,
                 lot_label: lot.lot_label,

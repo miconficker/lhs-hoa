@@ -19,6 +19,7 @@ import type {
   PaymentDemand,
   MyLotsSummary,
   MyLot,
+  PublicLot,
   NotificationsResponse,
   NotificationResponse,
   BulkNotificationResponse,
@@ -595,7 +596,7 @@ export const api = {
       apiRequest<MapLocationsResponse>("/households/map/locations"),
     getMyLots: (): Promise<ApiResponse<MyLotsSummary>> =>
       apiGet<MyLotsSummary>("/households/my-lots"),
-    getLots: (): Promise<ApiResponse<{ lots: MyLot[] }>> =>
+    getLots: (): Promise<ApiResponse<{ lots: PublicLot[] }>> =>
       apiGet<{ lots: MyLot[] }>("/households/lots"),
   },
   reservations: {

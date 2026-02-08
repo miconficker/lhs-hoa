@@ -427,6 +427,7 @@ export interface PublicLot {
   lot_type?: LotType;
   lot_label?: string;
   lot_description?: string;
+  owner_user_id?: string; // Only included for lots owned by the current user
 }
 
 // =============================================================================
