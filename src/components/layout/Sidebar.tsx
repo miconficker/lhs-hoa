@@ -10,7 +10,6 @@ import {
   MessageSquare,
   BarChart,
   Settings,
-  Edit3,
   Building2,
   Home as HomeIcon,
   DollarSign,
@@ -88,12 +87,6 @@ const navItems = [
     roles: ["admin", "resident", "staff"],
   },
   { separator: true, roles: ["admin", "resident", "staff"] },
-  {
-    to: "/annotate",
-    icon: Edit3,
-    label: "Annotate Lots",
-    roles: ["admin"],
-  },
   {
     to: "/admin/lots",
     icon: Building2,
