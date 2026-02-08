@@ -799,6 +799,20 @@ export const api = {
       apiPut<{ success: boolean }>(`/admin/lots/${lotId}/size`, {
         lot_size_sqm: size,
       }),
+    updateLotLabel: (
+      lotId: string,
+      label: string | null,
+    ): Promise<ApiResponse<{ success: boolean }>> =>
+      apiPut<{ success: boolean }>(`/admin/lots/${lotId}/label`, {
+        lot_label: label,
+      }),
+    updateLotDescription: (
+      lotId: string,
+      description: string | null,
+    ): Promise<ApiResponse<{ success: boolean }>> =>
+      apiPut<{ success: boolean }>(`/admin/lots/${lotId}/description`, {
+        lot_description: description,
+      }),
     getHomeowners: (): Promise<ApiResponse<{ homeowners: User[] }>> =>
       apiGet<{ homeowners: User[] }>("/admin/homeowners"),
     batchAssignOwner: (

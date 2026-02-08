@@ -47,6 +47,8 @@ export function AdminLotsPage() {
   const [selectedLotType, setSelectedLotType] =
     useState<LotType>("residential");
   const [lotSize, setLotSize] = useState<string>("");
+  const [lotLabel, setLotLabel] = useState<string>("");
+  const [lotDescription, setLotDescription] = useState<string>("");
   const [selectedLots, setSelectedLots] = useState<Set<string>>(new Set());
   const [highlightOwnerId, setHighlightOwnerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,6 +94,8 @@ export function AdminLotsPage() {
       setSelectedStatus(lot.lot_status);
       setSelectedLotType((lot.lot_type as LotType) || "residential");
       setLotSize(lot.lot_size_sqm?.toString() || "");
+      setLotLabel(lot.lot_label || "");
+      setLotDescription(lot.lot_description || "");
     }
   }
 
@@ -117,6 +121,11 @@ export function AdminLotsPage() {
         api.admin.updateLotSize(
           selectedLot.lot_id,
           lotSize ? parseFloat(lotSize) : null,
+        ),
+        api.admin.updateLotLabel(selectedLot.lot_id, lotLabel || null),
+        api.admin.updateLotDescription(
+          selectedLot.lot_id,
+          lotDescription || null,
         ),
       ]);
 
@@ -327,13 +336,17 @@ export function AdminLotsPage() {
                         <div class="p-2 min-w-[200px]">
                           <h3 class="font-semibold text-gray-900 mb-1">
                             ${
-                              lot?.block_number && lot?.lot_number
+                              lot?.lot_label ||
+                              (lot?.block_number && lot?.lot_number
                                 ? `Block ${lot.block_number}, Lot ${lot.lot_number}`
-                                : props?.path_id || "Unnamed Lot"
+                                : props?.path_id || "Unnamed Lot")
                             }
                           </h3>
                           <p class="text-sm text-gray-600">
-                            Owner: ${lot?.owner_name || "Unknown"}
+                            Owner: ${!lot?.owner_name && !lot?.owner_user_id ? "HOA-Owned" : lot?.owner_name || lot?.owner_email || "Unknown"}
+                          </p>
+                          <p class="text-sm text-gray-600">
+                            Type: ${lot?.lot_type || "residential"}
                           </p>
                           <p class="text-sm text-gray-600">
                             Status: ${lot?.lot_status || "vacant_lot"}
@@ -341,6 +354,11 @@ export function AdminLotsPage() {
                           ${
                             lot?.lot_size_sqm
                               ? `<p class="text-sm text-gray-600">Size: ${lot.lot_size_sqm} m²</p>`
+                              : ""
+                          }
+                          ${
+                            lot?.lot_description
+                              ? `<p class="text-sm text-gray-600">${lot.lot_description}</p>`
                               : ""
                           }
                           ${
@@ -482,6 +500,38 @@ export function AdminLotsPage() {
                     min="0"
                     step="0.01"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Label (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={lotLabel}
+                    onChange={(e) => setLotLabel(e.target.value)}
+                    placeholder="e.g., Clubhouse, Water Tower, Tennis Court"
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Short name for community/utility lots
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description (optional)
+                  </label>
+                  <textarea
+                    value={lotDescription}
+                    onChange={(e) => setLotDescription(e.target.value)}
+                    placeholder="e.g., Multi-purpose court with basketball and volleyball hoops"
+                    className="w-full px-3 py-2 border rounded-lg"
+                    rows={3}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Detailed description for amenities or common areas
+                  </p>
                 </div>
 
                 <div className="flex gap-2 pt-4">

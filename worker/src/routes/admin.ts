@@ -685,6 +685,8 @@ adminRouter.get('/lots/ownership', async (c) => {
         h.lot_status,
         h.lot_type,
         h.lot_size_sqm,
+        h.lot_label,
+        h.lot_description,
         u.email as owner_email,
         CASE
           WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN u.first_name || ' ' || u.last_name
@@ -894,6 +896,98 @@ adminRouter.put('/lots/:lotId/size', async (c) => {
   } catch (error) {
     console.error('Error updating lot size:', error);
     return c.json({ error: 'Failed to update lot size' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/lots/:lotId/label
+ * Update lot label (admin only)
+ * Used for naming community areas like "Clubhouse", "Water Tower", etc.
+ */
+adminRouter.put('/lots/:lotId/label', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const lotId = c.req.param('lotId');
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON' }, 400);
+  }
+  const { lot_label } = body;
+
+  // Verify lot exists
+  const lot = await c.env.DB.prepare(
+    'SELECT id FROM households WHERE id = ?'
+  ).bind(lotId).first();
+
+  if (!lot) {
+    return c.json({ error: 'Lot not found' }, 404);
+  }
+
+  // Allow null (clearing the label) or string
+  if (lot_label !== null && lot_label !== undefined && typeof lot_label !== 'string') {
+    return c.json({ error: 'Invalid lot_label' }, 400);
+  }
+
+  try {
+    await c.env.DB.prepare(
+      'UPDATE households SET lot_label = ? WHERE id = ?'
+    ).bind(lot_label || null, lotId).run();
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Error updating lot label:', error);
+    return c.json({ error: 'Failed to update lot label' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/lots/:lotId/description
+ * Update lot description (admin only)
+ * Used for describing community areas, amenities, etc.
+ */
+adminRouter.put('/lots/:lotId/description', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const lotId = c.req.param('lotId');
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON' }, 400);
+  }
+  const { lot_description } = body;
+
+  // Verify lot exists
+  const lot = await c.env.DB.prepare(
+    'SELECT id FROM households WHERE id = ?'
+  ).bind(lotId).first();
+
+  if (!lot) {
+    return c.json({ error: 'Lot not found' }, 404);
+  }
+
+  // Allow null (clearing the description) or string
+  if (lot_description !== null && lot_description !== undefined && typeof lot_description !== 'string') {
+    return c.json({ error: 'Invalid lot_description' }, 400);
+  }
+
+  try {
+    await c.env.DB.prepare(
+      'UPDATE households SET lot_description = ? WHERE id = ?'
+    ).bind(lot_description || null, lotId).run();
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Error updating lot description:', error);
+    return c.json({ error: 'Failed to update lot description' }, 500);
   }
 });
 

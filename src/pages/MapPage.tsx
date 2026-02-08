@@ -131,6 +131,9 @@ interface LotsGeoJSONProps {
       owner_user_id?: string;
       owner_name?: string;
       lot_status?: string;
+      lot_type?: string;
+      lot_label?: string;
+      lot_description?: string;
       household_group_id?: string;
       is_primary_lot?: boolean;
     }
@@ -148,13 +151,28 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
     const props = feature?.properties;
     const lotId = props?.path_id;
 
-    // Get household group for this lot
+    // Get ownership data for this lot
     const ownershipData = lotsOwnership?.get(lotId || "");
+    const lotType = ownershipData?.lot_type;
     const isMerged = ownershipData?.household_group_id;
+    const isCommunityLot =
+      lotType === "community" ||
+      lotType === "utility" ||
+      lotType === "open_space";
 
     let fillColor = "#9ca3af"; // default gray
     if (props?.status === "built") fillColor = "#22c55e"; // green
     if (props?.status === "under_construction") fillColor = "#f59e0b"; // orange
+
+    // For community/utility/open space lots, use teal/cyan color
+    if (isCommunityLot) {
+      fillColor =
+        lotType === "utility"
+          ? "#f97316" // orange for utility
+          : lotType === "open_space"
+            ? "#14b8a6" // teal for open space
+            : "#8b5cf6"; // purple for community
+    }
 
     // For merged lots, use same color across group (shade of purple)
     if (isMerged) {
@@ -171,7 +189,11 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
               ? "#d97706"
               : fillColor === "#8b5cf6"
                 ? "#7c3aed"
-                : "#8b5cf6",
+                : fillColor === "#14b8a6"
+                  ? "#0d9488"
+                  : fillColor === "#f97316"
+                    ? "#ea580c"
+                    : "#8b5cf6",
       weight: 2,
       fillColor,
       fillOpacity: 0.3,
@@ -210,6 +232,9 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
       const ownerId = ownershipData?.owner_user_id || props.owner_user_id;
       const ownerName = ownershipData?.owner_name;
       const lotStatus = ownershipData?.lot_status || props.status;
+      const lotLabel = ownershipData?.lot_label;
+      const lotDescription = ownershipData?.lot_description;
+      const lotType = ownershipData?.lot_type;
 
       const ownerInfo = isAdmin
         ? `
@@ -238,12 +263,14 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
         <div class="p-2 min-w-[200px]">
           <h3 class="font-semibold text-gray-900 mb-1">
             ${
-              props.block_number && props.lot_number
+              lotLabel ||
+              (props.block_number && props.lot_number
                 ? `Block ${props.block_number}, Lot ${props.lot_number}`
-                : props.path_id || "Unnamed Lot"
+                : props.path_id || "Unnamed Lot")
             }
           </h3>
           ${ownerInfo}
+          ${lotType ? `<p class="text-xs text-gray-500">Type: ${lotType}</p>` : ""}
           ${mergeBadge}
           <div class="flex items-center gap-2 mb-2">
             <span class="px-2 py-1 text-xs font-medium rounded-full ${
@@ -265,6 +292,11 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
           ${
             props.lot_size_sqm
               ? `<p class="text-xs text-gray-500">Size: ${Math.round(props.lot_size_sqm)} m²</p>`
+              : ""
+          }
+          ${
+            lotDescription
+              ? `<p class="text-xs text-gray-600 mt-1">${lotDescription}</p>`
               : ""
           }
           ${editLink}
@@ -376,6 +408,11 @@ export function MapPage() {
                 owner_user_id: lot.owner_user_id,
                 owner_name: lot.owner_name,
                 lot_status: lot.lot_status,
+                lot_type: lot.lot_type,
+                lot_label: lot.lot_label,
+                lot_description: lot.lot_description,
+                household_group_id: lot.household_group_id,
+                is_primary_lot: lot.is_primary_lot,
               });
             });
             setLotsOwnership(ownershipMap);
@@ -388,6 +425,9 @@ export function MapPage() {
             lotsResult.data.lots.forEach((lot) => {
               ownershipMap.set(lot.lot_id, {
                 lot_status: lot.lot_status,
+                lot_type: lot.lot_type,
+                lot_label: lot.lot_label,
+                lot_description: lot.lot_description,
               });
             });
             setLotsOwnership(ownershipMap);
@@ -733,6 +773,23 @@ export function MapPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 rounded bg-gray-400 border-2 border-gray-500"></div>
                   <span className="text-sm text-gray-700">Vacant Lot</span>
+                </div>
+                <div className="border-t border-gray-200 pt-2 mt-2">
+                  <p className="text-xs text-gray-500 mb-2 font-medium">
+                    HOA-Owned Areas
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded bg-purple-500 border-2 border-purple-600"></div>
+                  <span className="text-sm text-gray-700">Community</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded bg-orange-600 border-2 border-orange-700"></div>
+                  <span className="text-sm text-gray-700">Utility</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded bg-teal-500 border-2 border-teal-600"></div>
+                  <span className="text-sm text-gray-700">Open Space</span>
                 </div>
               </div>
             </div>

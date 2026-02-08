@@ -226,7 +226,9 @@ householdsRouter.get('/lots', async (c) => {
         h.block,
         h.lot,
         h.lot_status,
-        h.lot_type
+        h.lot_type,
+        h.lot_label,
+        h.lot_description
       FROM households h
       ORDER BY
         CAST(h.block AS INTEGER) ASC,

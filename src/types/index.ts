@@ -82,6 +82,10 @@ export interface LotOwnership {
   lot_status: LotStatus;
   lot_type?: LotType;
   lot_size_sqm?: number;
+  lot_label?: string;
+  lot_description?: string;
+  household_group_id?: string | null;
+  is_primary_lot?: boolean;
   address?: string;
 }
 
@@ -391,6 +395,8 @@ export interface MyLot {
   lot_status: LotStatus;
   lot_type?: LotType;
   lot_size_sqm?: number;
+  lot_label?: string;
+  lot_description?: string;
   annual_dues: number;
   payment_status?: "current" | "overdue" | "suspended";
   household_group_id?: string | null;
@@ -419,6 +425,8 @@ export interface PublicLot {
   lot?: string;
   lot_status: LotStatus;
   lot_type?: LotType;
+  lot_label?: string;
+  lot_description?: string;
 }
 
 // =============================================================================
