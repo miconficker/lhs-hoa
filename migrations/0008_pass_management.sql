@@ -1,4 +1,9 @@
--- Migration 0008: Employee and Vehicle Pass Management
+-- Migration: Employee and Vehicle Pass Management
+-- Date: 2025-02-08
+-- Last updated: 2025-02-08
+
+-- Enable foreign key enforcement
+PRAGMA foreign_keys = ON;
 
 -- Household employees table
 CREATE TABLE IF NOT EXISTS household_employees (
@@ -49,7 +54,7 @@ CREATE TABLE IF NOT EXISTS pass_fees (
 );
 
 -- Insert default fees (configurable, will be set by admin)
-INSERT INTO pass_fees (id, fee_type, amount, effective_date)
+INSERT OR IGNORE INTO pass_fees (id, fee_type, amount, effective_date)
 VALUES
   ('default-sticker', 'sticker', 500, DATE('now')),
   ('default-rfid', 'rfid', 800, DATE('now')),
@@ -61,6 +66,7 @@ ALTER TABLE payments ADD COLUMN payment_category TEXT DEFAULT 'dues' CHECK(payme
 -- Index for faster lookups
 CREATE INDEX IF NOT EXISTS idx_household_employees_household_id ON household_employees(household_id);
 CREATE INDEX IF NOT EXISTS idx_household_employees_status ON household_employees(status);
+CREATE INDEX IF NOT EXISTS idx_household_employees_expiry_date ON household_employees(expiry_date);
 CREATE INDEX IF NOT EXISTS idx_vehicle_registrations_household_id ON vehicle_registrations(household_id);
 CREATE INDEX IF NOT EXISTS idx_vehicle_registrations_status ON vehicle_registrations(status);
 CREATE INDEX IF NOT EXISTS idx_vehicle_registrations_plate ON vehicle_registrations(plate_number);
