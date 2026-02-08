@@ -118,10 +118,10 @@ householdsRouter.get('/my-lots', async (c) => {
       ORDER BY year DESC
     `).bind(authUser.userId).all();
 
-    // Calculate summary
+    // Calculate summary (rate is monthly per sqm, annual = monthly * 12)
     const totalLots = lots.results?.length || 0;
     const totalSqm = lots.results?.reduce((sum, lot) => sum + (lot.lot_size_sqm || 0), 0) || 0;
-    const annualDuesTotal = totalSqm * ratePerSqm;
+    const annualDuesTotal = totalSqm * ratePerSqm * 12;
 
     // Find unpaid periods
     const unpaidPeriods: string[] = [];
@@ -151,7 +151,7 @@ householdsRouter.get('/my-lots', async (c) => {
         const existing = acc.find(g => g.household_group_id === lot.household_group_id);
         if (existing) {
           existing.merged_lots.push(lot.lot_id);
-          existing.annual_dues += (lot.lot_size_sqm || 0) * ratePerSqm;
+          existing.annual_dues += (lot.lot_size_sqm || 0) * ratePerSqm * 12;
           existing.lot_size_sqm += lot.lot_size_sqm || 0;
           existing.address = `${existing.block}-${existing.lot} + ${lot.block}-${lot.lot}`;
         } else {
@@ -159,14 +159,14 @@ householdsRouter.get('/my-lots', async (c) => {
             ...lot,
             merged_lots: [lot.lot_id],
             is_primary_lot: true,
-            annual_dues: (lot.lot_size_sqm || 0) * ratePerSqm,
+            annual_dues: (lot.lot_size_sqm || 0) * ratePerSqm * 12,
           });
         }
       } else {
         acc.push({
           ...lot,
           merged_lots: [],
-          annual_dues: (lot.lot_size_sqm || 0) * ratePerSqm,
+          annual_dues: (lot.lot_size_sqm || 0) * ratePerSqm * 12,
         });
       }
       return acc;

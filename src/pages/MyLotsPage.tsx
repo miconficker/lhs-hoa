@@ -94,7 +94,7 @@ export function MyLotsPage() {
               ₱{summary.annual_dues_total.toLocaleString()}
             </p>
             <p className="text-xs text-gray-400">
-              ₱{summary.rate_per_sqm} per sqm
+              ₱{summary.rate_per_sqm}/sqm/month
             </p>
           </div>
 
@@ -185,17 +185,22 @@ export function MyLotsPage() {
                     {lot.lot || "—"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs font-medium rounded">
-                      {lot.lot_type === "resort"
-                        ? "bg-purple-100 text-purple-700"
-                        : lot.lot_type === "commercial"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-green-100 text-green-700"}
+                    <span
+                      className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        lot.lot_type === "resort"
+                          ? "bg-purple-100 text-purple-700"
+                          : lot.lot_type === "commercial"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-green-100 text-green-700"
+                      }`}
+                    >
                       {lot.lot_type === "residential"
                         ? "Residential"
                         : lot.lot_type === "resort"
                           ? "Resort"
-                          : "Commercial"}
+                          : lot.lot_type === "commercial"
+                            ? "Commercial"
+                            : "Unknown"}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -239,7 +244,7 @@ export function MyLotsPage() {
             <p className="text-sm text-blue-700 mt-1">
               This page shows all lots registered to your account. Annual dues
               are calculated based on lot size (₱{summary.rate_per_sqm} per
-              square meter).
+              square meter per month × 12 months).
             </p>
             <p className="text-sm text-blue-700 mt-1">
               Voting: 1 lot = 1 vote. If you own multiple lots, your single vote

@@ -181,7 +181,7 @@ export function DuesConfigPage() {
             Dues Configuration
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Manage annual HOA dues rates per square meter
+            Manage monthly HOA dues rates per square meter
           </p>
         </div>
         {!showForm && (
@@ -226,7 +226,7 @@ export function DuesConfigPage() {
             <span className="text-4xl font-bold">
               ₱{currentRate.rate_per_sqm.toLocaleString()}
             </span>
-            <span className="text-blue-100">per sqm</span>
+            <span className="text-blue-100">per sqm/month</span>
           </div>
           <p className="text-sm text-blue-100 mt-2">
             Effective since{" "}
@@ -261,7 +261,7 @@ export function DuesConfigPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Rate per Square Meter (₱)
+                Monthly Rate per Square Meter (₱)
               </label>
               <input
                 type="number"
@@ -336,7 +336,7 @@ export function DuesConfigPage() {
                   Year
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Rate per sqm
+                  Monthly Rate (₱/sqm)
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Effective Date
@@ -427,7 +427,7 @@ export function DuesConfigPage() {
             <p className="text-sm text-blue-700 mt-1">
               The annual dues for each lot is calculated as:
               <code className="ml-1 px-1 py-0.5 bg-blue-100 rounded">
-                lot_size_sqm × rate_per_sqm
+                lot_size_sqm × monthly_rate × 12
               </code>
             </p>
             <p className="text-sm text-blue-700 mt-1">

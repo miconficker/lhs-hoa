@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   MapContainer,
   ImageOverlay,
@@ -213,7 +214,7 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
       const ownerInfo = isAdmin
         ? `
         <p class="text-sm text-gray-600">
-          Owner: ${ownerName || ownerId || "developer-owner"}
+          Owner: ${!ownerName && !ownerId ? "HOA-Owned" : ownerName || ownerId || "Unassigned"}
         </p>
       `
         : "";
@@ -332,6 +333,7 @@ function BlocksGeoJSON({ data }: BlocksGeoJSONProps) {
 
 export function MapPage() {
   const { user } = useAuth();
+  const location = useLocation();
   const [households, setHouseholds] = useState<MapHousehold[]>([]);
   const [lotsData, setLotsData] = useState<GeoJSON.FeatureCollection | null>(
     null,
@@ -418,6 +420,29 @@ export function MapPage() {
 
     loadData();
   }, [user]);
+
+  // Refresh ownership data when returning to map page (e.g., from admin)
+  useEffect(() => {
+    if (location.pathname === "/map") {
+      const refreshOwnershipData = async () => {
+        if (user?.role === "admin") {
+          const ownershipResult = await api.admin.getLotsWithOwnership();
+          if (ownershipResult.data?.lots) {
+            const ownershipMap = new Map();
+            ownershipResult.data.lots.forEach((lot) => {
+              ownershipMap.set(lot.lot_id, {
+                owner_user_id: lot.owner_user_id,
+                owner_name: lot.owner_name,
+                lot_status: lot.lot_status,
+              });
+            });
+            setLotsOwnership(ownershipMap);
+          }
+        }
+      };
+      refreshOwnershipData();
+    }
+  }, [location.pathname, user]);
 
   const filteredHouseholds = households.filter(() => {
     // For now, show all households regardless of lot status filter
@@ -593,11 +618,18 @@ export function MapPage() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-gray-900">
-                      {lotsData?.features.filter(
-                        (f: any) => f.properties?.status === "built",
-                      ).length || 0}
+                      {lotsData?.features.filter((f: any) => {
+                        const lotId = f.properties?.path_id;
+                        const ownership = lotsOwnership?.get(lotId || "");
+                        // Count only private lots (has owner) that are built
+                        return (
+                          ownership?.owner_user_id &&
+                          (ownership.lot_status === "built" ||
+                            f.properties?.status === "built")
+                        );
+                      }).length || 0}
                     </p>
-                    <p className="text-sm text-gray-600">Built</p>
+                    <p className="text-sm text-gray-600">Built (Private)</p>
                   </div>
                 </div>
               </div>
@@ -609,12 +641,20 @@ export function MapPage() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-gray-900">
-                      {lotsData?.features.filter(
-                        (f: any) =>
-                          f.properties?.status === "under_construction",
-                      ).length || 0}
+                      {lotsData?.features.filter((f: any) => {
+                        const lotId = f.properties?.path_id;
+                        const ownership = lotsOwnership?.get(lotId || "");
+                        // Count only private lots (has owner) that are under construction
+                        return (
+                          ownership?.owner_user_id &&
+                          (ownership.lot_status === "under_construction" ||
+                            f.properties?.status === "under_construction")
+                        );
+                      }).length || 0}
                     </p>
-                    <p className="text-sm text-gray-600">Under Construction</p>
+                    <p className="text-sm text-gray-600">
+                      Under Construction (Private)
+                    </p>
                   </div>
                 </div>
               </div>
@@ -626,16 +666,52 @@ export function MapPage() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-gray-900">
-                      {lotsData?.features.filter(
-                        (f: any) =>
-                          f.properties?.status === "vacant_lot" ||
-                          !f.properties?.status,
-                      ).length || 0}
+                      {lotsData?.features.filter((f: any) => {
+                        const lotId = f.properties?.path_id;
+                        const ownership = lotsOwnership?.get(lotId || "");
+                        // Count only private lots (has owner) that are vacant
+                        return (
+                          ownership?.owner_user_id &&
+                          (!ownership.lot_status ||
+                            ownership.lot_status === "vacant_lot" ||
+                            !f.properties?.status ||
+                            f.properties?.status === "vacant_lot")
+                        );
+                      }).length || 0}
                     </p>
-                    <p className="text-sm text-gray-600">Vacant</p>
+                    <p className="text-sm text-gray-600">Vacant (Private)</p>
                   </div>
                 </div>
               </div>
+
+              {/* HOA-Owned Common Areas - only show if there are any */}
+              {(lotsData?.features ?? []).filter((f: any) => {
+                const lotId = f.properties?.path_id;
+                const ownership = lotsOwnership?.get(lotId || "");
+                // Count HOA-owned lots (no owner)
+                return !ownership?.owner_user_id;
+              }).length > 0 && (
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-xl p-4 border border-purple-200">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-500 rounded-lg">
+                      <Landmark className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {(lotsData?.features ?? []).filter((f: any) => {
+                          const lotId = f.properties?.path_id;
+                          const ownership = lotsOwnership?.get(lotId || "");
+                          // Count HOA-owned lots (no owner)
+                          return !ownership?.owner_user_id;
+                        }).length || 0}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        HOA-Owned Common Areas
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Legend */}
