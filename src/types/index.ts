@@ -80,6 +80,7 @@ export interface LotOwnership {
   owner_name: string;
   owner_email: string;
   lot_status: LotStatus;
+  lot_type?: LotType;
   lot_size_sqm?: number;
   address?: string;
 }

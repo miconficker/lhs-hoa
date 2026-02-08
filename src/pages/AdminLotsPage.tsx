@@ -3,7 +3,13 @@ import { MapContainer, ImageOverlay, GeoJSON } from "react-leaflet";
 import { LatLngBoundsExpression } from "leaflet";
 import L from "leaflet";
 import { api } from "@/lib/api";
-import { LotOwnership, LotStatus, User, LotFeatureProperties } from "@/types";
+import {
+  LotOwnership,
+  LotStatus,
+  LotType,
+  User,
+  LotFeatureProperties,
+} from "@/types";
 import { Map, Save, X, Link2, Unlink } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -38,6 +44,8 @@ export function AdminLotsPage() {
   const [selectedLot, setSelectedLot] = useState<LotWithOwnership | null>(null);
   const [selectedOwner, setSelectedOwner] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<LotStatus>("vacant_lot");
+  const [selectedLotType, setSelectedLotType] =
+    useState<LotType>("residential");
   const [lotSize, setLotSize] = useState<string>("");
   const [selectedLots, setSelectedLots] = useState<Set<string>>(new Set());
   const [highlightOwnerId, setHighlightOwnerId] = useState<string | null>(null);
@@ -80,8 +88,9 @@ export function AdminLotsPage() {
     const lot = lots.find((l) => l.lot_id === lotId);
     if (lot) {
       setSelectedLot(lot);
-      setSelectedOwner(lot.owner_user_id);
+      setSelectedOwner(lot.owner_user_id || "");
       setSelectedStatus(lot.lot_status);
+      setSelectedLotType((lot.lot_type as LotType) || "residential");
       setLotSize(lot.lot_size_sqm?.toString() || "");
     }
   }
@@ -104,6 +113,7 @@ export function AdminLotsPage() {
       await Promise.all([
         api.admin.assignLotOwner(selectedLot.lot_id, selectedOwner),
         api.admin.updateLotStatus(selectedLot.lot_id, selectedStatus),
+        api.admin.updateLotType(selectedLot.lot_id, selectedLotType),
         api.admin.updateLotSize(
           selectedLot.lot_id,
           lotSize ? parseFloat(lotSize) : null,
@@ -240,7 +250,7 @@ export function AdminLotsPage() {
               onChange={(e) => setSelectedOwner(e.target.value)}
               className="px-3 py-2 border rounded-lg text-sm"
             >
-              <option value="">Select owner...</option>
+              <option value="">Remove owner (HOA-Owned)</option>
               {homeowners.map((h) => (
                 <option key={h.id} value={h.id}>
                   {h.email}
@@ -249,10 +259,12 @@ export function AdminLotsPage() {
             </select>
             <button
               onClick={handleBatchAssign}
-              disabled={!selectedOwner || saving}
+              disabled={saving}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
             >
-              Assign to {selectedLots.size} lots
+              {selectedOwner === ""
+                ? `Remove owner from ${selectedLots.size} lot(s)`
+                : `Assign to ${selectedLots.size} lots`}
             </button>
             {selectedLots.size >= 2 && (
               <button
@@ -382,6 +394,7 @@ export function AdminLotsPage() {
                     onChange={(e) => setSelectedOwner(e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg"
                   >
+                    <option value="">No Owner (HOA-Owned / Common Area)</option>
                     {homeowners.map((h) => (
                       <option key={h.id} value={h.id}>
                         {h.email}
@@ -425,6 +438,35 @@ export function AdminLotsPage() {
                       🚧 Under Construction
                     </option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Lot Type
+                  </label>
+                  <select
+                    value={selectedLotType}
+                    onChange={(e) =>
+                      setSelectedLotType(e.target.value as LotType)
+                    }
+                    className="w-full px-3 py-2 border rounded-lg"
+                  >
+                    <option value="residential">🏠 Residential</option>
+                    <option value="resort">🏨 Resort</option>
+                    <option value="commercial">🏢 Commercial</option>
+                    <option value="community">🌳 Community (HOA-Owned)</option>
+                    <option value="utility">⚡ Utility (HOA-Owned)</option>
+                    <option value="open_space">
+                      💧 Open Space (HOA-Owned)
+                    </option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {selectedLotType === "community" ||
+                    selectedLotType === "utility" ||
+                    selectedLotType === "open_space"
+                      ? "HOA-owned lots don't pay dues or vote"
+                      : "Private property"}
+                  </p>
                 </div>
 
                 <div>

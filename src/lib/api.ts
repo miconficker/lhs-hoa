@@ -14,6 +14,7 @@ import type {
   Document,
   LotOwnershipList,
   LotStatus,
+  LotType,
   DuesRate,
   PaymentDemand,
   MyLotsSummary,
@@ -783,6 +784,13 @@ export const api = {
     ): Promise<ApiResponse<{ success: boolean }>> =>
       apiPut<{ success: boolean }>(`/admin/lots/${lotId}/status`, {
         lot_status: status,
+      }),
+    updateLotType: (
+      lotId: string,
+      lotType: LotType,
+    ): Promise<ApiResponse<{ success: boolean }>> =>
+      apiPut<{ success: boolean }>(`/admin/lots/${lotId}/type`, {
+        lot_type: lotType,
       }),
     updateLotSize: (
       lotId: string,
