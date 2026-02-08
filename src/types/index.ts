@@ -5,7 +5,13 @@ export type UserRole = "admin" | "resident" | "staff" | "guest";
 export type LotStatus = "built" | "vacant_lot" | "under_construction";
 
 // Lot Type enum (property category)
-export type LotType = "residential" | "resort" | "commercial";
+export type LotType =
+  | "residential"
+  | "resort"
+  | "commercial"
+  | "community"
+  | "utility"
+  | "open_space";
 
 export interface User {
   id: string;
@@ -39,8 +45,12 @@ export interface Household {
   map_marker_y?: number;
   owner_user_id?: string; // UPDATED: Can be null (using existing owner_id in DB)
   lot_status?: LotStatus; // NEW: built, vacant_lot, under_construction
-  lot_type?: LotType; // NEW: residential, resort, commercial
+  lot_type?: LotType; // NEW: residential, resort, commercial, community, utility, open_space
   lot_size_sqm?: number; // NEW: Lot size in m² (nullable)
+  lot_label?: string; // NEW: Label for community/utility lots
+  lot_description?: string; // NEW: Description for community/utility lots
+  household_group_id?: string | null; // NEW: For grouping merged lots
+  is_primary_lot?: boolean; // NEW: Whether this is the primary lot in a merged group
   created_at: string;
 }
 
