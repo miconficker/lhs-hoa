@@ -18,6 +18,15 @@ const voteSchema = z.object({
   selected_option: z.string(),
 });
 
+// Schema for recording in-person votes (admin only)
+const inPersonVoteSchema = z.object({
+  user_id: z.string(),
+  selected_option: z.string(),
+  voted_at: z.string().optional(),
+  recorded_by: z.string().optional(),
+  witness: z.string().optional(),
+});
+
 export const pollsRouter = new Hono<{ Bindings: Env }>();
 
 function generateId(): string {
@@ -36,9 +45,10 @@ pollsRouter.get('/', async (c) => {
   return c.json({ polls: polls.results });
 });
 
-// Get single poll with results
+// Get single poll with results (WEIGHTED BY lot_count for proxy voting)
 pollsRouter.get('/:id', async (c) => {
   const id = c.req.param('id');
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
 
   const poll = await c.env.DB.prepare(
     'SELECT * FROM polls WHERE id = ?'
@@ -48,9 +58,10 @@ pollsRouter.get('/:id', async (c) => {
     return c.json({ error: 'Poll not found' }, 404);
   }
 
-  // Get vote counts per option
+  // Get vote counts per option (WEIGHTED by lot_count for proxy voting)
+  // Note: Votes already have lot_count calculated at voting time, excluding community lots
   const votes = await c.env.DB.prepare(
-    `SELECT selected_option, COUNT(*) as count
+    `SELECT selected_option, SUM(lot_count) as count
      FROM poll_votes
      WHERE poll_id = ?
      GROUP BY selected_option`
@@ -59,7 +70,7 @@ pollsRouter.get('/:id', async (c) => {
   // Parse options from JSON
   const options = JSON.parse(poll.options as string);
 
-  // Build results with counts
+  // Build results with weighted counts
   const voteResults = options.map((option: string) => {
     const voteRecord = votes.results.find((v: any) => v.selected_option === option);
     return {
@@ -69,13 +80,31 @@ pollsRouter.get('/:id', async (c) => {
   });
 
   const totalVotes = voteResults.reduce((sum: number, r: any) => sum + r.count, 0);
+  const totalLots = totalVotes; // This is now weighted lot count
+
+  // Check if current user has voted
+  let hasVoted = false;
+  let userLotCount = 0;
+  if (authUser) {
+    const userVote = await c.env.DB.prepare(
+      'SELECT lot_count, voting_method FROM poll_votes WHERE poll_id = ? AND household_id = ?'
+    ).bind(id, authUser.userId).first();
+
+    if (userVote) {
+      hasVoted = true;
+      userLotCount = userVote.lot_count || 1;
+    }
+  }
 
   return c.json({
     poll: {
       ...poll,
       options,
       votes: voteResults,
-      total_votes: totalVotes,
+      total_votes: votes.results?.length || 0, // Number of votes cast (households)
+      total_lots: totalLots, // Weighted lot count
+      has_voted: hasVoted,
+      user_lot_count: userLotCount,
     },
   });
 });
@@ -129,9 +158,14 @@ pollsRouter.post('/', async (c) => {
   return c.json({ poll }, 201);
 });
 
-// Cast vote (prevent duplicate votes)
+// Cast vote (prevent duplicate votes) - PROXY VOTING (1 vote = all lots owned)
 pollsRouter.post('/:id/vote', async (c) => {
   const id = c.req.param('id');
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  if (!authUser) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
   const body = await c.req.json();
   const result = voteSchema.safeParse(body);
 
@@ -161,27 +195,40 @@ pollsRouter.post('/:id/vote', async (c) => {
     return c.json({ error: 'Invalid option' }, 400);
   }
 
-  // Check if household has already voted
+  // PROXY VOTING: Check if user has already voted (any of their lots)
   const existingVote = await c.env.DB.prepare(
     'SELECT id FROM poll_votes WHERE poll_id = ? AND household_id = ?'
   ).bind(id, household_id).first();
 
   if (existingVote) {
-    return c.json({ error: 'You have already voted on this poll' }, 400);
+    return c.json({ error: 'You have already voted on behalf of your lots' }, 400);
   }
 
-  // Cast the vote
+  // PROXY VOTING: Count all lots owned by this user (excluding community/utility)
+  const lotsCount = await c.env.DB.prepare(
+    `SELECT COUNT(*) as count FROM households
+     WHERE owner_id = ?
+       AND lot_type IN ('residential', 'resort', 'commercial')`
+  ).bind(authUser.userId).first();
+
+  const lotCount = lotsCount ? (lotsCount.count as number) : 1;
+
+  // Cast the vote with lot_count (all lots vote together)
   const voteId = generateId();
   await c.env.DB.prepare(
-    `INSERT INTO poll_votes (id, poll_id, household_id, selected_option)
-     VALUES (?, ?, ?, ?)`
-  ).bind(voteId, id, household_id, selected_option).run();
+    `INSERT INTO poll_votes (id, poll_id, household_id, selected_option, lot_count, voting_method)
+     VALUES (?, ?, ?, ?, ?, 'online')`
+  ).bind(voteId, id, household_id, selected_option, lotCount).run();
 
   const vote = await c.env.DB.prepare(
     'SELECT * FROM poll_votes WHERE id = ?'
   ).bind(voteId).first();
 
-  return c.json({ vote }, 201);
+  return c.json({
+    vote,
+    lots_voted: lotCount,
+    message: `Your vote has been cast on behalf of your ${lotCount} lot(s)`
+  }, 201);
 });
 
 // Update poll (admin only)
@@ -247,4 +294,107 @@ pollsRouter.delete('/:id', async (c) => {
   await c.env.DB.prepare('DELETE FROM polls WHERE id = ?').bind(id).run();
 
   return c.json({ success: true });
+});
+
+// =============================================================================
+// ADMIN: Record In-Person Vote
+// =============================================================================
+
+/**
+ * POST /api/polls/:id/record-vote
+ * Record an in-person vote for a user (admin only)
+ */
+pollsRouter.post('/:id/record-vote', async (c) => {
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  if (!authUser || authUser.role !== 'admin') {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const id = c.req.param('id');
+
+  try {
+    const body = await c.req.json();
+    const result = inPersonVoteSchema.safeParse(body);
+
+    if (!result.success) {
+      return c.json({ error: 'Invalid input', details: result.error.flatten() }, 400);
+    }
+
+    const { user_id, selected_option, voted_at, recorded_by, witness } = result.data;
+
+    // Verify poll exists and is active
+    const poll = await c.env.DB.prepare(
+      'SELECT options, ends_at FROM polls WHERE id = ?'
+    ).bind(id).first();
+
+    if (!poll) {
+      return c.json({ error: 'Poll not found' }, 404);
+    }
+
+    // Check if poll has expired
+    if (new Date(poll.ends_at as string) < new Date()) {
+      return c.json({ error: 'Poll has expired' }, 400);
+    }
+
+    // Verify selected option is valid
+    const options = JSON.parse(poll.options as string);
+    if (!options.includes(selected_option)) {
+      return c.json({ error: 'Invalid option' }, 400);
+    }
+
+    // Verify user exists
+    const user = await c.env.DB.prepare(
+      'SELECT id FROM users WHERE id = ?'
+    ).bind(user_id).first();
+
+    if (!user) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+
+    // Check if user has already voted (in-person or online)
+    const existingVote = await c.env.DB.prepare(
+      'SELECT id FROM poll_votes WHERE poll_id = ? AND household_id = ?'
+    ).bind(id, user_id).first();
+
+    if (existingVote) {
+      return c.json({ error: 'User has already voted on this poll' }, 400);
+    }
+
+    // Count lots owned by this user for proxy voting (excluding community/utility)
+    const lotsCount = await c.env.DB.prepare(
+      `SELECT COUNT(*) as count FROM households
+       WHERE owner_id = ?
+         AND lot_type IN ('residential', 'resort', 'commercial')`
+    ).bind(user_id).first();
+
+    const lotCount = lotsCount ? (lotsCount.count as number) : 1;
+
+    // Record the in-person vote
+    const voteId = generateId();
+    await c.env.DB.prepare(
+      `INSERT INTO poll_votes (id, poll_id, household_id, selected_option, lot_count, voting_method, voted_at, recorded_by)
+       VALUES (?, ?, ?, ?, ?, 'in-person', ?, ?)`
+    ).bind(
+      voteId,
+      id,
+      user_id,
+      selected_option,
+      lotCount,
+      voted_at || new Date().toISOString(),
+      recorded_by || authUser.userId
+    ).run();
+
+    const vote = await c.env.DB.prepare(
+      'SELECT * FROM poll_votes WHERE id = ?'
+    ).bind(voteId).first();
+
+    return c.json({
+      vote,
+      lots_voted: lotCount,
+      message: `In-person vote recorded for ${lotCount} lot(s)`
+    }, 201);
+  } catch (error) {
+    console.error('Error recording in-person vote:', error);
+    return c.json({ error: 'Failed to record vote' }, 500);
+  }
 });

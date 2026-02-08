@@ -90,7 +90,7 @@ householdsRouter.get('/my-lots', async (c) => {
 
     const ratePerSqm = rateResult?.rate_per_sqm || 0;
 
-    // Get user's lots
+    // Get user's lots (exclude community/utility from dues)
     const lots = await c.env.DB.prepare(`
       SELECT
         h.id as lot_id,
@@ -105,6 +105,7 @@ householdsRouter.get('/my-lots', async (c) => {
         h.created_at
       FROM households h
       WHERE h.owner_id = ?
+        AND h.lot_type IN ('residential', 'resort', 'commercial')
       ORDER BY
         CAST(h.block AS INTEGER) ASC,
         CAST(h.lot AS INTEGER) ASC
