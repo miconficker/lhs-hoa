@@ -124,9 +124,19 @@ function HouseholdMarker({ household }: HouseholdMarkerProps) {
 interface LotsGeoJSONProps {
   data: GeoJSON.FeatureCollection | null;
   filter: "all" | LotStatus;
+  lotsOwnership?: Map<
+    string,
+    {
+      owner_user_id?: string;
+      owner_name?: string;
+      lot_status?: string;
+      household_group_id?: string;
+      is_primary_lot?: boolean;
+    }
+  >;
 }
 
-function LotsGeoJSON({ data, filter }: LotsGeoJSONProps) {
+function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
   const { user } = useAuth();
 
   if (!data) return null;
@@ -135,9 +145,20 @@ function LotsGeoJSON({ data, filter }: LotsGeoJSONProps) {
     feature?: GeoJSON.Feature<GeoJSON.Geometry, LotFeatureProperties>,
   ) => {
     const props = feature?.properties;
+    const lotId = props?.path_id;
+
+    // Get household group for this lot
+    const ownershipData = lotsOwnership?.get(lotId || "");
+    const isMerged = ownershipData?.household_group_id;
+
     let fillColor = "#9ca3af"; // default gray
     if (props?.status === "built") fillColor = "#22c55e"; // green
     if (props?.status === "under_construction") fillColor = "#f59e0b"; // orange
+
+    // For merged lots, use same color across group (shade of purple)
+    if (isMerged) {
+      fillColor = ownershipData?.is_primary_lot ? "#8b5cf6" : "#a78bfa";
+    }
 
     return {
       color:
@@ -145,7 +166,11 @@ function LotsGeoJSON({ data, filter }: LotsGeoJSONProps) {
           ? "#6b7280"
           : fillColor === "#22c55e"
             ? "#16a34a"
-            : "#d97706",
+            : fillColor === "#f59e0b"
+              ? "#d97706"
+              : fillColor === "#8b5cf6"
+                ? "#7c3aed"
+                : "#8b5cf6",
       weight: 2,
       fillColor,
       fillOpacity: 0.3,
@@ -177,12 +202,27 @@ function LotsGeoJSON({ data, filter }: LotsGeoJSONProps) {
     const props = feature.properties;
     if (props) {
       const isAdmin = user?.role === "admin";
+      const lotId = props.path_id;
+
+      // Get current ownership data from database instead of static GeoJSON
+      const ownershipData = lotsOwnership?.get(lotId);
+      const ownerId = ownershipData?.owner_user_id || props.owner_user_id;
+      const ownerName = ownershipData?.owner_name;
+      const lotStatus = ownershipData?.lot_status || props.status;
+
       const ownerInfo = isAdmin
         ? `
         <p class="text-sm text-gray-600">
-          Owner: ${props.owner_user_id || "developer-owner"}
+          Owner: ${ownerName || ownerId || "developer-owner"}
         </p>
       `
+        : "";
+
+      const isMerged = ownershipData?.household_group_id;
+      const mergeBadge = isMerged
+        ? `<span class="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-700 ml-2">
+             🔗 Merged
+           </span>`
         : "";
 
       const editLink = isAdmin
@@ -203,18 +243,19 @@ function LotsGeoJSON({ data, filter }: LotsGeoJSONProps) {
             }
           </h3>
           ${ownerInfo}
+          ${mergeBadge}
           <div class="flex items-center gap-2 mb-2">
             <span class="px-2 py-1 text-xs font-medium rounded-full ${
-              props.status === "built"
+              lotStatus === "built"
                 ? "bg-green-100 text-green-700"
-                : props.status === "under_construction"
+                : lotStatus === "under_construction"
                   ? "bg-orange-100 text-orange-700"
                   : "bg-gray-100 text-gray-700"
             }">
               ${
-                props.status === "built"
+                lotStatus === "built"
                   ? "Built"
-                  : props.status === "under_construction"
+                  : lotStatus === "under_construction"
                     ? "Under Construction"
                     : "Vacant Lot"
               }
@@ -290,12 +331,19 @@ function BlocksGeoJSON({ data }: BlocksGeoJSONProps) {
 }
 
 export function MapPage() {
+  const { user } = useAuth();
   const [households, setHouseholds] = useState<MapHousehold[]>([]);
   const [lotsData, setLotsData] = useState<GeoJSON.FeatureCollection | null>(
     null,
   );
   const [blocksData, setBlocksData] =
     useState<GeoJSON.FeatureCollection | null>(null);
+  const [lotsOwnership, setLotsOwnership] = useState<
+    Map<
+      string,
+      { owner_user_id?: string; owner_name?: string; lot_status?: string }
+    >
+  >(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"all" | LotStatus>("all");
@@ -313,6 +361,35 @@ export function MapPage() {
         const householdResult = await api.households.getMapLocations();
         if (householdResult.data) {
           setHouseholds(householdResult.data.households);
+        }
+
+        // Load lot ownership data from database (not GeoJSON)
+        // For admin users, get detailed ownership info; for others, just basic lot info
+        if (user?.role === "admin") {
+          const ownershipResult = await api.admin.getLotsWithOwnership();
+          if (ownershipResult.data?.lots) {
+            const ownershipMap = new Map();
+            ownershipResult.data.lots.forEach((lot) => {
+              ownershipMap.set(lot.lot_id, {
+                owner_user_id: lot.owner_user_id,
+                owner_name: lot.owner_name,
+                lot_status: lot.lot_status,
+              });
+            });
+            setLotsOwnership(ownershipMap);
+          }
+        } else {
+          // For non-admin users, get basic lot info
+          const lotsResult = await api.households.getLots();
+          if (lotsResult.data?.lots) {
+            const ownershipMap = new Map();
+            lotsResult.data.lots.forEach((lot) => {
+              ownershipMap.set(lot.lot_id, {
+                lot_status: lot.lot_status,
+              });
+            });
+            setLotsOwnership(ownershipMap);
+          }
         }
 
         // Load GeoJSON data in parallel with cache-busting
@@ -340,7 +417,7 @@ export function MapPage() {
     }
 
     loadData();
-  }, []);
+  }, [user]);
 
   const filteredHouseholds = households.filter(() => {
     // For now, show all households regardless of lot status filter
@@ -380,7 +457,13 @@ export function MapPage() {
           />
 
           {showBlocks && <BlocksGeoJSON data={blocksData} />}
-          {showLots && <LotsGeoJSON data={lotsData} filter={filter} />}
+          {showLots && (
+            <LotsGeoJSON
+              data={lotsData}
+              filter={filter}
+              lotsOwnership={lotsOwnership}
+            />
+          )}
 
           {filteredHouseholds.map((household) => (
             <HouseholdMarker key={household.id} household={household} />
