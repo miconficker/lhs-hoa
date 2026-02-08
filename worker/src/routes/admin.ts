@@ -1712,3 +1712,871 @@ adminRouter.post('/payments/in-person', async (c) => {
     return c.json({ error: 'Failed to record payment' }, 500);
   }
 });
+
+// =============================================================================
+// ADMIN: Pass Management
+// =============================================================================
+
+/**
+ * GET /api/admin/pass-stats
+ * Get pass management statistics (admin only)
+ */
+adminRouter.get('/pass-stats', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    // Employee stats
+    const employeeStats = await c.env.DB.prepare(`
+      SELECT
+        status,
+        COUNT(*) as count
+      FROM household_employees
+      GROUP BY status
+    `).all();
+
+    // Vehicle stats
+    const vehicleStats = await c.env.DB.prepare(`
+      SELECT
+        status,
+        COUNT(*) as count
+      FROM vehicle_registrations
+      GROUP BY status
+    `).all();
+
+    // Payment status stats
+    const paymentStats = await c.env.DB.prepare(`
+      SELECT
+        payment_status,
+        COUNT(*) as count,
+        COALESCE(SUM(amount_due), 0) as total_due,
+        COALESCE(SUM(amount_paid), 0) as total_paid
+      FROM vehicle_registrations
+      GROUP BY payment_status
+    `).all();
+
+    // Pass type distribution
+    const passTypeStats = await c.env.DB.prepare(`
+      SELECT
+        pass_type,
+        COUNT(*) as count,
+        COALESCE(SUM(amount_due), 0) as total_revenue
+      FROM vehicle_registrations
+      WHERE payment_status = 'paid'
+      GROUP BY pass_type
+    `).all();
+
+    // Pending approvals
+    const pendingEmployees = await c.env.DB.prepare(`
+      SELECT COUNT(*) as count FROM household_employees WHERE status = 'pending'
+    `).first();
+
+    const pendingVehicles = await c.env.DB.prepare(`
+      SELECT COUNT(*) as count FROM vehicle_registrations WHERE status = 'pending_approval'
+    `).first();
+
+    // Expiring soon (next 30 days)
+    const expiringEmployees = await c.env.DB.prepare(`
+      SELECT COUNT(*) as count FROM household_employees
+      WHERE expiry_date BETWEEN DATE('now') AND DATE('now', '+30 days')
+      AND status = 'active'
+    `).first();
+
+    return c.json({
+      stats: {
+        employees: {
+          byStatus: employeeStats.results || [],
+          pending: (pendingEmployees?.count as number) || 0,
+          expiringSoon: (expiringEmployees?.count as number) || 0,
+        },
+        vehicles: {
+          byStatus: vehicleStats.results || [],
+          pendingApproval: (pendingVehicles?.count as number) || 0,
+        },
+        payments: {
+          byStatus: paymentStats.results || [],
+        },
+        passTypes: passTypeStats.results || [],
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching pass stats:', error);
+    return c.json({ error: 'Failed to fetch pass statistics' }, 500);
+  }
+});
+
+// =============================================================================
+// ADMIN: Employee Management
+// =============================================================================
+
+/**
+ * GET /api/admin/employees
+ * Get all employees with filtering (admin only)
+ */
+adminRouter.get('/employees', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const { status, employee_type, household_id } = c.req.query();
+
+    let query = `
+      SELECT
+        he.*,
+        h.address as household_address,
+        h.block,
+        h.lot,
+        u.email as owner_email,
+        u.first_name || ' ' || u.last_name as owner_name
+      FROM household_employees he
+      JOIN households h ON he.household_id = h.id
+      LEFT JOIN users u ON h.owner_id = u.id
+    `;
+
+    const conditions: string[] = [];
+    const values: any[] = [];
+
+    if (status) {
+      conditions.push('he.status = ?');
+      values.push(status);
+    }
+
+    if (employee_type) {
+      conditions.push('he.employee_type = ?');
+      values.push(employee_type);
+    }
+
+    if (household_id) {
+      conditions.push('he.household_id = ?');
+      values.push(household_id);
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    query += ' ORDER BY he.created_at DESC';
+
+    const employees = await c.env.DB.prepare(query).bind(...values).all();
+
+    return c.json({ employees: employees.results || [] });
+  } catch (error) {
+    console.error('Error fetching employees:', error);
+    return c.json({ error: 'Failed to fetch employees' }, 500);
+  }
+});
+
+/**
+ * GET /api/admin/employees/:id
+ * Get single employee details (admin only)
+ */
+adminRouter.get('/employees/:id', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const id = c.req.param('id');
+
+    const employee = await c.env.DB.prepare(`
+      SELECT
+        he.*,
+        h.address as household_address,
+        h.block,
+        h.lot,
+        u.email as owner_email,
+        u.first_name || ' ' || u.last_name as owner_name,
+        u.phone as owner_phone
+      FROM household_employees he
+      JOIN households h ON he.household_id = h.id
+      LEFT JOIN users u ON h.owner_id = u.id
+      WHERE he.id = ?
+    `).bind(id).first();
+
+    if (!employee) {
+      return c.json({ error: 'Employee not found' }, 404);
+    }
+
+    return c.json({ employee });
+  } catch (error) {
+    console.error('Error fetching employee:', error);
+    return c.json({ error: 'Failed to fetch employee' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/employees/:id/status
+ * Update employee status (approve/revoke/etc) (admin only)
+ */
+adminRouter.put('/employees/:id/status', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json();
+    const { status, issued_date, expiry_date, notes } = body;
+
+    if (!status || !['pending', 'active', 'revoked', 'expired'].includes(status)) {
+      return c.json({ error: 'Invalid status' }, 400);
+    }
+
+    // Verify employee exists
+    const existing = await c.env.DB.prepare(
+      'SELECT id FROM household_employees WHERE id = ?'
+    ).bind(id).first();
+
+    if (!existing) {
+      return c.json({ error: 'Employee not found' }, 404);
+    }
+
+    const updates: string[] = ['status = ?', 'updated_at = ?'];
+    const values: any[] = [status, new Date().toISOString()];
+
+    if (issued_date !== undefined) {
+      updates.push('issued_date = ?');
+      values.push(issued_date);
+    }
+
+    if (expiry_date !== undefined) {
+      updates.push('expiry_date = ?');
+      values.push(expiry_date);
+    }
+
+    if (notes !== undefined) {
+      updates.push('notes = ?');
+      values.push(notes);
+    }
+
+    values.push(id);
+    await c.env.DB.prepare(
+      `UPDATE household_employees SET ${updates.join(', ')} WHERE id = ?`
+    ).bind(...values).run();
+
+    const updated = await c.env.DB.prepare(`
+      SELECT he.*, h.address as household_address
+      FROM household_employees he
+      JOIN households h ON he.household_id = h.id
+      WHERE he.id = ?
+    `).bind(id).first();
+
+    return c.json({ employee: updated });
+  } catch (error) {
+    console.error('Error updating employee status:', error);
+    return c.json({ error: 'Failed to update employee status' }, 500);
+  }
+});
+
+/**
+ * DELETE /api/admin/employees/:id
+ * Delete employee record (admin only)
+ */
+adminRouter.delete('/employees/:id', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const id = c.req.param('id');
+
+    // Verify employee exists
+    const existing = await c.env.DB.prepare(
+      'SELECT id FROM household_employees WHERE id = ?'
+    ).bind(id).first();
+
+    if (!existing) {
+      return c.json({ error: 'Employee not found' }, 404);
+    }
+
+    await c.env.DB.prepare('DELETE FROM household_employees WHERE id = ?').bind(id).run();
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting employee:', error);
+    return c.json({ error: 'Failed to delete employee' }, 500);
+  }
+});
+
+/**
+ * POST /api/admin/employees/:id/regenerate-id
+ * Regenerate employee ID number (admin only)
+ */
+adminRouter.post('/employees/:id/regenerate-id', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const id = c.req.param('id');
+
+    // Verify employee exists
+    const employee = await c.env.DB.prepare(
+      'SELECT * FROM household_employees WHERE id = ?'
+    ).bind(id).first();
+
+    if (!employee) {
+      return c.json({ error: 'Employee not found' }, 404);
+    }
+
+    // Generate new ID number
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 6);
+    const newIdNumber = `EMP-${timestamp}-${random}`.toUpperCase();
+
+    await c.env.DB.prepare(`
+      UPDATE household_employees
+      SET id_number = ?, updated_at = ?
+      WHERE id = ?
+    `).bind(newIdNumber, new Date().toISOString(), id).run();
+
+    return c.json({ id_number: newIdNumber });
+  } catch (error) {
+    console.error('Error regenerating employee ID:', error);
+    return c.json({ error: 'Failed to regenerate employee ID' }, 500);
+  }
+});
+
+// =============================================================================
+// ADMIN: Vehicle Management
+// =============================================================================
+
+/**
+ * GET /api/admin/vehicles
+ * Get all vehicles with filtering (admin only)
+ */
+adminRouter.get('/vehicles', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const { status, payment_status, pass_type, household_id } = c.req.query();
+
+    let query = `
+      SELECT
+        vr.*,
+        h.address as household_address,
+        h.block,
+        h.lot,
+        u.email as owner_email,
+        u.first_name || ' ' || u.last_name as owner_name,
+        u.phone as owner_phone
+      FROM vehicle_registrations vr
+      JOIN households h ON vr.household_id = h.id
+      LEFT JOIN users u ON h.owner_id = u.id
+    `;
+
+    const conditions: string[] = [];
+    const values: any[] = [];
+
+    if (status) {
+      conditions.push('vr.status = ?');
+      values.push(status);
+    }
+
+    if (payment_status) {
+      conditions.push('vr.payment_status = ?');
+      values.push(payment_status);
+    }
+
+    if (pass_type) {
+      conditions.push('vr.pass_type = ?');
+      values.push(pass_type);
+    }
+
+    if (household_id) {
+      conditions.push('vr.household_id = ?');
+      values.push(household_id);
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    query += ' ORDER BY vr.created_at DESC';
+
+    const vehicles = await c.env.DB.prepare(query).bind(...values).all();
+
+    return c.json({ vehicles: vehicles.results || [] });
+  } catch (error) {
+    console.error('Error fetching vehicles:', error);
+    return c.json({ error: 'Failed to fetch vehicles' }, 500);
+  }
+});
+
+/**
+ * GET /api/admin/vehicles/:id
+ * Get single vehicle details (admin only)
+ */
+adminRouter.get('/vehicles/:id', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const id = c.req.param('id');
+
+    const vehicle = await c.env.DB.prepare(`
+      SELECT
+        vr.*,
+        h.address as household_address,
+        h.block,
+        h.lot,
+        u.email as owner_email,
+        u.first_name || ' ' || u.last_name as owner_name,
+        u.phone as owner_phone
+      FROM vehicle_registrations vr
+      JOIN households h ON vr.household_id = h.id
+      LEFT JOIN users u ON h.owner_id = u.id
+      WHERE vr.id = ?
+    `).bind(id).first();
+
+    if (!vehicle) {
+      return c.json({ error: 'Vehicle not found' }, 404);
+    }
+
+    return c.json({ vehicle });
+  } catch (error) {
+    console.error('Error fetching vehicle:', error);
+    return c.json({ error: 'Failed to fetch vehicle' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/vehicles/:id/status
+ * Update vehicle status (approve/cancel/etc) (admin only)
+ */
+adminRouter.put('/vehicles/:id/status', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json();
+    const { status, notes } = body;
+
+    if (!status || !['pending_payment', 'pending_approval', 'active', 'cancelled', 'expired'].includes(status)) {
+      return c.json({ error: 'Invalid status' }, 400);
+    }
+
+    // Verify vehicle exists
+    const existing = await c.env.DB.prepare(
+      'SELECT id FROM vehicle_registrations WHERE id = ?'
+    ).bind(id).first();
+
+    if (!existing) {
+      return c.json({ error: 'Vehicle not found' }, 404);
+    }
+
+    const updates: string[] = ['status = ?', 'updated_at = ?'];
+    const values: any[] = [status, new Date().toISOString()];
+
+    if (notes !== undefined) {
+      updates.push('notes = ?');
+      values.push(notes);
+    }
+
+    // Set issued_date when activating
+    if (status === 'active') {
+      updates.push('issued_date = DATE("now")');
+    }
+
+    values.push(id);
+    await c.env.DB.prepare(
+      `UPDATE vehicle_registrations SET ${updates.join(', ')} WHERE id = ?`
+    ).bind(...values).run();
+
+    const updated = await c.env.DB.prepare(`
+      SELECT vr.*, h.address as household_address
+      FROM vehicle_registrations vr
+      JOIN households h ON vr.household_id = h.id
+      WHERE vr.id = ?
+    `).bind(id).first();
+
+    return c.json({ vehicle: updated });
+  } catch (error) {
+    console.error('Error updating vehicle status:', error);
+    return c.json({ error: 'Failed to update vehicle status' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/vehicles/:id/assign-pass
+ * Assign RFID code or sticker number to vehicle (admin only)
+ */
+adminRouter.put('/vehicles/:id/assign-pass', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json();
+    const { rfid_code, sticker_number } = body;
+
+    // Verify vehicle exists
+    const vehicle = await c.env.DB.prepare(
+      'SELECT * FROM vehicle_registrations WHERE id = ?'
+    ).bind(id).first() as any;
+
+    if (!vehicle) {
+      return c.json({ error: 'Vehicle not found' }, 404);
+    }
+
+    const updates: string[] = ['updated_at = ?'];
+    const values: any[] = [new Date().toISOString()];
+
+    // Check RFID uniqueness if provided
+    if (rfid_code !== undefined) {
+      if (rfid_code) {
+        const existing = await c.env.DB.prepare(
+          'SELECT id FROM vehicle_registrations WHERE rfid_code = ? AND id != ?'
+        ).bind(rfid_code, id).first();
+
+        if (existing) {
+          return c.json({ error: 'RFID code already in use' }, 409);
+        }
+      }
+      updates.push('rfid_code = ?');
+      values.push(rfid_code || null);
+    }
+
+    // Check sticker uniqueness if provided
+    if (sticker_number !== undefined) {
+      if (sticker_number) {
+        const existing = await c.env.DB.prepare(
+          'SELECT id FROM vehicle_registrations WHERE sticker_number = ? AND id != ?'
+        ).bind(sticker_number, id).first();
+
+        if (existing) {
+          return c.json({ error: 'Sticker number already in use' }, 409);
+        }
+      }
+      updates.push('sticker_number = ?');
+      values.push(sticker_number || null);
+    }
+
+    // Auto-approve if both assigned
+    if ((rfid_code && vehicle.pass_type !== 'sticker') || (sticker_number && vehicle.pass_type !== 'rfid')) {
+      if ((vehicle.pass_type === 'both' && rfid_code && sticker_number) ||
+          (vehicle.pass_type === 'rfid' && rfid_code) ||
+          (vehicle.pass_type === 'sticker' && sticker_number)) {
+        updates.push('status = ?');
+        values.push('active');
+        updates.push('issued_date = DATE("now")');
+      }
+    }
+
+    values.push(id);
+    await c.env.DB.prepare(
+      `UPDATE vehicle_registrations SET ${updates.join(', ')} WHERE id = ?`
+    ).bind(...values).run();
+
+    const updated = await c.env.DB.prepare(`
+      SELECT vr.*, h.address as household_address
+      FROM vehicle_registrations vr
+      JOIN households h ON vr.household_id = h.id
+      WHERE vr.id = ?
+    `).bind(id).first();
+
+    return c.json({ vehicle: updated });
+  } catch (error) {
+    console.error('Error assigning pass:', error);
+    return c.json({ error: 'Failed to assign pass' }, 500);
+  }
+});
+
+/**
+ * DELETE /api/admin/vehicles/:id
+ * Delete vehicle registration (admin only)
+ */
+adminRouter.delete('/vehicles/:id', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const id = c.req.param('id');
+
+    // Verify vehicle exists
+    const existing = await c.env.DB.prepare(
+      'SELECT id FROM vehicle_registrations WHERE id = ?'
+    ).bind(id).first();
+
+    if (!existing) {
+      return c.json({ error: 'Vehicle not found' }, 404);
+    }
+
+    await c.env.DB.prepare('DELETE FROM vehicle_registrations WHERE id = ?').bind(id).run();
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting vehicle:', error);
+    return c.json({ error: 'Failed to delete vehicle' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/vehicles/:id/payment
+ * Record payment for vehicle pass (admin only)
+ */
+adminRouter.put('/vehicles/:id/payment', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json();
+    const { amount_paid, payment_method } = body;
+
+    if (!amount_paid || !payment_method) {
+      return c.json({ error: 'amount_paid and payment_method are required' }, 400);
+    }
+
+    if (!['gcash', 'paymaya', 'instapay', 'cash', 'in-person'].includes(payment_method)) {
+      return c.json({ error: 'Invalid payment_method' }, 400);
+    }
+
+    // Verify vehicle exists
+    const vehicle = await c.env.DB.prepare(
+      'SELECT * FROM vehicle_registrations WHERE id = ?'
+    ).bind(id).first() as any;
+
+    if (!vehicle) {
+      return c.json({ error: 'Vehicle not found' }, 404);
+    }
+
+    // Update payment info
+    await c.env.DB.prepare(`
+      UPDATE vehicle_registrations
+      SET payment_status = 'paid',
+          amount_paid = ?,
+          payment_method = ?,
+          status = 'pending_approval',
+          updated_at = ?
+      WHERE id = ?
+    `).bind(amount_paid, payment_method, new Date().toISOString(), id).run();
+
+    // Create payment record
+    const paymentId = generateId();
+    await c.env.DB.prepare(
+      `INSERT INTO payments (id, household_id, amount, currency, method, status, payment_category, period, received_by)
+       VALUES (?, ?, ?, 'PHP', ?, 'completed', 'vehicle_pass', DATE('now'), ?)`
+    ).bind(paymentId, vehicle.household_id, amount_paid, payment_method, authUser.userId).run();
+
+    const updated = await c.env.DB.prepare(`
+      SELECT vr.*, h.address as household_address
+      FROM vehicle_registrations vr
+      JOIN households h ON vr.household_id = h.id
+      WHERE vr.id = ?
+    `).bind(id).first();
+
+    return c.json({ vehicle: updated, payment_id: paymentId });
+  } catch (error) {
+    console.error('Error recording payment:', error);
+    return c.json({ error: 'Failed to record payment' }, 500);
+  }
+});
+
+// =============================================================================
+// ADMIN: Pass Fee Management
+// =============================================================================
+
+/**
+ * GET /api/admin/pass-fees
+ * Get all pass fees (admin only)
+ */
+adminRouter.get('/pass-fees', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const fees = await c.env.DB.prepare(`
+      SELECT * FROM pass_fees
+      ORDER BY effective_date DESC
+    `).all();
+
+    return c.json({ fees: fees.results || [] });
+  } catch (error) {
+    console.error('Error fetching pass fees:', error);
+    return c.json({ error: 'Failed to fetch pass fees' }, 500);
+  }
+});
+
+/**
+ * GET /api/admin/pass-fees/active
+ * Get current active pass fees (admin only)
+ */
+adminRouter.get('/pass-fees/active', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const fees = await c.env.DB.prepare(`
+      SELECT * FROM pass_fees
+      WHERE effective_date <= DATE('now')
+      ORDER BY effective_date DESC
+    `).all();
+
+    // Get latest fee for each type
+    const feeMap: Record<string, any> = {};
+    for (const fee of fees.results || []) {
+      if (!feeMap[fee.fee_type]) {
+        feeMap[fee.fee_type] = fee;
+      }
+    }
+
+    return c.json({ fees: feeMap });
+  } catch (error) {
+    console.error('Error fetching active pass fees:', error);
+    return c.json({ error: 'Failed to fetch active pass fees' }, 500);
+  }
+});
+
+/**
+ * POST /api/admin/pass-fees
+ * Create new pass fee (admin only)
+ */
+adminRouter.post('/pass-fees', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const body = await c.req.json();
+    const { fee_type, amount, effective_date } = body;
+
+    if (!fee_type || !amount || !effective_date) {
+      return c.json({ error: 'fee_type, amount, and effective_date are required' }, 400);
+    }
+
+    if (!['sticker', 'rfid', 'both'].includes(fee_type)) {
+      return c.json({ error: 'Invalid fee_type' }, 400);
+    }
+
+    const id = generateId();
+    await c.env.DB.prepare(
+      `INSERT INTO pass_fees (id, fee_type, amount, effective_date)
+       VALUES (?, ?, ?, ?)`
+    ).bind(id, fee_type, amount, effective_date).run();
+
+    const fee = await c.env.DB.prepare(
+      'SELECT * FROM pass_fees WHERE id = ?'
+    ).bind(id).first();
+
+    return c.json({ fee }, 201);
+  } catch (error) {
+    console.error('Error creating pass fee:', error);
+    return c.json({ error: 'Failed to create pass fee' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/pass-fees/:id
+ * Update pass fee (admin only)
+ */
+adminRouter.put('/pass-fees/:id', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json();
+    const { amount, effective_date } = body;
+
+    // Verify fee exists
+    const existing = await c.env.DB.prepare(
+      'SELECT id FROM pass_fees WHERE id = ?'
+    ).bind(id).first();
+
+    if (!existing) {
+      return c.json({ error: 'Pass fee not found' }, 404);
+    }
+
+    const updates: string[] = [];
+    const values: any[] = [];
+
+    if (amount !== undefined) {
+      updates.push('amount = ?');
+      values.push(amount);
+    }
+
+    if (effective_date !== undefined) {
+      updates.push('effective_date = ?');
+      values.push(effective_date);
+    }
+
+    if (updates.length === 0) {
+      return c.json({ error: 'No fields to update' }, 400);
+    }
+
+    values.push(id);
+    await c.env.DB.prepare(
+      `UPDATE pass_fees SET ${updates.join(', ')} WHERE id = ?`
+    ).bind(...values).run();
+
+    const updated = await c.env.DB.prepare(
+      'SELECT * FROM pass_fees WHERE id = ?'
+    ).bind(id).first();
+
+    return c.json({ fee: updated });
+  } catch (error) {
+    console.error('Error updating pass fee:', error);
+    return c.json({ error: 'Failed to update pass fee' }, 500);
+  }
+});
+
+/**
+ * DELETE /api/admin/pass-fees/:id
+ * Delete pass fee (admin only)
+ */
+adminRouter.delete('/pass-fees/:id', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const id = c.req.param('id');
+
+    // Verify fee exists
+    const existing = await c.env.DB.prepare(
+      'SELECT id FROM pass_fees WHERE id = ?'
+    ).bind(id).first();
+
+    if (!existing) {
+      return c.json({ error: 'Pass fee not found' }, 404);
+    }
+
+    await c.env.DB.prepare('DELETE FROM pass_fees WHERE id = ?').bind(id).run();
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting pass fee:', error);
+    return c.json({ error: 'Failed to delete pass fee' }, 500);
+  }
+});
