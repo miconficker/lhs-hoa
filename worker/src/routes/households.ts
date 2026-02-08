@@ -100,6 +100,8 @@ householdsRouter.get('/my-lots', async (c) => {
         h.lot_status,
         h.lot_type,
         h.lot_size_sqm,
+        h.household_group_id,
+        h.is_primary_lot,
         h.created_at
       FROM households h
       WHERE h.owner_id = ?
@@ -142,8 +144,37 @@ householdsRouter.get('/my-lots', async (c) => {
       }
     }
 
+    // Group lots by household_group_id
+    const groupedLots = (lots.results || []).reduce((acc: any[], lot: any) => {
+      if (lot.household_group_id) {
+        const existing = acc.find(g => g.household_group_id === lot.household_group_id);
+        if (existing) {
+          existing.merged_lots.push(lot.lot_id);
+          existing.annual_dues += (lot.lot_size_sqm || 0) * ratePerSqm;
+          existing.lot_size_sqm += lot.lot_size_sqm || 0;
+          existing.address = `${existing.block}-${existing.lot} + ${lot.block}-${lot.lot}`;
+        } else {
+          acc.push({
+            ...lot,
+            merged_lots: [lot.lot_id],
+            is_primary_lot: true,
+            annual_dues: (lot.lot_size_sqm || 0) * ratePerSqm,
+          });
+        }
+      } else {
+        acc.push({
+          ...lot,
+          merged_lots: [],
+          annual_dues: (lot.lot_size_sqm || 0) * ratePerSqm,
+        });
+      }
+      return acc;
+    }, []);
+
+    const totalProperties = groupedLots.length;
+
     // Build my lots list with annual dues
-    const myLots = (lots.results || []).map((lot: any) => ({
+    const myLots = groupedLots.map((lot: any) => ({
       lot_id: lot.lot_id,
       block: lot.block,
       lot: lot.lot,
@@ -151,13 +182,17 @@ householdsRouter.get('/my-lots', async (c) => {
       lot_status: lot.lot_status || 'vacant_lot',
       lot_type: lot.lot_type || 'residential',
       lot_size_sqm: lot.lot_size_sqm,
-      annual_dues: (lot.lot_size_sqm || 0) * ratePerSqm,
+      annual_dues: lot.annual_dues,
       payment_status: 'current', // TODO: Calculate per-lot based on payment demands
+      household_group_id: lot.household_group_id,
+      is_primary_lot: lot.is_primary_lot,
+      merged_lots: lot.merged_lots,
     }));
 
     // Return response with properties directly (not nested in 'summary')
     return c.json({
       total_lots: totalLots,
+      total_properties: totalProperties,
       total_sqm: totalSqm,
       annual_dues_total: annualDuesTotal,
       unpaid_periods: unpaidPeriods,

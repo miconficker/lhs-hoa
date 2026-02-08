@@ -392,10 +392,14 @@ export interface MyLot {
   lot_size_sqm?: number;
   annual_dues: number;
   payment_status?: "current" | "overdue" | "suspended";
+  household_group_id?: string | null;
+  is_primary_lot?: boolean;
+  merged_lots?: string[];
 }
 
 export interface MyLotsSummary {
   total_lots: number;
+  total_properties?: number;
   total_sqm: number;
   annual_dues_total: number;
   unpaid_periods: string[];
