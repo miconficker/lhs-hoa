@@ -22,6 +22,7 @@ import { InPersonPaymentsPage } from "./pages/InPersonPaymentsPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { CommonAreasPage } from "./pages/CommonAreasPage";
 import { PassesPage } from "./pages/PassesPage";
+import { PassManagementPage } from "./pages/PassManagementPage";
 import { useAuth } from "./hooks/useAuth";
 
 function App() {
@@ -116,6 +117,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <CommonAreasPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="admin/pass-management"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <PassManagementPage />
               </ProtectedRoute>
             }
           />
