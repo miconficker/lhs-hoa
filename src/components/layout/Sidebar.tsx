@@ -87,6 +87,7 @@ const navItems = [
     label: "Notifications",
     roles: ["admin", "resident", "staff"],
   },
+  { separator: true, roles: ["admin", "resident", "staff"] },
   {
     to: "/annotate",
     icon: Edit3,
@@ -140,22 +141,33 @@ export function Sidebar() {
   return (
     <aside className="w-64 bg-white border-r border-gray-200 min-h-[calc(100vh-4rem)]">
       <nav className="p-4 space-y-1">
-        {visibleItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                isActive
-                  ? "bg-primary-50 text-primary-700 font-medium"
-                  : "text-gray-700 hover:bg-gray-100"
-              }`
-            }
-          >
-            <item.icon className="w-5 h-5" />
-            <span>{item.label}</span>
-          </NavLink>
-        ))}
+        {visibleItems.map((item, index) => {
+          if (item.separator) {
+            return (
+              <div
+                key={`separator-${index}`}
+                className="my-2 border-t border-gray-200"
+              />
+            );
+          }
+          if (!item.to) return null;
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  isActive
+                    ? "bg-primary-50 text-primary-700 font-medium"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`
+              }
+            >
+              {item.icon && <item.icon className="w-5 h-5" />}
+              <span>{item.label}</span>
+            </NavLink>
+          );
+        })}
       </nav>
     </aside>
   );
