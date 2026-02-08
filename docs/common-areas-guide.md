@@ -12,7 +12,7 @@ Common areas are HOA-owned properties that:
 
 ## How to Add Common Areas
 
-### Method 1: Via Lot Management Page (Recommended)
+### Method 1: Via Lot Management Page (Easiest!)
 
 1. **Navigate to Lot Management**
    - Log in as admin
@@ -22,24 +22,28 @@ Common areas are HOA-owned properties that:
    - Click on the lot on the map
    - The lot details will appear in the side panel
 
-3. **Set Owner to None**
-   - In the "Owner" dropdown, leave it empty or select "No Owner"
-   - Common areas should have `owner_id = NULL` in the database
+3. **Set Owner to "No Owner"**
+   - In the "Owner" dropdown, select **"No Owner (HOA-Owned / Common Area)"**
+   - This sets `owner_id = NULL` in the database
 
-4. **Update the Lot Type**
-   - Currently, lot type is set through the database
-   - You'll need to run a SQL update or use a database tool
-   - Example SQL to mark a lot as a common area:
-     ```sql
-     UPDATE households
-     SET lot_type = 'community',
-         owner_id = NULL
-     WHERE id = 'B01-L01';
-     ```
+4. **Set the Lot Type**
+   - In the "Lot Type" dropdown, select the appropriate type:
+     - **Community** → Parks, playgrounds, basketball courts, etc.
+     - **Utility** → Water towers, drainage canals, pump stations, etc.
+     - **Open Space** → Gardens, green belts, landscaping areas, etc.
+   - A helpful note will appear: "HOA-owned lots don't pay dues or vote"
+
+5. **Click Save**
+   - That's it! The lot is now marked as a common area
 
 ### Method 2: Direct Database Update
 
-For quick updates, you can modify the database directly:
+5. **Click Save**
+   - That's it! The lot is now marked as a common area
+
+### Method 2: Direct Database Update (Advanced / Batch Operations)
+
+For batch updates or advanced users, you can modify the database directly:
 
 ```sql
 -- Mark a lot as a common area (e.g., park, playground)
@@ -65,6 +69,12 @@ SET lot_type = 'open_space',
     lot_description = 'Main garden area with walking paths',
     owner_id = NULL
 WHERE id = 'C02';
+
+-- Batch: Mark all lots with block "C" as community areas
+UPDATE households
+SET lot_type = 'community',
+    owner_id = NULL
+WHERE block = 'C';
 ```
 
 ## Lot Types Explained
