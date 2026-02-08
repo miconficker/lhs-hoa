@@ -169,13 +169,6 @@ export function AdminLotsPage() {
 
     const lotArray = Array.from(selectedLots);
     const primaryLotId = lotArray[0];
-  }
-
-  async function handleMerge() {
-    if (selectedLots.size < 2) return;
-
-    const lotArray = Array.from(selectedLots);
-    const primaryLotId = lotArray[0];
 
     setSaving(true);
     try {
@@ -253,7 +246,8 @@ export function AdminLotsPage() {
             Lot Ownership Management
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Click lots to assign owners and update status. Map updates automatically.
+            Click lots to assign owners and update status. Map updates
+            automatically.
           </p>
         </div>
         {selectedLots.size > 0 && (
@@ -420,7 +414,9 @@ export function AdminLotsPage() {
                       onChange={(e) => setSelectedOwner(e.target.value)}
                       className="w-full px-3 py-2 border rounded-lg"
                     >
-                      <option value="">No Owner (HOA-Owned / Common Area)</option>
+                      <option value="">
+                        No Owner (HOA-Owned / Common Area)
+                      </option>
                       {homeowners.map((h) => (
                         <option key={h.id} value={h.id}>
                           {h.email}
@@ -433,8 +429,8 @@ export function AdminLotsPage() {
                         className="mt-2 text-xs text-blue-600 hover:text-blue-800"
                       >
                         Highlight all{" "}
-                        {homeowners.find((h) => h.id === selectedOwner)?.email}'s
-                        lots
+                        {homeowners.find((h) => h.id === selectedOwner)?.email}
+                        's lots
                       </button>
                     )}
                     {highlightOwnerId && (
@@ -480,7 +476,9 @@ export function AdminLotsPage() {
                       <option value="residential">🏠 Residential</option>
                       <option value="resort">🏨 Resort</option>
                       <option value="commercial">🏢 Commercial</option>
-                      <option value="community">🌳 Community (HOA-Owned)</option>
+                      <option value="community">
+                        🌳 Community (HOA-Owned)
+                      </option>
                       <option value="utility">⚡ Utility (HOA-Owned)</option>
                       <option value="open_space">
                         💧 Open Space (HOA-Owned)
