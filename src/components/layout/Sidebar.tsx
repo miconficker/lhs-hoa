@@ -12,6 +12,11 @@ import {
   Settings,
   Edit3,
   Building2,
+  Home as HomeIcon,
+  DollarSign,
+  Bell,
+  Receipt,
+  Trees,
 } from "lucide-react";
 
 const navItems = [
@@ -40,6 +45,12 @@ const navItems = [
     roles: ["admin", "resident", "guest"],
   },
   {
+    to: "/my-lots",
+    icon: HomeIcon,
+    label: "My Lots",
+    roles: ["admin", "resident"],
+  },
+  {
     to: "/payments",
     icon: CreditCard,
     label: "Payments",
@@ -64,6 +75,12 @@ const navItems = [
     roles: ["admin", "resident", "staff", "guest"],
   },
   {
+    to: "/notifications",
+    icon: Bell,
+    label: "Notifications",
+    roles: ["admin", "resident", "staff"],
+  },
+  {
     to: "/annotate",
     icon: Edit3,
     label: "Annotate Lots",
@@ -73,6 +90,24 @@ const navItems = [
     to: "/admin/lots",
     icon: Building2,
     label: "Lot Management",
+    roles: ["admin"],
+  },
+  {
+    to: "/admin/dues",
+    icon: DollarSign,
+    label: "Dues Configuration",
+    roles: ["admin"],
+  },
+  {
+    to: "/admin/payments/in-person",
+    icon: Receipt,
+    label: "In-Person Payments",
+    roles: ["admin"],
+  },
+  {
+    to: "/admin/common-areas",
+    icon: Trees,
+    label: "Common Areas",
     roles: ["admin"],
   },
   { to: "/admin", icon: Settings, label: "Admin Panel", roles: ["admin"] },
