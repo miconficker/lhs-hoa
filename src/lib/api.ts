@@ -8,11 +8,20 @@ import type {
   Reservation,
   AmenityAvailability,
   Payment,
+  PaymentMethod,
   Poll,
   PollWithResults,
   Document,
   LotOwnershipList,
   LotStatus,
+  DuesRate,
+  PaymentDemand,
+  MyLotsSummary,
+  MyLot,
+  NotificationsResponse,
+  NotificationResponse,
+  BulkNotificationResponse,
+  AdminNotificationsResponse,
 } from "@/types";
 
 const API_BASE = "/api";
@@ -286,8 +295,8 @@ export interface BalanceResponse {
 export interface CreatePaymentInput {
   household_id: string;
   amount: number;
-  method: "gcash" | "paymaya" | "instapay" | "cash";
-  period: string; // YYYY-MM format
+  method: PaymentMethod;
+  period: string; // YYYY format for annual dues
   reference_number?: string;
 }
 
@@ -583,6 +592,10 @@ export const api = {
       apiRequest<{ household: MapHousehold }>(`/households/${id}`),
     getMapLocations: () =>
       apiRequest<MapLocationsResponse>("/households/map/locations"),
+    getMyLots: (): Promise<ApiResponse<MyLotsSummary>> =>
+      apiGet<MyLotsSummary>("/households/my-lots"),
+    getLots: (): Promise<ApiResponse<{ lots: MyLot[] }>> =>
+      apiGet<{ lots: MyLot[] }>("/households/lots"),
   },
   reservations: {
     list: (filters?: {
@@ -634,12 +647,14 @@ export const api = {
       household_id?: string;
       status?: string;
       period?: string;
+      method?: string;
     }) => {
       const params = new URLSearchParams();
       if (filters?.household_id)
         params.append("household_id", filters.household_id);
       if (filters?.status) params.append("status", filters.status);
       if (filters?.period) params.append("period", filters.period);
+      if (filters?.method) params.append("method", filters.method);
       const query = params.toString();
       return apiRequest<PaymentsResponse>(
         `/payments${query ? "?" + query : ""}`,
@@ -786,5 +801,234 @@ export const api = {
         lot_ids: lotIds,
         owner_user_id: ownerId,
       }),
+    // Merge/Unmerge Households
+    mergeHouseholds: (
+      primary_lot_id: string,
+      lot_ids_to_merge: string[],
+    ): Promise<
+      ApiResponse<{
+        household_group_id: string;
+        merged_count: number;
+        lots: Array<{ lot_id: string; address: string }>;
+      }>
+    > =>
+      apiRequest<{
+        household_group_id: string;
+        merged_count: number;
+        lots: Array<{ lot_id: string; address: string }>;
+      }>("/admin/households/merge", {
+        method: "POST",
+        body: JSON.stringify({ primary_lot_id, lot_ids_to_merge }),
+      }),
+    unmergeHousehold: (
+      lot_id: string,
+    ): Promise<ApiResponse<{ success: boolean; lot_id: string }>> =>
+      apiRequest<{ success: boolean; lot_id: string }>(
+        `/admin/households/unmerge`,
+        {
+          method: "POST",
+          body: JSON.stringify({ lot_id }),
+        },
+      ),
+    // Sync lots from GeoJSON
+    syncLots: (): Promise<
+      ApiResponse<{
+        success: boolean;
+        results: {
+          inserted: number;
+          updated: number;
+          errors: number;
+          errorDetails: string[];
+        };
+      }>
+    > =>
+      apiRequest<{
+        success: boolean;
+        results: {
+          inserted: number;
+          updated: number;
+          errors: number;
+          errorDetails: string[];
+        };
+      }>("/admin/sync-lots", {
+        method: "POST",
+      }),
+    // Dues Rates Management
+    getDuesRates: (): Promise<ApiResponse<{ dues_rates: DuesRate[] }>> =>
+      apiGet<{ dues_rates: DuesRate[] }>("/admin/dues-rates"),
+    createDuesRate: (input: {
+      rate_per_sqm: number;
+      year: number;
+      effective_date: string;
+    }): Promise<ApiResponse<{ dues_rate: DuesRate }>> =>
+      apiRequest<{ dues_rate: DuesRate }>("/admin/dues-rates", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    updateDuesRate: (
+      id: string,
+      input: {
+        rate_per_sqm?: number;
+        year?: number;
+        effective_date?: string;
+      },
+    ): Promise<ApiResponse<{ dues_rate: DuesRate }>> =>
+      apiRequest<{ dues_rate: DuesRate }>(`/admin/dues-rates/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(input),
+      }),
+    deleteDuesRate: (id: string): Promise<ApiResponse<{ success: boolean }>> =>
+      apiRequest<{ success: boolean }>(`/admin/dues-rates/${id}`, {
+        method: "DELETE",
+      }),
+    getActiveDuesRate: (): Promise<
+      ApiResponse<{ active_rate: DuesRate | null }>
+    > => apiGet<{ active_rate: DuesRate | null }>("/admin/dues-rates/active"),
+    // Payment Demands
+    getPaymentDemands: (params?: {
+      year?: number;
+      status?: string;
+    }): Promise<ApiResponse<{ payment_demands: PaymentDemand[] }>> =>
+      apiGet<{ payment_demands: PaymentDemand[] }>(
+        `/admin/payment-demands${
+          params
+            ? `?${new URLSearchParams(
+                Object.fromEntries(
+                  Object.entries({
+                    year: params.year?.toString(),
+                    status: params.status,
+                  }).filter(([_, v]) => v !== undefined) as [string, string][],
+                ),
+              )}`
+            : ""
+        }`,
+      ),
+    createPaymentDemands: (input: {
+      year: number;
+      demand_sent_date: string;
+      due_date: string;
+    }): Promise<
+      ApiResponse<{
+        results: {
+          created: number;
+          skipped: number;
+          total_amount: number;
+          errors: string[];
+        };
+      }>
+    > =>
+      apiRequest<{
+        results: {
+          created: number;
+          skipped: number;
+          total_amount: number;
+          errors: string[];
+        };
+      }>("/admin/payment-demands/create", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    // Record in-person payment
+    recordInPersonPayment: (input: {
+      user_id: string;
+      amount: number;
+      method: "cash" | "in-person";
+      period: string;
+      check_number?: string;
+      lot_ids?: string[];
+    }): Promise<ApiResponse<{ payment: Payment; late_fees: number }>> =>
+      apiRequest<{ payment: Payment; late_fees: number }>(
+        "/admin/payments/in-person",
+        {
+          method: "POST",
+          body: JSON.stringify(input),
+        },
+      ),
+    // Record in-person vote
+    recordInPersonVote: (
+      pollId: string,
+      input: {
+        household_id: string;
+        selected_option: string;
+        voted_at?: string;
+        witness?: string;
+      },
+    ): Promise<ApiResponse<{ vote: { id: string } }>> =>
+      apiRequest<{ vote: { id: string } }>(
+        `/admin/polls/${pollId}/record-vote`,
+        {
+          method: "POST",
+          body: JSON.stringify(input),
+        },
+      ),
+    // Get list of users for admin dropdowns - already defined above in admin object
+  },
+  notifications: {
+    list: (params?: {
+      limit?: number;
+      offset?: number;
+      type?: string;
+      read?: boolean;
+    }) => {
+      const query = new URLSearchParams();
+      if (params?.limit) query.append("limit", params.limit.toString());
+      if (params?.offset) query.append("offset", params.offset.toString());
+      if (params?.type) query.append("type", params.type);
+      if (params?.read !== undefined)
+        query.append("read", params.read.toString());
+      const queryString = query.toString();
+      return apiRequest<NotificationsResponse>(
+        `/notifications${queryString ? "?" + queryString : ""}`,
+      );
+    },
+    get: (id: string) =>
+      apiRequest<NotificationResponse>(`/notifications/${id}`),
+    create: (input: {
+      user_id: string;
+      type: string;
+      title: string;
+      content: string;
+      link?: string;
+    }) =>
+      apiRequest<NotificationResponse>("/notifications", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    markAsRead: (id: string) =>
+      apiRequest<NotificationResponse>(`/notifications/${id}/read`, {
+        method: "PUT",
+      }),
+    markAllAsRead: () =>
+      apiRequest<{ success: boolean }>("/notifications/read-all", {
+        method: "PUT",
+      }),
+    delete: (id: string) =>
+      apiRequest<{ success: boolean }>(`/notifications/${id}`, {
+        method: "DELETE",
+      }),
+    // Admin bulk send
+    sendBulk: (input: {
+      target: "all" | "delinquent" | "specific";
+      user_ids?: string[];
+      type: string;
+      title: string;
+      content: string;
+      link?: string;
+      send_now?: boolean;
+    }) =>
+      apiRequest<BulkNotificationResponse>("/notifications/admin/send", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    // Admin get all notifications
+    getAll: (params?: { limit?: number; offset?: number }) => {
+      const query = new URLSearchParams();
+      if (params?.limit) query.append("limit", params.limit.toString());
+      if (params?.offset) query.append("offset", params.offset.toString());
+      const queryString = query.toString();
+      return apiRequest<AdminNotificationsResponse>(
+        `/notifications/admin/all${queryString ? "?" + queryString : ""}`,
+      );
+    },
   },
 };

@@ -932,6 +932,108 @@ adminRouter.put('/lots/batch/owner', async (c) => {
 });
 
 /**
+ * POST /api/admin/households/merge
+ * Merge multiple lots into one household group
+ */
+adminRouter.post('/households/merge', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const { primary_lot_id, lot_ids_to_merge } = await c.req.json();
+
+    if (!primary_lot_id || !lot_ids_to_merge || !Array.isArray(lot_ids_to_merge)) {
+      return c.json({ error: 'primary_lot_id and lot_ids_to_merge array required' }, 400);
+    }
+
+    if (lot_ids_to_merge.length === 0) {
+      return c.json({ error: 'At least one lot to merge required' }, 400);
+    }
+
+    // Validate all lots exist
+    const allLotIds = [primary_lot_id, ...lot_ids_to_merge];
+    const placeholders = allLotIds.map(() => '?').join(',');
+    const lots = await c.env.DB.prepare(
+      `SELECT id, owner_id, block, lot, address FROM households WHERE id IN (${placeholders})`
+    ).bind(...allLotIds).all();
+
+    if (lots.results.length !== allLotIds.length) {
+      return c.json({ error: 'One or more lots not found' }, 404);
+    }
+
+    // Validate all lots have same owner
+    const primaryLot = lots.results.find((l: any) => l.id === primary_lot_id);
+    if (!primaryLot) {
+      return c.json({ error: 'Primary lot not found' }, 404);
+    }
+
+    const ownerId = primaryLot.owner_id;
+    const hasDifferentOwner = lots.results.some((l: any) => l.owner_id !== ownerId);
+    if (hasDifferentOwner) {
+      return c.json({ error: 'All lots must have the same owner' }, 400);
+    }
+
+    // Generate group ID
+    const household_group_id = crypto.randomUUID();
+
+    // Update lots - set is_primary_lot = 1 for primary, 0 for others
+    const updates = await Promise.all(
+      allLotIds.map(lotId =>
+        c.env.DB.prepare(`
+          UPDATE households
+          SET household_group_id = ?,
+              is_primary_lot = CASE WHEN id = ? THEN 1 ELSE 0 END
+          WHERE id = ?
+        `).bind(household_group_id, primary_lot_id, lotId).run()
+      )
+    );
+
+    return c.json({
+      household_group_id,
+      merged_count: allLotIds.length,
+      lots: lots.results.map((l: any) => ({ lot_id: l.id, address: l.address }))
+    });
+  } catch (error) {
+    console.error('Error merging lots:', error);
+    return c.json({ error: 'Failed to merge lots' }, 500);
+  }
+});
+
+/**
+ * POST /api/admin/households/unmerge
+ * Remove a lot from a merged group
+ */
+adminRouter.post('/households/unmerge', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const { lot_id } = await c.req.json();
+
+    if (!lot_id) {
+      return c.json({ error: 'lot_id required' }, 400);
+    }
+
+    // Update lot to remove from group
+    await c.env.DB.prepare(`
+      UPDATE households
+      SET household_group_id = NULL,
+          is_primary_lot = 1
+      WHERE id = ?
+    `).bind(lot_id).run();
+
+    return c.json({ success: true, lot_id });
+  } catch (error) {
+    console.error('Error unmerging lot:', error);
+    return c.json({ error: 'Failed to unmerge lot' }, 500);
+  }
+});
+
+/**
  * POST /api/admin/sync-lots
  * Sync lots from GeoJSON to database (admin only)
  * This endpoint reads the lots.geojson file and upserts household records
