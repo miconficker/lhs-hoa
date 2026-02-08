@@ -21,6 +21,7 @@ import { DuesConfigPage } from "./pages/DuesConfigPage";
 import { InPersonPaymentsPage } from "./pages/InPersonPaymentsPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { CommonAreasPage } from "./pages/CommonAreasPage";
+import { PassesPage } from "./pages/PassesPage";
 import { useAuth } from "./hooks/useAuth";
 
 function App() {
@@ -55,6 +56,7 @@ function App() {
           <Route path="service-requests" element={<ServiceRequestsPage />} />
           <Route path="reservations" element={<ReservationsPage />} />
           <Route path="my-lots" element={<MyLotsPage />} />
+          <Route path="passes" element={<PassesPage />} />
           <Route path="payments" element={<PaymentsPage />} />
           <Route path="documents" element={<DocumentsPage />} />
           <Route path="announcements" element={<AnnouncementsPage />} />

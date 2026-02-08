@@ -17,6 +17,7 @@ import {
   Bell,
   Receipt,
   Trees,
+  Badge,
 } from "lucide-react";
 
 const navItems = [
@@ -48,6 +49,12 @@ const navItems = [
     to: "/my-lots",
     icon: HomeIcon,
     label: "My Lots",
+    roles: ["admin", "resident"],
+  },
+  {
+    to: "/passes",
+    icon: Badge,
+    label: "Passes",
     roles: ["admin", "resident"],
   },
   {
