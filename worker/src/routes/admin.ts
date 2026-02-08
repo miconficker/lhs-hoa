@@ -37,6 +37,8 @@ adminRouter.get('/users', async (c) => {
     SELECT
       u.id,
       u.email,
+      u.first_name,
+      u.last_name,
       u.role,
       u.phone,
       u.created_at,
@@ -350,13 +352,24 @@ adminRouter.put('/households/:id', async (c) => {
 
   const id = c.req.param('id');
   const body = await c.req.json();
-  const result = createHouseholdSchema.partial().safeParse(body);
+
+  console.log('[Admin] PUT /households/:id - Request body:', JSON.stringify(body));
+
+  // Allow both owner_id and owner_email (for consistency with import endpoint)
+  const updateHouseholdSchema = createHouseholdSchema.partial().extend({
+    owner_email: z.string().email().optional(),
+  });
+
+  const result = updateHouseholdSchema.safeParse(body);
 
   if (!result.success) {
+    console.log('[Admin] Validation failed:', result.error.flatten());
     return c.json({ error: 'Invalid input', details: result.error.flatten() }, 400);
   }
 
-  const { address, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id } = result.data;
+  const { address, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id, owner_email } = result.data;
+
+  console.log('[Admin] Parsed data - owner_email:', owner_email, 'owner_id:', owner_id);
 
   // Check if household exists
   const existing = await c.env.DB.prepare(
@@ -367,8 +380,17 @@ adminRouter.put('/households/:id', async (c) => {
     return c.json({ error: 'Household not found' }, 404);
   }
 
-  // Verify owner exists if provided
-  if (owner_id) {
+  // Convert owner_email to owner_id if provided
+  let finalOwnerId = owner_id;
+  if (owner_email) {
+    const owner = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(owner_email).first();
+    if (!owner) {
+      return c.json({ error: 'Owner not found with provided email' }, 404);
+    }
+    finalOwnerId = owner.id as string;
+    console.log('[Admin] Converted owner_email to owner_id:', finalOwnerId);
+  } else if (owner_id !== undefined) {
+    // Verify owner exists if owner_id is provided
     const owner = await c.env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(owner_id).first();
     if (!owner) {
       return c.json({ error: 'Owner not found' }, 404);
@@ -407,9 +429,9 @@ adminRouter.put('/households/:id', async (c) => {
     updates.push('map_marker_y = ?');
     values.push(map_marker_y || null);
   }
-  if (owner_id !== undefined) {
+  if (finalOwnerId !== undefined) {
     updates.push('owner_id = ?');
-    values.push(owner_id || null);
+    values.push(finalOwnerId || null);
   }
 
   if (updates.length === 0) {
@@ -417,6 +439,8 @@ adminRouter.put('/households/:id', async (c) => {
   }
 
   values.push(id);
+  console.log('[Admin] Executing UPDATE with values:', values);
+
   await c.env.DB.prepare(
     `UPDATE households SET ${updates.join(', ')} WHERE id = ?`
   ).bind(...values).run();
@@ -425,6 +449,8 @@ adminRouter.put('/households/:id', async (c) => {
   const household = await c.env.DB.prepare(
     'SELECT * FROM households WHERE id = ?'
   ).bind(id).first() as any;
+
+  console.log('[Admin] Updated household:', household);
 
   return c.json({ household });
 });
@@ -898,5 +924,542 @@ adminRouter.put('/lots/batch/owner', async (c) => {
   } catch (error) {
     console.error('Error batch updating lot owner:', error);
     return c.json({ error: 'Failed to batch update lot owner' }, 500);
+  }
+});
+
+/**
+ * POST /api/admin/sync-lots
+ * Sync lots from GeoJSON to database (admin only)
+ * This endpoint reads the lots.geojson file and upserts household records
+ */
+adminRouter.post('/sync-lots', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    // Read GeoJSON file from R2 or public folder
+    // Since we're in a Worker, we'll need to fetch from a public URL
+    const geoUrl = 'https://laguna-hills-hoa.pages.dev/data/lots.geojson';
+    const response = await fetch(geoUrl);
+
+    if (!response.ok) {
+      return c.json({ error: 'Failed to fetch GeoJSON data' }, 500);
+    }
+
+    const geojson = (await response.json()) as {
+      type: string;
+      features: Array<{
+        id?: string;
+        properties: {
+          path_id: string;
+          lot_number: string | null;
+          block_number: string | null;
+          area_sqm: number | null;
+          status: string;
+          owner_user_id: string;
+          lot_size_sqm: number | null;
+        };
+      }>;
+    };
+
+    if (geojson.type !== 'FeatureCollection' || !geojson.features) {
+      return c.json({ error: 'Invalid GeoJSON format' }, 400);
+    }
+
+    // Get existing household IDs
+    const existingResult = await c.env.DB.prepare('SELECT id FROM households').all();
+    const existingIds = new Set(existingResult.results.map((r: any) => r.id));
+
+    // Ensure developer-owner user exists
+    const developerCheck = await c.env.DB.prepare(
+      "SELECT id FROM users WHERE id = 'developer-owner'"
+    ).first();
+
+    if (!developerCheck) {
+      // Create developer-owner user
+      const passwordHash =
+        '$2a$10$YQl7ZWK3WK3L3WK3L3WK3OeWK3L3WK3L3WK3L3WK3L3WK3L3WK3L3';
+      await c.env.DB.prepare(
+        "INSERT INTO users (id, email, password_hash, role) VALUES ('developer-owner', 'developer@lagunahills.com', ?, 'resident')"
+      ).bind(passwordHash).run();
+    }
+
+    // Sync lots
+    let inserted = 0;
+    let updated = 0;
+    const errors: string[] = [];
+
+    for (const lot of geojson.features) {
+      try {
+        const lotId = lot.id || lot.properties.path_id;
+        const exists = existingIds.has(lotId);
+
+        // Generate address
+        const address =
+          lot.properties.block_number && lot.properties.lot_number
+            ? `Block ${lot.properties.block_number}, Lot ${lot.properties.lot_number}`
+            : `Lot ${lotId}`;
+
+        if (exists) {
+          // Update existing
+          await c.env.DB.prepare(
+            `UPDATE households
+             SET address = ?, block = ?, lot = ?, lot_status = ?, lot_size_sqm = ?, owner_id = ?
+             WHERE id = ?`
+          ).bind(
+            address,
+            lot.properties.block_number || null,
+            lot.properties.lot_number || null,
+            lot.properties.lot_status || lot.properties.status || 'vacant_lot',
+            lot.properties.lot_size_sqm ?? null,
+            lot.properties.owner_user_id || 'developer-owner',
+            lotId
+          ).run();
+          updated++;
+        } else {
+          // Insert new
+          await c.env.DB.prepare(
+            `INSERT INTO households (id, address, block, lot, lot_status, lot_size_sqm, owner_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`
+          ).bind(
+            lotId,
+            address,
+            lot.properties.block_number || null,
+            lot.properties.lot_number || null,
+            lot.properties.lot_status || lot.properties.status || 'vacant_lot',
+            lot.properties.lot_size_sqm ?? null,
+            lot.properties.owner_user_id || 'developer-owner'
+          ).run();
+          inserted++;
+          existingIds.add(lotId);
+        }
+      } catch (error) {
+        errors.push(`${lot.id || lot.properties.path_id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    return c.json({
+      success: true,
+      results: {
+        inserted,
+        updated,
+        errors: errors.length,
+        errorDetails: errors.slice(0, 10), // Return first 10 errors
+      },
+    });
+  } catch (error) {
+    console.error('Error syncing lots:', error);
+    return c.json({ error: 'Failed to sync lots' }, 500);
+  }
+});
+
+// =============================================================================
+// ADMIN: Dues Rates Management
+// =============================================================================
+
+/**
+ * GET /api/admin/dues-rates
+ * Get all dues rates (admin only)
+ */
+adminRouter.get('/dues-rates', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const rates = await c.env.DB.prepare(`
+      SELECT
+        dr.id,
+        dr.rate_per_sqm,
+        dr.year,
+        dr.effective_date,
+        dr.created_at,
+        u.email as created_by_email
+      FROM dues_rates dr
+      LEFT JOIN users u ON dr.created_by = u.id
+      ORDER BY dr.year DESC, dr.effective_date DESC
+    `).all();
+
+    return c.json({ dues_rates: rates.results || [] });
+  } catch (error) {
+    console.error('Error fetching dues rates:', error);
+    return c.json({ error: 'Failed to fetch dues rates' }, 500);
+  }
+});
+
+/**
+ * POST /api/admin/dues-rates
+ * Create new dues rate (admin only)
+ */
+adminRouter.post('/dues-rates', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const body = await c.req.json();
+    const { rate_per_sqm, year, effective_date } = body;
+
+    if (!rate_per_sqm || !year || !effective_date) {
+      return c.json({ error: 'rate_per_sqm, year, and effective_date are required' }, 400);
+    }
+
+    // Check if rate already exists for this year
+    const existing = await c.env.DB.prepare(
+      'SELECT id FROM dues_rates WHERE year = ?'
+    ).bind(year).first();
+
+    if (existing) {
+      return c.json({ error: 'Dues rate already exists for this year' }, 409);
+    }
+
+    const id = generateId();
+    await c.env.DB.prepare(
+      `INSERT INTO dues_rates (id, rate_per_sqm, year, effective_date, created_by)
+       VALUES (?, ?, ?, ?, ?)`
+    ).bind(id, rate_per_sqm, year, effective_date, authUser.userId).run();
+
+    const newRate = await c.env.DB.prepare(
+      `SELECT * FROM dues_rates WHERE id = ?`
+    ).bind(id).first();
+
+    return c.json({ dues_rate: newRate }, 201);
+  } catch (error) {
+    console.error('Error creating dues rate:', error);
+    return c.json({ error: 'Failed to create dues rate' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/dues-rates/:id
+ * Update dues rate (admin only)
+ */
+adminRouter.put('/dues-rates/:id', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const id = c.req.param('id');
+
+  try {
+    const body = await c.req.json();
+    const { rate_per_sqm, effective_date } = body;
+
+    // Verify rate exists
+    const existing = await c.env.DB.prepare(
+      'SELECT * FROM dues_rates WHERE id = ?'
+    ).bind(id).first();
+
+    if (!existing) {
+      return c.json({ error: 'Dues rate not found' }, 404);
+    }
+
+    const updates: string[] = [];
+    const values: any[] = [];
+
+    if (rate_per_sqm !== undefined) {
+      updates.push('rate_per_sqm = ?');
+      values.push(rate_per_sqm);
+    }
+
+    if (effective_date !== undefined) {
+      updates.push('effective_date = ?');
+      values.push(effective_date);
+    }
+
+    if (updates.length === 0) {
+      return c.json({ error: 'No fields to update' }, 400);
+    }
+
+    values.push(id);
+    await c.env.DB.prepare(
+      `UPDATE dues_rates SET ${updates.join(', ')} WHERE id = ?`
+    ).bind(...values).run();
+
+    const updated = await c.env.DB.prepare(
+      'SELECT * FROM dues_rates WHERE id = ?'
+    ).bind(id).first();
+
+    return c.json({ dues_rate: updated });
+  } catch (error) {
+    console.error('Error updating dues rate:', error);
+    return c.json({ error: 'Failed to update dues rate' }, 500);
+  }
+});
+
+/**
+ * DELETE /api/admin/dues-rates/:id
+ * Delete dues rate (admin only)
+ */
+adminRouter.delete('/dues-rates/:id', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const id = c.req.param('id');
+
+  try {
+    // Verify rate exists
+    const existing = await c.env.DB.prepare(
+      'SELECT * FROM dues_rates WHERE id = ?'
+    ).bind(id).first();
+
+    if (!existing) {
+      return c.json({ error: 'Dues rate not found' }, 404);
+    }
+
+    // Delete the rate
+    await c.env.DB.prepare('DELETE FROM dues_rates WHERE id = ?').bind(id).run();
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting dues rate:', error);
+    return c.json({ error: 'Failed to delete dues rate' }, 500);
+  }
+});
+
+/**
+ * GET /api/admin/dues-rates/active
+ * Get current active dues rate (admin only)
+ */
+adminRouter.get('/dues-rates/active', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const currentYear = new Date().getFullYear();
+    const active = await c.env.DB.prepare(`
+      SELECT * FROM dues_rates
+      WHERE year <= ? AND effective_date <= DATE('now')
+      ORDER BY year DESC, effective_date DESC
+      LIMIT 1
+    `).bind(currentYear).first();
+
+    return c.json({ active_rate: active || null });
+  } catch (error) {
+    console.error('Error fetching active dues rate:', error);
+    return c.json({ error: 'Failed to fetch active dues rate' }, 500);
+  }
+});
+
+// =============================================================================
+// ADMIN: Payment Demands Management
+// =============================================================================
+
+/**
+ * POST /api/admin/payment-demands/create
+ * Create payment demands for all users for a given year (admin only)
+ */
+adminRouter.post('/payment-demands/create', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const body = await c.req.json();
+    const { year, demand_sent_date, due_date } = body;
+
+    if (!year || !demand_sent_date || !due_date) {
+      return c.json({ error: 'year, demand_sent_date, and due_date are required' }, 400);
+    }
+
+    // Get current active dues rate
+    const rateResult = await c.env.DB.prepare(`
+      SELECT rate_per_sqm FROM dues_rates
+      WHERE year <= ? AND effective_date <= DATE('now')
+      ORDER BY year DESC, effective_date DESC
+      LIMIT 1
+    `).bind(year).first();
+
+    if (!rateResult) {
+      return c.json({ error: 'No active dues rate found for this year' }, 400);
+    }
+
+    const rate_per_sqm = rateResult.rate_per_sqm;
+
+    // Get all lots with owners
+    const lots = await c.env.DB.prepare(`
+      SELECT
+        h.id as lot_id,
+        h.owner_id,
+        h.lot_size_sqm,
+        u.id as user_id,
+        u.email as user_email
+      FROM households h
+      INNER JOIN users u ON h.owner_id = u.id
+      WHERE h.owner_id IS NOT NULL
+    `).all();
+
+    const results = {
+      created: 0,
+      skipped: 0,
+      total_amount: 0,
+      errors: [] as string[]
+    };
+
+    for (const lot of lots.results || []) {
+      try {
+        const lotSize = lot.lot_size_sqm || 0;
+        const amountDue = lotSize * rate_per_sqm;
+
+        // Check if demand already exists
+        const existing = await c.env.DB.prepare(
+          'SELECT id FROM payment_demands WHERE user_id = ? AND year = ?'
+        ).bind(lot.user_id, year).first();
+
+        if (existing) {
+          results.skipped++;
+          continue;
+        }
+
+        const demandId = generateId();
+        await c.env.DB.prepare(
+          `INSERT INTO payment_demands (id, user_id, year, demand_sent_date, due_date, amount_due)
+           VALUES (?, ?, ?, ?, ?, ?)`
+        ).bind(demandId, lot.user_id, year, demand_sent_date, due_date, amountDue).run();
+
+        results.created++;
+        results.total_amount += amountDue;
+      } catch (error) {
+        results.errors.push(`Lot ${lot.lot_id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    return c.json({ results });
+  } catch (error) {
+    console.error('Error creating payment demands:', error);
+    return c.json({ error: 'Failed to create payment demands' }, 500);
+  }
+});
+
+/**
+ * GET /api/admin/payment-demands
+ * Get all payment demands with filtering (admin only)
+ */
+adminRouter.get('/payment-demands', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const { year, status } = c.req.query();
+
+    let query = `
+      SELECT
+        pd.id,
+        pd.user_id,
+        pd.year,
+        pd.demand_sent_date,
+        pd.due_date,
+        pd.amount_due,
+        pd.status,
+        pd.paid_date,
+        pd.created_at,
+        u.email as user_email,
+        u.first_name || ' ' || u.last_name as user_name
+      FROM payment_demands pd
+      INNER JOIN users u ON pd.user_id = u.id
+    `;
+
+    const conditions: string[] = [];
+    const values: any[] = [];
+
+    if (year) {
+      conditions.push('pd.year = ?');
+      values.push(year);
+    }
+
+    if (status) {
+      conditions.push('pd.status = ?');
+      values.push(status);
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    query += ' ORDER BY pd.year DESC, pd.demand_sent_date DESC';
+
+    const demands = await c.env.DB.prepare(query).bind(...values).all();
+
+    return c.json({ payment_demands: demands.results || [] });
+  } catch (error) {
+    console.error('Error fetching payment demands:', error);
+    return c.json({ error: 'Failed to fetch payment demands' }, 500);
+  }
+});
+
+/**
+ * POST /api/admin/payments/in-person
+ * Record an in-person payment (admin only)
+ */
+adminRouter.post('/payments/in-person', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const body = await c.req.json();
+    const { user_id, amount, method, check_number, period, lot_ids } = body;
+
+    if (!user_id || !amount || !method || !period) {
+      return c.json({ error: 'user_id, amount, method, and period are required' }, 400);
+    }
+
+    // Verify user exists
+    const user = await c.env.DB.prepare(
+      'SELECT id FROM users WHERE id = ?'
+    ).bind(user_id).first();
+
+    if (!user) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+
+    // Calculate late fees if overdue (1% per month)
+    const paymentDate = new Date();
+    const dueDate = new Date(period + '-01-31'); // Due Jan 31 of the year
+    const monthsLate = Math.max(0, Math.floor((paymentDate.getTime() - dueDate.getTime()) / (30 * 24 * 60 * 60 * 1000)));
+    const lateFeeAmount = monthsLate > 0 ? amount * 0.01 * monthsLate : 0;
+
+    const paymentId = generateId();
+    await c.env.DB.prepare(
+      `INSERT INTO payments (id, household_id, amount, currency, method, status, period, late_fee_amount, late_fee_months, received_by)
+       VALUES (?, ?, ?, 'PHP', ?, 'completed', ?, ?, ?, ?)`
+    ).bind(
+      paymentId,
+      user_id, // Using user_id as household_id for in-person payments
+      amount,
+      method === 'cash' ? 'cash' : 'in-person',
+      period,
+      lateFeeAmount,
+      monthsLate,
+      authUser.userId
+    ).run();
+
+    const payment = await c.env.DB.prepare(
+      'SELECT * FROM payments WHERE id = ?'
+    ).bind(paymentId).first();
+
+    // Update payment demand status if exists
+    await c.env.DB.prepare(
+      `UPDATE payment_demands SET status = 'paid', paid_date = DATE('now')
+       WHERE user_id = ? AND year = ? AND status = 'pending'`
+    ).bind(user_id, parseInt(period)).run();
+
+    return c.json({ payment, late_fees: lateFeeAmount }, 201);
+  } catch (error) {
+    console.error('Error recording in-person payment:', error);
+    return c.json({ error: 'Failed to record payment' }, 500);
   }
 });

@@ -1,12 +1,17 @@
 // User & Auth
 export type UserRole = "admin" | "resident" | "staff" | "guest";
 
-// Lot Status enum
+// Lot Status enum (development state)
 export type LotStatus = "built" | "vacant_lot" | "under_construction";
+
+// Lot Type enum (property category)
+export type LotType = "residential" | "resort" | "commercial";
 
 export interface User {
   id: string;
   email: string;
+  first_name: string | null;
+  last_name: string | null;
   role: UserRole;
   phone?: string;
   created_at: string;
@@ -34,6 +39,7 @@ export interface Household {
   map_marker_y?: number;
   owner_user_id?: string; // UPDATED: Can be null (using existing owner_id in DB)
   lot_status?: LotStatus; // NEW: built, vacant_lot, under_construction
+  lot_type?: LotType; // NEW: residential, resort, commercial
   lot_size_sqm?: number; // NEW: Lot size in m² (nullable)
   created_at: string;
 }
@@ -145,7 +151,12 @@ export interface Event {
 }
 
 // Payments
-export type PaymentMethod = "gcash" | "paymaya" | "instapay" | "cash";
+export type PaymentMethod =
+  | "gcash"
+  | "paymaya"
+  | "instapay"
+  | "cash"
+  | "in-person";
 export type PaymentStatus = "pending" | "completed" | "failed";
 
 export interface Payment {
@@ -156,9 +167,12 @@ export interface Payment {
   method: PaymentMethod;
   status: PaymentStatus;
   reference_number?: string;
-  period: string; // "2025-01" format
+  period: string; // "2025" format for annual dues
   created_at: string;
   paid_at?: string;
+  late_fee_amount?: number; // NEW: Accumulated late fees
+  late_fee_months?: number; // NEW: Number of months late fee calculated for
+  received_by?: string; // NEW: Admin who recorded in-person payment
 }
 
 export interface OutstandingBalance {
@@ -195,11 +209,15 @@ export interface PollVote {
   household_id: string;
   selected_option: string;
   voted_at: string;
+  lot_count?: number; // NEW: Number of lots this vote represents (proxy voting)
+  voting_method?: "online" | "in-person"; // NEW: How the vote was cast
+  recorded_by?: string; // NEW: Admin who recorded in-person vote
 }
 
 export interface PollWithResults extends Poll {
   votes: { option: string; count: number }[];
   total_votes: number;
+  total_lots: number; // NEW: Total lots voted (weighted by lot_count)
   has_voted: boolean;
 }
 
@@ -295,4 +313,151 @@ export interface LotMappingFile {
   version: string;
   created_at: string;
   mappings: LotMapping[];
+}
+
+// =============================================================================
+// Dues & Payments
+// =============================================================================
+
+export interface DuesRate {
+  id: string;
+  rate_per_sqm: number;
+  year: number;
+  effective_date: string;
+  created_at: string;
+  created_by?: string;
+}
+
+export interface PaymentDemand {
+  id: string;
+  user_id: string;
+  year: number;
+  demand_sent_date: string;
+  due_date: string;
+  amount_due: number;
+  status: "pending" | "paid" | "suspended";
+  paid_date?: string;
+  created_at: string;
+}
+
+export interface InstallmentPlan {
+  id: string;
+  user_id: string;
+  year: number;
+  total_amount: number;
+  schedule: InstallmentSchedule[];
+  status: "active" | "completed" | "cancelled";
+  approved_by: string;
+  approved_at: string;
+  notes?: string;
+  created_at: string;
+}
+
+export interface InstallmentSchedule {
+  due_date: string;
+  amount: number;
+}
+
+export interface InstallmentPayment {
+  id: string;
+  plan_id: string;
+  due_date: string;
+  amount: number;
+  paid_date?: string;
+  status: "pending" | "paid" | "missed";
+  created_at: string;
+}
+
+// =============================================================================
+// My Lots Dashboard
+// =============================================================================
+
+export interface MyLot {
+  lot_id: string;
+  block?: string;
+  lot?: string;
+  address: string;
+  lot_status: LotStatus;
+  lot_type?: LotType;
+  lot_size_sqm?: number;
+  annual_dues: number;
+  payment_status?: "current" | "overdue" | "suspended";
+}
+
+export interface MyLotsSummary {
+  total_lots: number;
+  total_sqm: number;
+  annual_dues_total: number;
+  unpaid_periods: string[];
+  voting_status: "eligible" | "suspended";
+  rate_per_sqm: number;
+  lots: MyLot[];
+}
+
+// =============================================================================
+// Public Lot Information (for non-admin users)
+// =============================================================================
+
+export interface PublicLot {
+  lot_id: string;
+  block?: string;
+  lot?: string;
+  lot_status: LotStatus;
+  lot_type?: LotType;
+}
+
+// =============================================================================
+// Notifications
+// =============================================================================
+
+export type NotificationType =
+  | "demand_letter"
+  | "reminder"
+  | "late_notice"
+  | "announcement"
+  | "alert";
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  content: string;
+  link?: string;
+  read: boolean;
+  created_at: string;
+  sent_at?: string;
+}
+
+export interface NotificationWithUser extends Notification {
+  user_email?: string;
+}
+
+export interface NotificationsResponse {
+  notifications: Notification[];
+  unread_count: number;
+}
+
+export interface NotificationResponse {
+  notification: Notification;
+}
+
+export interface BulkNotificationInput {
+  target: "all" | "delinquent" | "specific";
+  user_ids?: string[];
+  type: NotificationType;
+  title: string;
+  content: string;
+  link?: string;
+  send_now?: boolean;
+}
+
+export interface BulkNotificationResponse {
+  success: boolean;
+  count: number;
+  notifications: Notification[];
+}
+
+export interface AdminNotificationsResponse {
+  notifications: NotificationWithUser[];
 }
