@@ -120,14 +120,14 @@ householdsRouter.get('/my-lots', async (c) => {
 
     // Calculate summary (rate is monthly per sqm, annual = monthly * 12)
     const totalLots = lots.results?.length || 0;
-    const totalSqm = lots.results?.reduce((sum, lot) => sum + (lot.lot_size_sqm || 0), 0) || 0;
-    const annualDuesTotal = totalSqm * ratePerSqm * 12;
+    const totalSqm = lots.results?.reduce((sum: number, lot) => sum + ((lot.lot_size_sqm as number) || 0), 0) || 0;
+    const annualDuesTotal = totalSqm * (ratePerSqm as number) * 12;
 
     // Find unpaid periods
     const unpaidPeriods: string[] = [];
     for (const demand of demands.results || []) {
       if (demand.status === 'pending' || demand.status === 'suspended') {
-        unpaidPeriods.push(demand.year.toString());
+        unpaidPeriods.push((demand.year as number).toString());
       }
     }
 
@@ -136,7 +136,7 @@ householdsRouter.get('/my-lots', async (c) => {
     let votingStatus: 'eligible' | 'suspended' = 'eligible';
     for (const demand of demands.results || []) {
       if (demand.status === 'pending' || demand.status === 'suspended') {
-        const dueDate = new Date(demand.due_date);
+        const dueDate = new Date(demand.due_date as string);
         const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (24 * 60 * 60 * 1000));
         if (daysOverdue >= 30) {
           votingStatus = 'suspended';
@@ -151,7 +151,7 @@ householdsRouter.get('/my-lots', async (c) => {
         const existing = acc.find(g => g.household_group_id === lot.household_group_id);
         if (existing) {
           existing.merged_lots.push(lot.lot_id);
-          existing.annual_dues += (lot.lot_size_sqm || 0) * ratePerSqm * 12;
+          existing.annual_dues += (lot.lot_size_sqm || 0) * (ratePerSqm as number) * 12;
           existing.lot_size_sqm += lot.lot_size_sqm || 0;
           existing.address = `${existing.block}-${existing.lot} + ${lot.block}-${lot.lot}`;
         } else {
@@ -159,14 +159,14 @@ householdsRouter.get('/my-lots', async (c) => {
             ...lot,
             merged_lots: [lot.lot_id],
             is_primary_lot: true,
-            annual_dues: (lot.lot_size_sqm || 0) * ratePerSqm * 12,
+            annual_dues: (lot.lot_size_sqm || 0) * (ratePerSqm as number) * 12,
           });
         }
       } else {
         acc.push({
           ...lot,
           merged_lots: [],
-          annual_dues: (lot.lot_size_sqm || 0) * ratePerSqm * 12,
+          annual_dues: (lot.lot_size_sqm || 0) * (ratePerSqm as number) * 12,
         });
       }
       return acc;

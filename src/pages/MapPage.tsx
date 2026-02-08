@@ -474,7 +474,7 @@ export function MapPage() {
         // Load GeoJSON data in parallel with cache-busting
         const cacheBust = Date.now();
         const [lotsResponse, blocksResponse] = await Promise.all([
-          fetch(`/data/lots.geojson?t=${cacheBust}`),
+          fetch(`/api/data/lots.geojson?t=${cacheBust}`),
           fetch(`/data/blocks.geojson?t=${cacheBust}`),
         ]);
 

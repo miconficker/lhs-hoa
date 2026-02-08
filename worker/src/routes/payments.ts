@@ -75,8 +75,8 @@ paymentsRouter.get('/balance/:householdId', async (c) => {
   let totalDue = 0;
 
   for (const row of pendingResult.results || []) {
-    periodsDue.push(row.period);
-    totalDue += row.total;
+    periodsDue.push(row.period as string);
+    totalDue += row.total as number;
   }
 
   return c.json({

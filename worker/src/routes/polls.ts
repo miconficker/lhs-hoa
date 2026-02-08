@@ -92,7 +92,7 @@ pollsRouter.get('/:id', async (c) => {
 
     if (userVote) {
       hasVoted = true;
-      userLotCount = userVote.lot_count || 1;
+      userLotCount = (userVote.lot_count as number) ?? 1;
     }
   }
 

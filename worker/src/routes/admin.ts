@@ -1261,7 +1261,7 @@ adminRouter.post('/sync-lots', async (c) => {
             address,
             lot.properties.block_number || null,
             lot.properties.lot_number || null,
-            lot.properties.lot_status || lot.properties.status || 'vacant_lot',
+            lot.properties.status || 'vacant_lot',
             lot.properties.lot_size_sqm ?? null,
             lot.properties.owner_user_id || 'developer-owner',
             lotId
@@ -1277,7 +1277,7 @@ adminRouter.post('/sync-lots', async (c) => {
             address,
             lot.properties.block_number || null,
             lot.properties.lot_number || null,
-            lot.properties.lot_status || lot.properties.status || 'vacant_lot',
+            lot.properties.status || 'vacant_lot',
             lot.properties.lot_size_sqm ?? null,
             lot.properties.owner_user_id || 'developer-owner'
           ).run();
@@ -1557,8 +1557,8 @@ adminRouter.post('/payment-demands/create', async (c) => {
 
     for (const lot of lots.results || []) {
       try {
-        const lotSize = lot.lot_size_sqm || 0;
-        const amountDue = lotSize * rate_per_sqm;
+        const lotSize = (lot.lot_size_sqm as number) || 0;
+        const amountDue = lotSize * (rate_per_sqm as number);
 
         // Check if demand already exists
         const existing = await c.env.DB.prepare(
@@ -2490,8 +2490,9 @@ adminRouter.get('/pass-management/fees', async (c) => {
     // Get latest fee for each type
     const feeMap: Record<string, any> = {};
     for (const fee of fees.results || []) {
-      if (!feeMap[fee.fee_type]) {
-        feeMap[fee.fee_type] = fee;
+      const feeType = fee.fee_type as string;
+      if (!feeMap[feeType]) {
+        feeMap[feeType] = fee;
       }
     }
 

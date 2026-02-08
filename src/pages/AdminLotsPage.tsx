@@ -65,7 +65,7 @@ export function AdminLotsPage() {
       const [lotsResult, homeownersResult, geoResponse] = await Promise.all([
         api.admin.getLotsWithOwnership(),
         api.admin.getHomeowners(),
-        fetch(`/data/lots.geojson?t=${Date.now()}`),
+        fetch(`/api/data/lots.geojson?t=${Date.now()}`),
       ]);
 
       if (lotsResult.data) {
@@ -169,6 +169,13 @@ export function AdminLotsPage() {
 
     const lotArray = Array.from(selectedLots);
     const primaryLotId = lotArray[0];
+  }
+
+  async function handleMerge() {
+    if (selectedLots.size < 2) return;
+
+    const lotArray = Array.from(selectedLots);
+    const primaryLotId = lotArray[0];
 
     setSaving(true);
     try {
@@ -240,17 +247,17 @@ export function AdminLotsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             Lot Ownership Management
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Click lots to assign owners and update status
+            Click lots to assign owners and update status. Map updates automatically.
           </p>
         </div>
         {selectedLots.size > 0 && (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mt-4">
             <span className="text-sm text-gray-600">
               {selectedLots.size} lot(s) selected
             </span>
@@ -295,10 +302,10 @@ export function AdminLotsPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Map */}
-        <div className="lg:col-span-2 bg-white rounded-lg shadow overflow-hidden">
-          <div className="relative h-[700px]">
+      <div className="fixed top-16 left-64 right-0 bottom-0 z-40">
+        {/* Fullscreen Map */}
+        <div className="absolute inset-0">
+          <div className="relative h-full">
             <MapContainer
               crs={L.CRS.Simple}
               bounds={mapBounds}
@@ -378,227 +385,196 @@ export function AdminLotsPage() {
           </div>
         </div>
 
-        {/* Side Panel */}
-        <div className="space-y-4">
-          {selectedLot ? (
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Edit Lot
-                </h3>
-                <button
-                  onClick={() => setSelectedLot(null)}
-                  className="p-1 hover:bg-gray-100 rounded"
-                >
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
+        {/* Side Panel Overlay */}
+        <div
+          className={`absolute top-0 right-0 h-full bg-white shadow-2xl z-[9500] transition-transform duration-300 ease-in-out ${
+            selectedLot ? "translate-x-0" : "translate-x-full"
+          } w-96`}
+        >
+          <div className="h-full flex flex-col">
+            <div className="p-6 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Edit Lot</h3>
+              <button
+                onClick={() => setSelectedLot(null)}
+                className="p-1 hover:bg-gray-100 rounded"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
 
-              <div className="space-y-4">
-                <div>
+            <div className="flex-1 overflow-y-auto p-6">
+              {selectedLot ? (
+                <div className="space-y-4">
                   <p className="text-sm font-medium text-gray-700">
                     {selectedLot.block_number && selectedLot.lot_number
                       ? `Block ${selectedLot.block_number}, Lot ${selectedLot.lot_number}`
                       : selectedLot.address || "Unnamed Lot"}
                   </p>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Owner
-                  </label>
-                  <select
-                    value={selectedOwner}
-                    onChange={(e) => setSelectedOwner(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg"
-                  >
-                    <option value="">No Owner (HOA-Owned / Common Area)</option>
-                    {homeowners.map((h) => (
-                      <option key={h.id} value={h.id}>
-                        {h.email}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Owner
+                    </label>
+                    <select
+                      value={selectedOwner}
+                      onChange={(e) => setSelectedOwner(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    >
+                      <option value="">No Owner (HOA-Owned / Common Area)</option>
+                      {homeowners.map((h) => (
+                        <option key={h.id} value={h.id}>
+                          {h.email}
+                        </option>
+                      ))}
+                    </select>
+                    {selectedOwner && (
+                      <button
+                        onClick={() => setHighlightOwnerId(selectedOwner)}
+                        className="mt-2 text-xs text-blue-600 hover:text-blue-800"
+                      >
+                        Highlight all{" "}
+                        {homeowners.find((h) => h.id === selectedOwner)?.email}'s
+                        lots
+                      </button>
+                    )}
+                    {highlightOwnerId && (
+                      <button
+                        onClick={() => setHighlightOwnerId(null)}
+                        className="mt-2 ml-2 text-xs text-gray-600 hover:text-gray-800"
+                      >
+                        Clear highlight
+                      </button>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Lot Status
+                    </label>
+                    <select
+                      value={selectedStatus}
+                      onChange={(e) =>
+                        setSelectedStatus(e.target.value as LotStatus)
+                      }
+                      className="w-full px-3 py-2 border rounded-lg"
+                    >
+                      <option value="built">🏠 Built</option>
+                      <option value="vacant_lot">📐 Vacant Lot</option>
+                      <option value="under_construction">
+                        🚧 Under Construction
                       </option>
-                    ))}
-                  </select>
-                  {selectedOwner && (
-                    <button
-                      onClick={() => setHighlightOwnerId(selectedOwner)}
-                      className="mt-2 text-xs text-blue-600 hover:text-blue-800"
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Lot Type
+                    </label>
+                    <select
+                      value={selectedLotType}
+                      onChange={(e) =>
+                        setSelectedLotType(e.target.value as LotType)
+                      }
+                      className="w-full px-3 py-2 border rounded-lg"
                     >
-                      Highlight all{" "}
-                      {homeowners.find((h) => h.id === selectedOwner)?.email}'s
-                      lots
-                    </button>
-                  )}
-                  {highlightOwnerId && (
+                      <option value="residential">🏠 Residential</option>
+                      <option value="resort">🏨 Resort</option>
+                      <option value="commercial">🏢 Commercial</option>
+                      <option value="community">🌳 Community (HOA-Owned)</option>
+                      <option value="utility">⚡ Utility (HOA-Owned)</option>
+                      <option value="open_space">
+                        💧 Open Space (HOA-Owned)
+                      </option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {selectedLotType === "community" ||
+                      selectedLotType === "utility" ||
+                      selectedLotType === "open_space"
+                        ? "HOA-owned lots don't pay dues or vote"
+                        : "Private property"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Lot Size (m²)
+                    </label>
+                    <input
+                      type="number"
+                      value={lotSize}
+                      onChange={(e) => setLotSize(e.target.value)}
+                      placeholder="Not measured"
+                      className="w-full px-3 py-2 border rounded-lg"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Label (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={lotLabel}
+                      onChange={(e) => setLotLabel(e.target.value)}
+                      placeholder="e.g., Clubhouse, Water Tower, Tennis Court"
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Short name for community/utility lots
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description (optional)
+                    </label>
+                    <textarea
+                      value={lotDescription}
+                      onChange={(e) => setLotDescription(e.target.value)}
+                      placeholder="e.g., Multi-purpose court with basketball and volleyball hoops"
+                      className="w-full px-3 py-2 border rounded-lg"
+                      rows={3}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Detailed description for amenities or common areas
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2 pt-4">
                     <button
-                      onClick={() => setHighlightOwnerId(null)}
-                      className="mt-2 ml-2 text-xs text-gray-600 hover:text-gray-800"
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                     >
-                      Clear highlight
+                      <Save className="w-4 h-4" />
+                      {saving ? "Saving..." : "Save"}
                     </button>
-                  )}
+                    <button
+                      onClick={() => handleUnmerge(selectedLot.lot_id)}
+                      disabled={saving}
+                      className="px-4 py-2 border border-purple-200 text-purple-700 rounded-lg hover:bg-purple-50 disabled:opacity-50 flex items-center gap-2"
+                      title="Unmerge this lot from its household group"
+                    >
+                      <Unlink className="w-4 h-4" />
+                      Unmerge
+                    </button>
+                    <button
+                      onClick={() => setSelectedLot(null)}
+                      className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Lot Status
-                  </label>
-                  <select
-                    value={selectedStatus}
-                    onChange={(e) =>
-                      setSelectedStatus(e.target.value as LotStatus)
-                    }
-                    className="w-full px-3 py-2 border rounded-lg"
-                  >
-                    <option value="built">🏠 Built</option>
-                    <option value="vacant_lot">📐 Vacant Lot</option>
-                    <option value="under_construction">
-                      🚧 Under Construction
-                    </option>
-                  </select>
+              ) : (
+                <div className="text-center text-gray-500">
+                  <Map className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                  <p>Click a lot on the map to edit</p>
+                  <p className="text-sm mt-2">Ctrl+click for multi-select</p>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Lot Type
-                  </label>
-                  <select
-                    value={selectedLotType}
-                    onChange={(e) =>
-                      setSelectedLotType(e.target.value as LotType)
-                    }
-                    className="w-full px-3 py-2 border rounded-lg"
-                  >
-                    <option value="residential">🏠 Residential</option>
-                    <option value="resort">🏨 Resort</option>
-                    <option value="commercial">🏢 Commercial</option>
-                    <option value="community">🌳 Community (HOA-Owned)</option>
-                    <option value="utility">⚡ Utility (HOA-Owned)</option>
-                    <option value="open_space">
-                      💧 Open Space (HOA-Owned)
-                    </option>
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {selectedLotType === "community" ||
-                    selectedLotType === "utility" ||
-                    selectedLotType === "open_space"
-                      ? "HOA-owned lots don't pay dues or vote"
-                      : "Private property"}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Lot Size (m²)
-                  </label>
-                  <input
-                    type="number"
-                    value={lotSize}
-                    onChange={(e) => setLotSize(e.target.value)}
-                    placeholder="Not measured"
-                    className="w-full px-3 py-2 border rounded-lg"
-                    min="0"
-                    step="0.01"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Label (optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={lotLabel}
-                    onChange={(e) => setLotLabel(e.target.value)}
-                    placeholder="e.g., Clubhouse, Water Tower, Tennis Court"
-                    className="w-full px-3 py-2 border rounded-lg"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Short name for community/utility lots
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description (optional)
-                  </label>
-                  <textarea
-                    value={lotDescription}
-                    onChange={(e) => setLotDescription(e.target.value)}
-                    placeholder="e.g., Multi-purpose court with basketball and volleyball hoops"
-                    className="w-full px-3 py-2 border rounded-lg"
-                    rows={3}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Detailed description for amenities or common areas
-                  </p>
-                </div>
-
-                <div className="flex gap-2 pt-4">
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    <Save className="w-4 h-4" />
-                    {saving ? "Saving..." : "Save"}
-                  </button>
-                  <button
-                    onClick={() => handleUnmerge(selectedLot.lot_id)}
-                    disabled={saving}
-                    className="px-4 py-2 border border-purple-200 text-purple-700 rounded-lg hover:bg-purple-50 disabled:opacity-50 flex items-center gap-2"
-                    title="Unmerge this lot from its household group"
-                  >
-                    <Unlink className="w-4 h-4" />
-                    Unmerge
-                  </button>
-                  <button
-                    onClick={() => setSelectedLot(null)}
-                    className="px-4 py-2 border rounded-lg hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-center text-gray-500">
-                <Map className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                <p>Click a lot on the map to edit</p>
-                <p className="text-sm mt-2">Ctrl+click for multi-select</p>
-              </div>
-            </div>
-          )}
-
-          {/* Legend */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3">
-              Lot Status Legend
-            </h4>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-green-500"></div>
-                <span className="text-sm text-gray-600">Built</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-gray-400"></div>
-                <span className="text-sm text-gray-600">Vacant Lot</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-orange-500"></div>
-                <span className="text-sm text-gray-600">
-                  Under Construction
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-yellow-400 border-2 border-yellow-500"></div>
-                <span className="text-sm text-gray-600">Highlighted Owner</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded border-2 border-blue-500"></div>
-                <span className="text-sm text-gray-600">Selected Lot</span>
-              </div>
+              )}
             </div>
           </div>
         </div>

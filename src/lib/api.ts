@@ -1186,9 +1186,9 @@ export const api = {
   passRequests: {
     // Employee Pass Requests (for residents)
     employees: {
-      list: (householdId: string) =>
+      list: () =>
         apiRequest<EmployeesResponse>(
-          `/pass-requests/employees/${householdId}`,
+          `/pass-requests/employees`,
         ),
       get: (id: string) =>
         apiRequest<EmployeeResponse>(`/pass-requests/employees/${id}`),
@@ -1220,8 +1220,8 @@ export const api = {
     },
     // Vehicle Pass Requests (for residents)
     vehicles: {
-      list: (householdId: string) =>
-        apiRequest<VehiclesResponse>(`/pass-requests/vehicles/${householdId}`),
+      list: () =>
+        apiRequest<VehiclesResponse>(`/pass-requests/vehicles`),
       get: (id: string) =>
         apiRequest<VehicleResponse>(`/pass-requests/vehicles/${id}`),
       create: (input: CreateVehicleInput) =>
@@ -1239,7 +1239,7 @@ export const api = {
           method: "DELETE",
         }),
     },
-    // Get current pass fees (public endpoint)
-    getFees: () => apiRequest<PassFeesResponse>("/pass-requests/fees"),
+    // Get current pass fees (uses admin endpoint)
+    getFees: () => apiRequest<PassFeesResponse>("/admin/pass-management/fees"),
   },
 };

@@ -110,7 +110,7 @@ export function PassesPage() {
     setError("");
 
     // Load employees
-    const empResult = await api.passRequests.employees.list(householdId);
+    const empResult = await api.passRequests.employees.list();
     if (empResult.error) {
       setError(empResult.error);
     } else if (empResult.data) {
@@ -118,7 +118,7 @@ export function PassesPage() {
     }
 
     // Load vehicles
-    const vehResult = await api.passRequests.vehicles.list(householdId);
+    const vehResult = await api.passRequests.vehicles.list();
     if (vehResult.error) {
       setError(vehResult.error);
     } else if (vehResult.data) {
