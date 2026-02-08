@@ -485,3 +485,153 @@ export interface BulkNotificationResponse {
 export interface AdminNotificationsResponse {
   notifications: NotificationWithUser[];
 }
+
+// =============================================================================
+// Pass Management System
+// =============================================================================
+
+export type EmployeeType = "driver" | "housekeeper" | "caretaker" | "other";
+export type EmployeeStatus = "pending" | "active" | "revoked" | "expired";
+export type PassType = "sticker" | "rfid" | "both";
+export type VehicleStatus =
+  | "pending_payment"
+  | "pending_approval"
+  | "active"
+  | "cancelled";
+export type VehiclePaymentStatus = "unpaid" | "paid";
+
+export interface HouseholdEmployee {
+  id: string;
+  household_id: string;
+  household_address?: string; // Populated by JOIN
+  full_name: string;
+  employee_type: EmployeeType;
+  id_number: string;
+  photo_url?: string;
+  status: EmployeeStatus;
+  issued_date?: string;
+  expiry_date?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VehicleRegistration {
+  id: string;
+  household_id: string;
+  household_address?: string; // Populated by JOIN
+  plate_number: string;
+  make: string;
+  model: string;
+  color: string;
+  pass_type: PassType;
+  rfid_code?: string;
+  sticker_number?: string;
+  status: VehicleStatus;
+  payment_status: VehiclePaymentStatus;
+  issued_date?: string;
+  amount_due?: number;
+  amount_paid?: number;
+  payment_method?: PaymentMethod;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PassFee {
+  id: string;
+  fee_type: PassType;
+  amount: number;
+  effective_date: string;
+  created_at: string;
+}
+
+// API Response types for pass management
+export interface EmployeesResponse {
+  employees: HouseholdEmployee[];
+}
+
+export interface EmployeeResponse {
+  employee: HouseholdEmployee;
+}
+
+export interface VehiclesResponse {
+  vehicles: VehicleRegistration[];
+}
+
+export interface VehicleResponse {
+  vehicle: VehicleRegistration;
+}
+
+export interface PassFeesResponse {
+  fees: PassFee[];
+}
+
+export interface PassFeesUpdateResponse {
+  fees: PassFee[];
+}
+
+export interface CreateEmployeeInput {
+  household_id: string;
+  full_name: string;
+  employee_type: EmployeeType;
+  photo?: File;
+  expiry_date?: string;
+}
+
+export interface UpdateEmployeeInput {
+  full_name?: string;
+  employee_type?: EmployeeType;
+  expiry_date?: string;
+  notes?: string;
+}
+
+export interface CreateVehicleInput {
+  household_id: string;
+  plate_number: string;
+  make: string;
+  model: string;
+  color: string;
+  pass_type: PassType;
+}
+
+export interface UpdateVehicleInput {
+  plate_number?: string;
+  make?: string;
+  model?: string;
+  color?: string;
+  pass_type?: PassType;
+}
+
+export interface AssignRFIDInput {
+  rfid_code: string;
+}
+
+export interface AssignStickerInput {
+  sticker_number: string;
+}
+
+export interface RecordPaymentInput {
+  amount: number;
+  method: PaymentMethod;
+  reference_number?: string;
+  received_by: string;
+}
+
+export interface UpdateEmployeeStatusInput {
+  status: EmployeeStatus;
+  notes?: string;
+}
+
+export interface UpdateVehicleStatusInput {
+  status: VehicleStatus;
+  notes?: string;
+}
+
+// Dashboard stats for passes
+export interface PassStats {
+  active_employees: number;
+  active_vehicles: number;
+  pending_approvals: number;
+  monthly_revenue: number;
+}
