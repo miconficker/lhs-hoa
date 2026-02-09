@@ -1,6 +1,7 @@
 import type {
   AuthResponse,
   User,
+  PreApprovedEmail,
   Announcement,
   Event,
   ServiceRequest,
@@ -525,6 +526,21 @@ export const api = {
         body: JSON.stringify(credentials),
       }),
     getMe: () => apiRequest<{ user: User }>("/auth/me"),
+    getGoogleUrl: () => apiRequest<{ url: string }>("/auth/google/url"),
+    // Whitelist management (admin only)
+    whitelist: {
+      add: (input: { email: string; role: string; household_id?: string }) =>
+        apiRequest<{ entry: PreApprovedEmail }>("/auth/whitelist", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      list: () =>
+        apiRequest<{ entries: PreApprovedEmail[] }>("/auth/whitelist"),
+      remove: (id: string) =>
+        apiRequest<{ success: boolean }>(`/auth/whitelist/${id}`, {
+          method: "DELETE",
+        }),
+    },
   },
   dashboard: {
     getStats: () => apiRequest<DashboardStatsResponse>("/dashboard/stats"),

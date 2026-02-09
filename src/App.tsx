@@ -22,6 +22,7 @@ import { NotificationsPage } from "./pages/NotificationsPage";
 import { CommonAreasPage } from "./pages/CommonAreasPage";
 import { PassesPage } from "./pages/PassesPage";
 import { PassManagementPage } from "./pages/PassManagementPage";
+import { WhitelistManagementPage } from "./pages/WhitelistManagementPage";
 import { useAuth } from "./hooks/useAuth";
 
 function App() {
@@ -116,6 +117,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <PassManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="admin/whitelist"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <WhitelistManagementPage />
               </ProtectedRoute>
             }
           />
