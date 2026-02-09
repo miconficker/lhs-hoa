@@ -1189,8 +1189,9 @@ adminRouter.post('/sync-lots', async (c) => {
 
   try {
     // Read GeoJSON file from R2 or public folder
-    // Since we're in a Worker, we'll need to fetch from a public URL
-    const geoUrl = 'https://laguna-hills-hoa.pages.dev/data/lots.geojson';
+    // Use dynamic origin to work in both local and production
+    const url = new URL(c.req.raw.url);
+    const geoUrl = `${url.origin}/data/lots.geojson`;
     const response = await fetch(geoUrl);
 
     if (!response.ok) {

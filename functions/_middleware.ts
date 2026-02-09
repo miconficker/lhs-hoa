@@ -25,14 +25,30 @@ type Env = {
   DB: D1Database;
   R2: R2Bucket;
   JWT_SECRET: string;
+  ALLOWED_ORIGINS?: string;
 };
 
 // Create Hono app
 const app = new Hono<{ Bindings: Env }>();
 
-// CORS configuration
+// CORS configuration - secure, explicit allowlist
+// Origins are configured via ALLOWED_ORIGINS environment variable in wrangler.jsonc
 app.use('/*', cors({
-  origin: ['http://localhost:5173', 'https://laguna-hills-hoa.pages.dev', 'https://*.pages.dev'],
+  origin: (origin) => {
+    // Allow no origin (same-origin requests like server-side)
+    if (!origin) return true;
+
+    // Development: allow localhost
+    if (origin.includes('localhost')) return true;
+
+    // Production: use environment variable (comma-separated list)
+    // Falls back to current production URL for backward compatibility
+    const allowedOrigins = c.env.ALLOWED_ORIGINS
+      ? c.env.ALLOWED_ORIGINS.split(',').map((o: string) => o.trim())
+      : ['https://lhs-hoa.pages.dev'];
+
+    return allowedOrigins.includes(origin);
+  },
   credentials: true,
 }));
 
@@ -60,9 +76,13 @@ app.get('/api/data/lots.geojson', async (c) => {
     `).all();
 
     // Read the original GeoJSON to get geometries
+    // Use relative URL to fetch from static assets within the same Pages project
     let originalGeojson: any;
     try {
-      const response = await fetch('https://laguna-hills-hoa.pages.dev/data/lots.geojson');
+      // Get the origin from the current request and use relative path
+      const url = new URL(c.req.raw.url);
+      const geojsonUrl = `${url.origin}/data/lots.geojson`;
+      const response = await fetch(geojsonUrl);
       if (response.ok) {
         originalGeojson = await response.json();
       } else {

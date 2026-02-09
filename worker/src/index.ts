@@ -55,7 +55,10 @@ app.get('/api/data/lots.geojson', async (c) => {
     // In production, this would be cached or served from CDN
     let originalGeojson: any;
     try {
-      const response = await fetch('http://localhost:5173/data/lots.geojson');
+      // Get the origin from the current request and use relative path
+      const url = new URL(c.req.raw.url);
+      const geojsonUrl = `${url.origin}/data/lots.geojson`;
+      const response = await fetch(geojsonUrl);
       if (response.ok) {
         originalGeojson = await response.json();
       } else {
