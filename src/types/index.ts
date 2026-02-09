@@ -33,6 +33,17 @@ export interface AuthResponse {
   token: string;
 }
 
+export interface PreApprovedEmail {
+  id: string;
+  email: string;
+  role: UserRole;
+  household_id?: string;
+  invited_by?: string;
+  invited_at: string;
+  accepted_at?: string;
+  is_active: number;
+}
+
 // Household & Residents
 export interface Household {
   id: string;

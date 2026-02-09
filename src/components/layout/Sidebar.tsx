@@ -17,6 +17,7 @@ import {
   Receipt,
   Trees,
   Badge,
+  UserCheck,
 } from "lucide-react";
 
 const navItems = [
@@ -115,6 +116,12 @@ const navItems = [
     to: "/admin/pass-management",
     icon: Badge,
     label: "Pass Management",
+    roles: ["admin"],
+  },
+  {
+    to: "/admin/whitelist",
+    icon: UserCheck,
+    label: "Email Whitelist",
     roles: ["admin"],
   },
   { to: "/admin", icon: Settings, label: "Admin Panel", roles: ["admin"] },

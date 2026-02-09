@@ -8,7 +8,20 @@ export interface User {
   email: string;
   role: UserRole;
   phone?: string;
+  first_name?: string;
+  last_name?: string;
   created_at: string;
+}
+
+export interface PreApprovedEmail {
+  id: string;
+  email: string;
+  role: UserRole;
+  household_id?: string;
+  invited_by?: string;
+  invited_at: string;
+  accepted_at?: string;
+  is_active: number;
 }
 
 export interface Household {
