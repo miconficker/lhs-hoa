@@ -3,6 +3,6 @@
   "compatibility_date": "2024-09-23",
   "pages_build_output_dir": "dist",
   "vars": {
-    "VITE_API_URL": "https://laguna-hills-hoa-api.your-subdomain.workers.dev/api"
+    "VITE_API_URL": "/api"
   }
 }

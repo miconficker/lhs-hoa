@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "optimizer": {
+      "command": "node",
+      "args": ["/home/mico/claude-code-optimizer/dist/index.js"]
+    }
+  }
+}

@@ -1,0 +1,22 @@
+name = "laguna-hills-hoa"
+compatibility_date = "2024-09-23"
+pages_build_output_dir = "dist"
+
+[compatibility_flags]
+flag = "nodejs_compat"
+
+# D1 Database binding for Pages Functions
+[[d1_databases]]
+binding = "DB"
+database_name = "laguna_hills_hoa"
+database_id = "YOUR_D1_DATABASE_ID"
+
+# R2 Storage binding for Pages Functions
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "hoa-documents"
+
+# Environment variables
+[vars]
+ENVIRONMENT = "production"
+JWT_SECRET = "change-me-in-production"
