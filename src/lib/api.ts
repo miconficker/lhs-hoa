@@ -1186,10 +1186,7 @@ export const api = {
   passRequests: {
     // Employee Pass Requests (for residents)
     employees: {
-      list: () =>
-        apiRequest<EmployeesResponse>(
-          `/pass-requests/employees`,
-        ),
+      list: () => apiRequest<EmployeesResponse>(`/pass-requests/employees`),
       get: (id: string) =>
         apiRequest<EmployeeResponse>(`/pass-requests/employees/${id}`),
       create: (input: CreateEmployeeInput) => {
@@ -1220,8 +1217,7 @@ export const api = {
     },
     // Vehicle Pass Requests (for residents)
     vehicles: {
-      list: () =>
-        apiRequest<VehiclesResponse>(`/pass-requests/vehicles`),
+      list: () => apiRequest<VehiclesResponse>(`/pass-requests/vehicles`),
       get: (id: string) =>
         apiRequest<VehicleResponse>(`/pass-requests/vehicles/${id}`),
       create: (input: CreateVehicleInput) =>

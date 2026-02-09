@@ -179,6 +179,8 @@ In Pages settings, add:
 VITE_API_URL = https://your-worker.workers.dev/api
 ```
 
+**Important:** Do NOT set a "deploy command" in Cloudflare Pages settings. The worker backend should be deployed separately to Cloudflare Workers (see Part 1).
+
 #### 4. Deploy
 
 Push to main branch to trigger automatic deployment.
