@@ -1,0 +1,22 @@
+{
+  "name": "laguna-hills-hoa",
+  "compatibility_date": "2024-09-23",
+  "compatibility_flags": ["nodejs_compat"],
+  "pages_build_output_dir": "dist",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "laguna_hills_hoa"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "hoa-documents"
+    }
+  ],
+  "vars": {
+    "ENVIRONMENT": "production",
+    "JWT_SECRET": "change-me-in-production"
+  }
+}

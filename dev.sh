@@ -1,5 +1,6 @@
 #!/bin/bash
 # Start both frontend and backend servers for Laguna Hills HOA system
+# Uses Cloudflare Pages with Functions (unified deployment)
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -14,15 +15,16 @@ echo -e "${BLUE}=================================${NC}"
 echo ""
 
 # Check if this is the first run (need to run migrations?)
-DB_CHECK=$(curl -s http://localhost:8787/api/health 2>/dev/null)
+DB_CHECK=$(curl -s http://localhost:8788/api/health 2>/dev/null)
 if [ -z "$DB_CHECK" ]; then
-    echo -e "${YELLOW}Starting worker and running database setup...${NC}"
-    npx wrangler dev --config wrangler.worker.jsonc > /tmp/worker.log 2>&1 &
-    WORKER_PID=$!
+    echo -e "${YELLOW}Starting Pages Functions and running database setup...${NC}"
+    npm run build > /dev/null 2>&1
+    npx wrangler pages dev dist --config wrangler.jsonc --local --port 8788 > /tmp/pages.log 2>&1 &
+    PAGES_PID=$!
 
-    # Wait for worker
+    # Wait for Pages Functions to start
     for i in {1..10}; do
-        if curl -s http://localhost:8787/api/health > /dev/null 2>&1; then
+        if curl -s http://localhost:8788/api/health > /dev/null 2>&1; then
             break
         fi
         sleep 1
@@ -33,7 +35,7 @@ if [ -z "$DB_CHECK" ]; then
     npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0001_schema.sql --local >/dev/null 2>&1
     echo ""
 else
-    echo -e "${BLUE}Worker already running on port 8787${NC}"
+    echo -e "${BLUE}Pages Functions already running on port 8788${NC}"
 fi
 
 # Function to cleanup on exit
@@ -41,11 +43,8 @@ cleanup() {
     echo ""
     echo -e "${YELLOW}Stopping servers...${NC}"
 
-    # Kill frontend dev server
-    pkill -f "vite.*5173" 2>/dev/null
-
-    # Kill backend worker
-    pkill -f "wrangler dev" 2>/dev/null
+    # Kill Pages dev server
+    pkill -f "wrangler pages dev" 2>/dev/null
 
     echo -e "${GREEN}Servers stopped.${NC}"
     exit 0
@@ -54,40 +53,20 @@ cleanup() {
 # Set trap to cleanup on script exit
 trap cleanup EXIT INT TERM
 
-# Check if worker is already running
-if curl -s http://localhost:8787/api/health > /dev/null 2>&1; then
-    echo -e "${YELLOW}Worker already running on port 8787${NC}"
+# Check if Pages Functions is already running
+if curl -s http://localhost:8788/api/health > /dev/null 2>&1; then
+    echo -e "${YELLOW}Pages Functions already running on port 8788${NC}"
 else
-    echo -e "${BLUE}Starting Cloudflare Workers backend...${NC}"
-    npx wrangler dev --config wrangler.worker.jsonc > /tmp/worker.log 2>&1 &
-    WORKER_PID=$!
+    echo -e "${BLUE}Starting Cloudflare Pages with Functions...${NC}"
+    npm run build > /dev/null 2>&1
+    npx wrangler pages dev dist --config wrangler.jsonc --local --port 8788 > /tmp/pages.log 2>&1 &
+    PAGES_PID=$!
 
-    # Wait for worker to be ready
-    echo -e "${YELLOW}Waiting for worker to start...${NC}"
+    # Wait for Pages to be ready
+    echo -e "${YELLOW}Waiting for Pages Functions to start...${NC}"
     for i in {1..15}; do
-        if curl -s http://localhost:8787/api/health > /dev/null 2>&1; then
-            echo -e "${GREEN}Worker is ready!${NC}"
-            break
-        fi
-        sleep 1
-        echo -n "."
-    done
-    echo ""
-fi
-
-# Check if frontend is already running
-if curl -s http://localhost:5173 > /dev/null 2>&1; then
-    echo -e "${YELLOW}Frontend already running on port 5173${NC}"
-else
-    echo -e "${BLUE}Starting Vite frontend...${NC}"
-    npm run dev > /tmp/frontend.log 2>&1 &
-    FRONTEND_PID=$!
-
-    # Wait for frontend to be ready
-    echo -e "${YELLOW}Waiting for frontend to start...${NC}"
-    for i in {1..10}; do
-        if curl -s http://localhost:5173 > /dev/null 2>&1; then
-            echo -e "${GREEN}Frontend is ready!${NC}"
+        if curl -s http://localhost:8788/api/health > /dev/null 2>&1; then
+            echo -e "${GREEN}Pages Functions is ready!${NC}"
             break
         fi
         sleep 1
@@ -97,25 +76,24 @@ else
 fi
 
 echo -e "${GREEN}=================================${NC}"
-echo -e "${GREEN}  Both servers are running!${NC}"
+echo -e "${GREEN}  Pages Functions is running!${NC}"
 echo -e "${GREEN}=================================${NC}"
 echo ""
-echo -e "${BLUE}Frontend:${NC}  http://localhost:5173"
-echo -e "${BLUE}Backend:${NC}   http://localhost:8787"
+echo -e "${BLUE}App URL:${NC}   http://localhost:8788"
 echo ""
 echo -e "${YELLOW}Login Credentials:${NC}"
 echo -e "  ${NC}Admin:    ${BLUE}admin@lagunahills.com${NC} / ${GREEN}admin123${NC}"
 echo -e "  ${NC}Resident: ${BLUE}resident@test.com${NC}  / ${GREEN}resident123${NC}"
 echo ""
-echo -e "${YELLOW}Press Ctrl+C to stop both servers${NC}"
+echo -e "${YELLOW}Press Ctrl+C to stop the server${NC}"
 echo ""
 
-# Keep script running and show logs if desired
+# Keep script running and show logs
 echo -e "${BLUE}Showing recent logs...${NC}"
-echo -e "${YELLOW}(Frontend logs: tail -f /tmp/frontend.log | Worker logs: tail -f /tmp/worker.log)${NC}"
+echo -e "${YELLOW}(Full logs: tail -f /tmp/pages.log)${NC}"
 echo ""
 echo -e "${GREEN}Ready for development!${NC}"
 echo ""
 
-# Monitor both logs
-tail -f /tmp/worker.log /tmp/frontend.log 2>/dev/null | grep -E "Ready|ERROR|WARN|Local server|started" --line-buffered
+# Monitor logs
+tail -f /tmp/pages.log 2>/dev/null | grep -E "Ready|ERROR|WARN|Local|started" --line-buffered
