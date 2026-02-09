@@ -20,6 +20,11 @@ const registerSchema = z.object({
   phone: z.string().optional(),
 });
 
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(6),
+  newPassword: z.string().min(6),
+});
+
 export const authRouter = new Hono<{ Bindings: Env }>();
 
 // Helper function to generate UUID
@@ -115,4 +120,46 @@ authRouter.get('/me', async (c) => {
   }
 
   return c.json({ user });
+});
+
+// Change password
+authRouter.post('/change-password', async (c) => {
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  if (!authUser) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const body = await c.req.json();
+  const result = changePasswordSchema.safeParse(body);
+
+  if (!result.success) {
+    return c.json({ error: 'Invalid input', details: result.error.flatten() }, 400);
+  }
+
+  const { currentPassword, newPassword } = result.data;
+
+  // Get user with password hash
+  const user = await c.env.DB.prepare(
+    'SELECT id, email, password_hash FROM users WHERE id = ?'
+  ).bind(authUser.userId).first() as any;
+
+  if (!user) {
+    return c.json({ error: 'User not found' }, 404);
+  }
+
+  // Verify current password
+  const valid = await verifyPassword(currentPassword, user.password_hash);
+  if (!valid) {
+    return c.json({ error: 'Current password is incorrect' }, 401);
+  }
+
+  // Hash new password
+  const newPasswordHash = await hashPassword(newPassword);
+
+  // Update password
+  await c.env.DB.prepare(
+    'UPDATE users SET password_hash = ? WHERE id = ?'
+  ).bind(newPasswordHash, user.id).run();
+
+  return c.json({ message: 'Password changed successfully' });
 });
