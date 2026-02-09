@@ -9,7 +9,7 @@ flag = "nodejs_compat"
 [[d1_databases]]
 binding = "DB"
 database_name = "laguna_hills_hoa"
-database_id = "YOUR_D1_DATABASE_ID"
+# database_id - Set as secret in Cloudflare Pages dashboard
 
 # R2 Storage binding for Pages Functions
 [[r2_buckets]]

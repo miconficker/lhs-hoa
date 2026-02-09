@@ -6,8 +6,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "laguna_hills_hoa",
-      "database_id": "YOUR_D1_DATABASE_ID"
+      "database_name": "laguna_hills_hoa"
+      // "database_id": "Set as secret in Cloudflare dashboard"
     }
   ],
   "r2_buckets": [
