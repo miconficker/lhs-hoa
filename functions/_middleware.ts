@@ -37,7 +37,6 @@ app.use('/*', cors({
 }));
 
 // Health check
-app.get('/', (c) => c.json({ message: 'Laguna Hills HOA API' }));
 app.get('/api/health', (c) => c.json({ status: 'ok' }));
 
 // Public GeoJSON endpoint for the map - always returns live data from database
@@ -132,9 +131,14 @@ app.route('/api/pass-requests', passManagementRouter);
 export default app;
 
 // Also export as a fetch handler for Pages Functions
-export async function onRequest(context: {
-  request: Request;
-  env: Env;
-}): Promise<Response> {
+export async function onRequest(context: any): Promise<Response> {
+  const url = new URL(context.request.url);
+
+  // Only handle API routes - let static assets pass through
+  if (!url.pathname.startsWith('/api/')) {
+    // Call next() to continue to static assets
+    return context.next();
+  }
+
   return app.fetch(context.request, context.env);
 }
