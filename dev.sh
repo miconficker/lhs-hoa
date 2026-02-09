@@ -17,10 +17,8 @@ echo ""
 DB_CHECK=$(curl -s http://localhost:8787/api/health 2>/dev/null)
 if [ -z "$DB_CHECK" ]; then
     echo -e "${YELLOW}Starting worker and running database setup...${NC}"
-    cd worker
-    npx wrangler dev > /tmp/worker.log 2>&1 &
+    npx wrangler dev --config wrangler.worker.jsonc > /tmp/worker.log 2>&1 &
     WORKER_PID=$!
-    cd ..
 
     # Wait for worker
     for i in {1..10}; do
@@ -61,10 +59,8 @@ if curl -s http://localhost:8787/api/health > /dev/null 2>&1; then
     echo -e "${YELLOW}Worker already running on port 8787${NC}"
 else
     echo -e "${BLUE}Starting Cloudflare Workers backend...${NC}"
-    cd worker
-    npx wrangler dev > /tmp/worker.log 2>&1 &
+    npx wrangler dev --config wrangler.worker.jsonc > /tmp/worker.log 2>&1 &
     WORKER_PID=$!
-    cd ..
 
     # Wait for worker to be ready
     echo -e "${YELLOW}Waiting for worker to start...${NC}"

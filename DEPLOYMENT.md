@@ -40,9 +40,9 @@ wrangler d1 create laguna_hills_hoa
 wrangler r2 bucket create hoa-documents
 ```
 
-### 4. Update wrangler.jsonc
+### 4. Update wrangler.worker.jsonc
 
-Update `worker/wrangler.jsonc` with your production values:
+Update `wrangler.worker.jsonc` in the project root with your production values:
 
 ```jsonc
 {
