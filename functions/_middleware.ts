@@ -32,7 +32,7 @@ type Env = {
 const app = new Hono<{ Bindings: Env }>();
 
 // CORS configuration - secure, explicit allowlist
-// Origins are configured via ALLOWED_ORIGINS environment variable in wrangler.jsonc
+// Add your custom domain here when you get one
 app.use('/*', cors({
   origin: (origin) => {
     // Allow no origin (same-origin requests like server-side)
@@ -41,11 +41,12 @@ app.use('/*', cors({
     // Development: allow localhost
     if (origin.includes('localhost')) return true;
 
-    // Production: use environment variable (comma-separated list)
-    // Falls back to current production URL for backward compatibility
-    const allowedOrigins = c.env.ALLOWED_ORIGINS
-      ? c.env.ALLOWED_ORIGINS.split(',').map((o: string) => o.trim())
-      : ['https://lhs-hoa.pages.dev'];
+    // Production: explicit allowlist
+    const allowedOrigins = [
+      'https://lhs-hoa.pages.dev',
+      // Add custom domain here when ready:
+      // 'https://your-custom-domain.com',
+    ];
 
     return allowedOrigins.includes(origin);
   },
