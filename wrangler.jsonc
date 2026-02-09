@@ -22,7 +22,8 @@
   },
   "rules": [
     {
-      "type": "ESModule"
+      "type": "ESModule",
+      "globs": ["**/*.ts", "**/*.tsx"]
     }
   ]
 }
