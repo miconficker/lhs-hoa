@@ -6,11 +6,10 @@
     {
       "binding": "DB",
       "database_name": "laguna_hills_hoa",
-      "database_id": ""
+      "database_id": "f7542e2f-7602-41d9-87a5-e2670dc1853e"
     }
   ],
   "vars": {
-    "ENVIRONMENT": "production",
-    "JWT_SECRET": "change-me-in-production"
+    "ENVIRONMENT": "production"
   }
 }
