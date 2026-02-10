@@ -7,7 +7,7 @@
    preserveAspectRatio="xMidYMid meet"
    style="width: 636.359px; height: auto;"
    id="svg21"
-   sodipodi:docname="picsvg_modified.svg"
+   sodipodi:docname="lhs-logo.svg"
    inkscape:version="1.4.3 (0d15f75042, 2025-12-25)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -26,13 +26,13 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="pt"
      inkscape:zoom="0.91875"
-     inkscape:cx="68.027211"
-     inkscape:cy="499.04762"
-     inkscape:window-width="2560"
+     inkscape:cx="69.115646"
+     inkscape:cy="500.13605"
+     inkscape:window-width="1280"
      inkscape:window-height="1412"
      inkscape:window-x="0"
      inkscape:window-y="0"
-     inkscape:window-maximized="1"
+     inkscape:window-maximized="0"
      inkscape:current-layer="g21" />
   <g
      transform="translate(0.000000,500.000000) scale(0.100000,-0.100000)"
@@ -66,17 +66,11 @@
        d="M2593 1789 c-7 -7 -23 -13 -35 -15 -13 -1 -25 -3 -27 -3 -14 -3 26 -31 46 -31 25 0 37 17 31 45 -2 13 -6 14 -15 4z"
        id="path20"
        style="fill:#64bd06;fill-opacity:1" />
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:400px;line-height:0;font-family:Montserrat;-inkscape-font-specification:'Montserrat, @wght=700';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;font-variation-settings:'wght' 700;letter-spacing:17.625px;word-spacing:2.25px;writing-mode:lr-tb;direction:ltr;display:inline;opacity:1;fill:#33534e;fill-opacity:1;stroke-width:7.23375"
-       x="192.89787"
-       y="-2207.3413"
+    <path
+       d="m 284.09787,-2207.3413 v -227.2 h -89.6 v -52.8 h 244 v 52.8 h -89.6 v 227.2 z m 398.82502,0 v -280 h 64.8 v 280 z m -192,0 v -280 h 64.8 v 280 z m 60,-114.8 v -54.8 h 136.8 v 54.8 z m 280.82525,114.8 v -280 h 211.59996 v 52 H 896.14814 v 176 h 152.39996 v 52 z m 59.6,-116.8 v -50.4 h 134.79996 v 50.4 z m 359.50026,116.8 v -280 h 64.8 v 227.2 h 140.4 v 52.8 z m 224.0126,0 124.8,-280 h 64 l 125.2,280 h -68 l -102.4,-247.2 h 25.6 l -102.8,247.2 z m 62.4,-60 17.2,-49.2 h 144 l 17.6,49.2 z m 429.6253,64.8 q -33.2,0 -61.2,-10.4 -27.6,-10.8 -48.4,-30.4 -20.4,-19.6 -32,-46 -11.2,-26.4 -11.2,-58 0,-31.6 11.2,-58 11.6,-26.4 32.4,-46 20.8,-19.6 48.8,-30 28,-10.8 61.6,-10.8 37.2,0 66.8,12.4 30,12.4 50.4,36 l -41.6,38.4 q -15.2,-16 -33.2,-23.6 -18,-8 -39.2,-8 -20.4,0 -37.2,6.4 -16.8,6.4 -29.2,18.4 -12,12 -18.8,28.4 -6.4,16.4 -6.4,36.4 0,19.6 6.4,36 6.8,16.4 18.8,28.8 12.4,12 28.8,18.4 16.8,6.4 36.8,6.4 19.2,0 37.2,-6 18.4,-6.4 35.6,-21.2 l 36.8,46.8 q -22.8,17.2 -53.2,26.4 -30,9.2 -60,9.2 z m 113.2,-35.6 -59.2,-8.4 v -105.2 h 59.2 z m 202.0249,35.6 q -59.6,0 -93.2,-33.2 -33.6,-33.2 -33.6,-94.8 v -156.8 h 64.8 v 154.4 q 0,40 16.4,57.6 16.4,17.6 46,17.6 29.6,0 46,-17.6 16.4,-17.6 16.4,-57.6 v -154.4 h 64 v 156.8 q 0,61.6 -33.6,94.8 -33.6,33.2 -93.2,33.2 z m 208.4251,-4.8 v -280 h 53.6 l 165.2,201.6 h -26 v -201.6 h 64 v 280 h -53.2 l -165.6,-201.6 h 26 v 201.6 z m 304.0252,0 124.8,-280 h 64 l 125.2,280 h -68 l -102.4,-247.2 h 25.6 l -102.8,247.2 z m 62.4,-60 17.2,-49.2 h 144 l 17.6,49.2 z m 623.5006,60 v -280 h 64.8 v 280 z m -192,0 v -280 h 64.8 v 280 z m 60,-114.8 v -54.8 h 136.8 v 54.8 z m 280.8252,114.8 v -280 h 64.8 v 280 z m 148.8247,0 v -280 h 64.8 v 227.2 h 140.4 v 52.8 z m 259.2251,0 v -280 h 64.8 v 227.2 h 140.4 v 52.8 z m 349.7776,4.8 q -33.6,0 -64.4,-8.8 -30.8,-9.2 -49.6,-23.6 l 22,-48.8 q 18,12.8 42.4,21.2 24.8,8 50,8 19.2,0 30.8,-3.6 12,-4 17.6,-10.8 5.6,-6.8 5.6,-15.6 0,-11.2 -8.8,-17.6 -8.8,-6.8 -23.2,-10.8 -14.4,-4.4 -32,-8 -17.2,-4 -34.8,-9.6 -17.2,-5.6 -31.6,-14.4 -14.4,-8.8 -23.6,-23.2 -8.8,-14.4 -8.8,-36.8 0,-24 12.8,-43.6 13.2,-20 39.2,-31.6 26.4,-12 66,-12 26.4,0 52,6.4 25.6,6 45.2,18.4 l -20,49.2 q -19.6,-11.2 -39.2,-16.4 -19.6,-5.6 -38.4,-5.6 -18.8,0 -30.8,4.4 -12,4.4 -17.2,11.6 -5.2,6.8 -5.2,16 0,10.8 8.8,17.6 8.8,6.4 23.2,10.4 14.4,4 31.6,8 17.6,4 34.8,9.2 17.6,5.2 32,14 14.4,8.8 23.2,23.2 9.2,14.4 9.2,36.4 0,23.6 -13.2,43.2 -13.2,19.6 -39.6,31.6 -26,12 -66,12 z"
        id="text21"
-       transform="scale(1.0599774,-0.94341635)"><tspan
-         sodipodi:role="line"
-         id="tspan21"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:400px;line-height:0;font-family:Montserrat;-inkscape-font-specification:'Montserrat, @wght=700';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;font-variation-settings:'wght' 700;letter-spacing:17.625px;word-spacing:2.25px;fill:#33534e;fill-opacity:1;stroke-width:7.23375"
-         x="0"
-         y="0">THE LAGUNA HILLS</tspan></text>
+       style="font-size:400px;line-height:0;font-family:Montserrat;-inkscape-font-specification:'Montserrat, @wght=700';font-variation-settings:'wght' 700;letter-spacing:17.625px;word-spacing:2.25px;fill:#33534e;stroke-width:7.23375"
+       transform="scale(1.0599774,-0.94341635)"
+       aria-label="THE LAGUNA HILLS" />
   </g>
 </svg>
