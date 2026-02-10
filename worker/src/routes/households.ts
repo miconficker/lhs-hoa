@@ -153,7 +153,7 @@ householdsRouter.get('/my-lots', async (c) => {
           existing.merged_lots.push(lot.lot_id);
           existing.annual_dues += (lot.lot_size_sqm || 0) * (ratePerSqm as number) * 12;
           existing.lot_size_sqm += lot.lot_size_sqm || 0;
-          existing.address = `${existing.block}-${existing.lot} + ${lot.block}-${lot.lot}`;
+          existing.address = `${existing.street || ''}${existing.street ? ', ' : ''}${existing.block}-${existing.lot} + ${lot.street || ''}${lot.street ? ', ' : ''}${lot.block}-${lot.lot}`;
         } else {
           acc.push({
             ...lot,
@@ -177,6 +177,7 @@ householdsRouter.get('/my-lots', async (c) => {
     // Build my lots list with annual dues
     const myLots = groupedLots.map((lot: any) => ({
       lot_id: lot.lot_id,
+      street: lot.street,
       block: lot.block,
       lot: lot.lot,
       address: lot.address,
@@ -224,6 +225,7 @@ householdsRouter.get('/lots', async (c) => {
     const lots = await c.env.DB.prepare(`
       SELECT
         h.id as lot_id,
+        h.street,
         h.block,
         h.lot,
         h.lot_status,
@@ -233,6 +235,7 @@ householdsRouter.get('/lots', async (c) => {
         CASE WHEN h.owner_id = ? THEN ? ELSE NULL END as owner_user_id
       FROM households h
       ORDER BY
+        h.street,
         CAST(h.block AS INTEGER) ASC,
         CAST(h.lot AS INTEGER) ASC
     `).bind(authUser.userId, authUser.userId).all();
@@ -259,6 +262,7 @@ householdsRouter.get('/map/locations', async (c) => {
     SELECT
       h.id,
       h.address,
+      h.street,
       h.block,
       h.lot,
       h.latitude,
@@ -276,7 +280,7 @@ householdsRouter.get('/map/locations', async (c) => {
     WHERE (h.latitude IS NOT NULL AND h.longitude IS NOT NULL)
        OR (h.map_marker_x IS NOT NULL AND h.map_marker_y IS NOT NULL)
     GROUP BY h.id
-    ORDER BY h.block, h.lot
+    ORDER BY h.street, h.block, h.lot
   `).all();
 
   return c.json({ households: households.results });

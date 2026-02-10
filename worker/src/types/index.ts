@@ -27,6 +27,7 @@ export interface PreApprovedEmail {
 export interface Household {
   id: string;
   address: string;
+  street?: string;
   block?: string;
   lot?: string;
   latitude?: number;

@@ -265,6 +265,7 @@ adminRouter.get('/households', async (c) => {
     SELECT
       h.id,
       h.address,
+      h.street,
       h.block,
       h.lot,
       h.latitude,
@@ -287,7 +288,7 @@ adminRouter.get('/households', async (c) => {
     LEFT JOIN users u ON h.owner_id = u.id
     LEFT JOIN residents r ON h.id = r.household_id
     GROUP BY h.id
-    ORDER BY h.block, h.lot
+    ORDER BY h.street, h.block, h.lot
   `).all();
 
   // Parse residents JSON
@@ -302,6 +303,7 @@ adminRouter.get('/households', async (c) => {
 // Create household
 const createHouseholdSchema = z.object({
   address: z.string().min(1),
+  street: z.string().optional(),
   block: z.string().optional(),
   lot: z.string().optional(),
   latitude: z.number().optional(),
@@ -330,7 +332,7 @@ adminRouter.post('/households', async (c) => {
     return c.json({ error: 'Invalid input', details: result.error.flatten() }, 400);
   }
 
-  const { address, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id, residents } = result.data;
+  const { address, street, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id, residents } = result.data;
 
   // Verify owner exists if provided
   if (owner_id) {
@@ -344,11 +346,12 @@ adminRouter.post('/households', async (c) => {
   const householdId = generateId();
 
   await c.env.DB.prepare(`
-    INSERT INTO households (id, address, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO households (id, address, street, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     householdId,
     address,
+    street || null,
     block || null,
     lot || null,
     latitude || null,
@@ -408,7 +411,7 @@ adminRouter.put('/households/:id', async (c) => {
     return c.json({ error: 'Invalid input', details: result.error.flatten() }, 400);
   }
 
-  const { address, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id, owner_email, residents } = result.data;
+  const { address, street, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id, owner_email, residents } = result.data;
 
   console.log('[Admin] Parsed data - owner_email:', owner_email, 'owner_id:', owner_id, 'residents:', residents);
 
@@ -445,6 +448,10 @@ adminRouter.put('/households/:id', async (c) => {
   if (address) {
     updates.push('address = ?');
     values.push(address);
+  }
+  if (street !== undefined) {
+    updates.push('street = ?');
+    values.push(street || null);
   }
   if (block !== undefined) {
     updates.push('block = ?');
@@ -1310,19 +1317,21 @@ adminRouter.post('/sync-lots', async (c) => {
         const exists = existingIds.has(lotId);
 
         // Generate address
+        const street = lot.properties.street || null;
         const address =
           lot.properties.block_number && lot.properties.lot_number
-            ? `Block ${lot.properties.block_number}, Lot ${lot.properties.lot_number}`
+            ? `${street ? street + ', ' : ''}Block ${lot.properties.block_number}, Lot ${lot.properties.lot_number}`
             : `Lot ${lotId}`;
 
         if (exists) {
           // Update existing
           await c.env.DB.prepare(
             `UPDATE households
-             SET address = ?, block = ?, lot = ?, lot_status = ?, lot_size_sqm = ?, owner_id = ?
+             SET address = ?, street = ?, block = ?, lot = ?, lot_status = ?, lot_size_sqm = ?, owner_id = ?
              WHERE id = ?`
           ).bind(
             address,
+            street,
             lot.properties.block_number || null,
             lot.properties.lot_number || null,
             lot.properties.status || 'vacant_lot',
@@ -1334,11 +1343,12 @@ adminRouter.post('/sync-lots', async (c) => {
         } else {
           // Insert new
           await c.env.DB.prepare(
-            `INSERT INTO households (id, address, block, lot, lot_status, lot_size_sqm, owner_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`
+            `INSERT INTO households (id, address, street, block, lot, lot_status, lot_size_sqm, owner_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
           ).bind(
             lotId,
             address,
+            street,
             lot.properties.block_number || null,
             lot.properties.lot_number || null,
             lot.properties.status || 'vacant_lot',
@@ -2084,7 +2094,7 @@ adminRouter.get('/pass-management/employees/:id/print', async (c) => {
         ${employee.expiry_date ? `Expires: ${employee.expiry_date}` : ''}
       </div>
     </div>
-    <div class="footer">Block ${employee.block || '?'} Lot ${employee.lot || '?'}</div>
+    <div class="footer">${employee.street ? employee.street + ', ' : ''}Block ${employee.block || '?'} Lot ${employee.lot || '?'}</div>
   </div>
 </body>
 </html>

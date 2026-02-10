@@ -44,6 +44,7 @@ app.get('/api/data/lots.geojson', async (c) => {
     const lots = await c.env.DB.prepare(`
       SELECT
         h.id as path_id,
+        h.street,
         h.block,
         h.lot,
         h.lot_size_sqm,
@@ -54,7 +55,7 @@ app.get('/api/data/lots.geojson', async (c) => {
         u.email as owner_email
       FROM households h
       LEFT JOIN users u ON h.owner_id = u.id
-      ORDER BY h.block, h.lot
+      ORDER BY h.street, h.block, h.lot
     `).all();
 
     // Read the original GeoJSON to get geometries

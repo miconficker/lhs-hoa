@@ -48,6 +48,7 @@ export interface PreApprovedEmail {
 export interface Household {
   id: string;
   address: string;
+  street?: string;
   block?: string;
   lot?: string;
   latitude?: number;
@@ -86,6 +87,7 @@ export interface HouseholdWithOwner extends Household {
 export interface LotOwnership {
   lot_id: string;
   lot_number: string;
+  street?: string;
   block_number: string;
   owner_user_id: string;
   owner_name: string;
@@ -265,6 +267,7 @@ export interface MapAmenity {
 // GeoJSON Map Features
 export interface LotFeatureProperties {
   path_id: string;
+  street?: string | null;
   lot_number: string | null;
   block_number: string | null;
   area_sqm: number | null;
@@ -400,6 +403,7 @@ export interface InstallmentPayment {
 
 export interface MyLot {
   lot_id: string;
+  street?: string;
   block?: string;
   lot?: string;
   address: string;
@@ -432,6 +436,7 @@ export interface MyLotsSummary {
 
 export interface PublicLot {
   lot_id: string;
+  street?: string;
   block?: string;
   lot?: string;
   lot_status: LotStatus;
