@@ -10,6 +10,12 @@
       "database_id": "f7542e2f-7602-41d9-87a5-e2670dc1853e"
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "lhs-hoa-documents"
+    }
+  ],
   "vars": {
     "ENVIRONMENT": "production",
     "ALLOWED_ORIGINS": "https://lhs-hoa.pages.dev",
