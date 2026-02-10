@@ -553,7 +553,7 @@ export function MapPage() {
           style={{ height: "100%", width: "100%" }}
         >
           <ImageOverlay
-            url="/LAGUNA-HILLS-MAP.svg.2026_01_23_14_02_46.0.png"
+            url="/LAGUNA-HILLS-MAP-v2.svg"
             bounds={mapBounds}
             opacity={1}
           />

@@ -40151,7 +40151,7 @@
     },
     {
       "type": "Feature",
-      "id": "B29-L01-ISLAND",
+      "id": "B39-L01-ISLAND",
       "geometry": {
         "type": "Polygon",
         "coordinates": [
@@ -40196,12 +40196,11 @@
         ]
       },
       "properties": {
-        "path_id": "B29-L01-ISLAND",
+        "path_id": "B39-L01-ISLAND",
         "lot_number": "01",
-        "block_number": "29",
+        "block_number": "39",
         "area_sqm": 625.7753484950517,
         "status": "vacant_lot",
-        "owner_user_id": "developer-owner",
         "lot_size_sqm": null
       }
     },
