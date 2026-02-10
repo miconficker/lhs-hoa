@@ -198,35 +198,48 @@ adminRouter.delete('/users/:id', async (c) => {
   }
 
   try {
-    // Check if user exists
+    // Check if user exists and get their email
     const existing = await c.env.DB.prepare(
-      'SELECT id FROM users WHERE id = ?'
+      'SELECT id, email FROM users WHERE id = ?'
     ).bind(id).first();
 
     if (!existing) {
       return c.json({ error: 'User not found' }, 404);
     }
 
-    // Clear foreign key references first
-    // Remove as household owner
+    const userEmail = existing.email as string;
+
+    // Clear foreign key references first (in order of dependencies)
+    // 1. Dues rates created_by
+    await c.env.DB.prepare('UPDATE dues_rates SET created_by = NULL WHERE created_by = ?').bind(id).run();
+    // 2. Installment plans - delete plans where user is the debtor, clear approved_by
+    await c.env.DB.prepare('DELETE FROM installment_payments WHERE plan_id IN (SELECT id FROM installment_plans WHERE user_id = ?)').bind(id).run();
+    await c.env.DB.prepare('DELETE FROM installment_plans WHERE user_id = ?').bind(id).run();
+    await c.env.DB.prepare('UPDATE installment_plans SET approved_by = NULL WHERE approved_by = ?').bind(id).run();
+    // 3. Poll votes recorded_by
+    await c.env.DB.prepare('UPDATE poll_votes SET recorded_by = NULL WHERE recorded_by = ?').bind(id).run();
+    // 4. Pre-approved emails - clear invited_by and deactivate if it's the user's own email
+    await c.env.DB.prepare('UPDATE pre_approved_emails SET invited_by = NULL WHERE invited_by = ?').bind(id).run();
+    await c.env.DB.prepare('UPDATE pre_approved_emails SET is_active = 0 WHERE email = ?').bind(userEmail).run();
+    // 5. Household owner
     await c.env.DB.prepare('UPDATE households SET owner_id = NULL WHERE owner_id = ?').bind(id).run();
-    // Remove as resident user reference
+    // 6. Residents user reference
     await c.env.DB.prepare('UPDATE residents SET user_id = NULL WHERE user_id = ?').bind(id).run();
-    // Remove as service request assignee
+    // 7. Service request assignee
     await c.env.DB.prepare('UPDATE service_requests SET assigned_to = NULL WHERE assigned_to = ?').bind(id).run();
-    // Remove as announcement creator
+    // 8. Announcement creator
     await c.env.DB.prepare('UPDATE announcements SET created_by = NULL WHERE created_by = ?').bind(id).run();
-    // Remove as document uploader
+    // 9. Document uploader
     await c.env.DB.prepare('UPDATE documents SET uploaded_by = NULL WHERE uploaded_by = ?').bind(id).run();
-    // Remove as event creator
+    // 10. Event creator
     await c.env.DB.prepare('UPDATE events SET created_by = NULL WHERE created_by = ?').bind(id).run();
-    // Remove as payment received_by
+    // 11. Payment received_by
     await c.env.DB.prepare('UPDATE payments SET received_by = NULL WHERE received_by = ?').bind(id).run();
-    // Remove as poll creator
+    // 12. Poll creator
     await c.env.DB.prepare('UPDATE polls SET created_by = NULL WHERE created_by = ?').bind(id).run();
-    // Delete payment demands
+    // 13. Delete payment demands
     await c.env.DB.prepare('DELETE FROM payment_demands WHERE user_id = ?').bind(id).run();
-    // Delete notifications
+    // 14. Delete notifications
     await c.env.DB.prepare('DELETE FROM notifications WHERE user_id = ?').bind(id).run();
 
     // Finally delete the user
