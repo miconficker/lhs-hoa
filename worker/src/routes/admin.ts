@@ -197,18 +197,46 @@ adminRouter.delete('/users/:id', async (c) => {
     return c.json({ error: 'Cannot delete your own account' }, 400);
   }
 
-  // Check if user exists
-  const existing = await c.env.DB.prepare(
-    'SELECT id FROM users WHERE id = ?'
-  ).bind(id).first();
+  try {
+    // Check if user exists
+    const existing = await c.env.DB.prepare(
+      'SELECT id FROM users WHERE id = ?'
+    ).bind(id).first();
 
-  if (!existing) {
-    return c.json({ error: 'User not found' }, 404);
+    if (!existing) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+
+    // Clear foreign key references first
+    // Remove as household owner
+    await c.env.DB.prepare('UPDATE households SET owner_id = NULL WHERE owner_id = ?').bind(id).run();
+    // Remove as resident user reference
+    await c.env.DB.prepare('UPDATE residents SET user_id = NULL WHERE user_id = ?').bind(id).run();
+    // Remove as service request assignee
+    await c.env.DB.prepare('UPDATE service_requests SET assigned_to = NULL WHERE assigned_to = ?').bind(id).run();
+    // Remove as announcement creator
+    await c.env.DB.prepare('UPDATE announcements SET created_by = NULL WHERE created_by = ?').bind(id).run();
+    // Remove as document uploader
+    await c.env.DB.prepare('UPDATE documents SET uploaded_by = NULL WHERE uploaded_by = ?').bind(id).run();
+    // Remove as event creator
+    await c.env.DB.prepare('UPDATE events SET created_by = NULL WHERE created_by = ?').bind(id).run();
+    // Remove as payment received_by
+    await c.env.DB.prepare('UPDATE payments SET received_by = NULL WHERE received_by = ?').bind(id).run();
+    // Remove as poll creator
+    await c.env.DB.prepare('UPDATE polls SET created_by = NULL WHERE created_by = ?').bind(id).run();
+    // Delete payment demands
+    await c.env.DB.prepare('DELETE FROM payment_demands WHERE user_id = ?').bind(id).run();
+    // Delete notifications
+    await c.env.DB.prepare('DELETE FROM notifications WHERE user_id = ?').bind(id).run();
+
+    // Finally delete the user
+    await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id).run();
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    return c.json({ error: 'Failed to delete user' }, 500);
   }
-
-  await c.env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id).run();
-
-  return c.json({ success: true });
 });
 
 // ==================== Household Management ====================
