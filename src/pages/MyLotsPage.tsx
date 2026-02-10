@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { MyLot, MyLotsSummary } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
-import { AlertCircle, CheckCircle2, Edit2, X, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Edit2, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
