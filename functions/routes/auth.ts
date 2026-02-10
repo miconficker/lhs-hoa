@@ -193,21 +193,29 @@ authRouter.get('/google/callback', async (c) => {
   }
 
   try {
+    console.log('[Google OAuth] Starting OAuth callback, code received:', !!code);
+
     // Exchange code for access token
+    console.log('[Google OAuth] Exchanging code for token...');
     const tokenResponse = await getGoogleAccessToken(
       code,
       c.env.GOOGLE_CLIENT_ID,
       c.env.GOOGLE_CLIENT_SECRET,
       c.env.GOOGLE_REDIRECT_URI
     );
+    console.log('[Google OAuth] Got access token:', !!tokenResponse.access_token);
 
     // Fetch user info from Google
+    console.log('[Google OAuth] Fetching user info...');
     const googleUser = await getGoogleUserInfo(tokenResponse.access_token);
+    console.log('[Google OAuth] Got user email:', googleUser.email);
 
     // Check if email is pre-approved
+    console.log('[Google OAuth] Checking whitelist for email:', googleUser.email);
     const preApproved = await c.env.DB.prepare(
       'SELECT * FROM pre_approved_emails WHERE email = ? AND is_active = 1'
     ).bind(googleUser.email).first();
+    console.log('[Google OAuth] Whitelist check result:', !!preApproved);
 
     if (!preApproved) {
       return c.redirect(
@@ -247,10 +255,11 @@ authRouter.get('/google/callback', async (c) => {
     // Redirect to frontend with token
     return c.redirect(`${new URL(c.req.raw.url).origin}/login?token=${token}&provider=google`);
 
-  } catch (err) {
+  } catch (err: any) {
     console.error('Google OAuth error:', err);
+    const errorMessage = err?.message || String(err);
     return c.redirect(
-      `${new URL(c.req.raw.url).origin}/login?error=oauth_error&message=${encodeURIComponent('Failed to complete login')}`
+      `${new URL(c.req.raw.url).origin}/login?error=oauth_error&message=${encodeURIComponent(errorMessage)}&details=${encodeURIComponent(JSON.stringify(err))}`
     );
   }
 });

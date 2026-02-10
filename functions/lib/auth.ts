@@ -80,7 +80,17 @@ export async function getGoogleAccessToken(code: string, clientId: string, clien
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Failed to exchange code for token: ${response.status} ${errorText}`);
+    let errorMessage = `Failed to exchange code for token: ${response.status}`;
+    try {
+      const errorJson = JSON.parse(errorText);
+      errorMessage += ` - ${errorJson.error || errorText}`;
+      if (errorJson.error_description) {
+        errorMessage += `: ${errorJson.error_description}`;
+      }
+    } catch {
+      errorMessage += ` - ${errorText}`;
+    }
+    throw new Error(errorMessage);
   }
 
   return await response.json() as GoogleTokenResponse;

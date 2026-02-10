@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "laguna-hills-hoa",
+  "name": "lhs-hoa",
   "pages_build_output_dir": "dist",
   "d1_databases": [
     {

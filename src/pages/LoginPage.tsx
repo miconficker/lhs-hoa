@@ -19,9 +19,13 @@ export function LoginPage() {
     const provider = searchParams.get("provider");
     const oauthError = searchParams.get("error");
     const message = searchParams.get("message");
+    const details = searchParams.get("details");
 
     if (oauthError) {
-      setError(message || "Authentication failed");
+      const fullError = details
+        ? `${message || "Authentication failed"}: ${details}`
+        : message || "Authentication failed";
+      setError(fullError);
       // Clean URL
       window.history.replaceState({}, "", "/login");
       return;
