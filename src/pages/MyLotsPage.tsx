@@ -1,13 +1,27 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import type { MyLotsSummary } from "@/types";
+import type { MyLot, MyLotsSummary } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Edit2, X, Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export function MyLotsPage() {
   const { user } = useAuth();
   const [data, setData] = useState<MyLotsSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editingLot, setEditingLot] = useState<MyLot | null>(null);
+  const [newAddress, setNewAddress] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   useEffect(() => {
     loadMyLots();
@@ -24,6 +38,52 @@ export function MyLotsPage() {
       console.error("Error loading my lots:", error);
     }
     setLoading(false);
+  }
+
+  function openEditDialog(lot: MyLot) {
+    setEditingLot(lot);
+    setNewAddress(lot.address);
+    setShowEditDialog(true);
+  }
+
+  async function saveAddress() {
+    if (!editingLot) return;
+
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/households/${editingLot.lot_id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ address: newAddress }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setData((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            lots: prev.lots.map((lot) =>
+              lot.lot_id === editingLot.lot_id
+                ? { ...lot, address: newAddress }
+                : lot,
+            ),
+          };
+        });
+        setShowEditDialog(false);
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to update address");
+      }
+    } catch (error) {
+      console.error("Error updating address:", error);
+      alert("Failed to update address");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (!user) {
@@ -162,6 +222,9 @@ export function MyLotsPage() {
                   Lot
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Address
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Type
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -173,6 +236,9 @@ export function MyLotsPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Annual Dues
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -183,6 +249,9 @@ export function MyLotsPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {lot.lot || "—"}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
+                    {lot.address}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
@@ -226,6 +295,15 @@ export function MyLotsPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     ₱{lot.annual_dues.toLocaleString()}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <button
+                      onClick={() => openEditDialog(lot)}
+                      className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                      Edit
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -253,6 +331,49 @@ export function MyLotsPage() {
           </div>
         </div>
       </div>
+
+      {/* Edit Address Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Address</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="address">Address</Label>
+              <Input
+                id="address"
+                value={newAddress}
+                onChange={(e) => setNewAddress(e.target.value)}
+                placeholder="Enter address"
+              />
+            </div>
+            <div className="text-sm text-gray-500">
+              <p>Block: {editingLot?.block || "—"}</p>
+              <p>Lot: {editingLot?.lot || "—"}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowEditDialog(false)}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button onClick={saveAddress} disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

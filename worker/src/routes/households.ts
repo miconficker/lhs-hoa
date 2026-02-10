@@ -314,3 +314,69 @@ householdsRouter.get('/:id', async (c) => {
 
   return c.json({ household });
 });
+
+/**
+ * PUT /api/households/:id
+ * Update a household (owner only - residents can only edit their owned households)
+ */
+householdsRouter.put('/:id', async (c) => {
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  if (!authUser) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const id = c.req.param('id');
+
+  // Check if user owns this household
+  const household = await c.env.DB.prepare(
+    'SELECT id, owner_id FROM households WHERE id = ?'
+  ).bind(id).first();
+
+  if (!household) {
+    return c.json({ error: 'Household not found' }, 404);
+  }
+
+  // Only allow owner to edit (or admins)
+  if (household.owner_id !== authUser.userId && authUser.role !== 'admin') {
+    return c.json({ error: 'You can only edit your own households' }, 403);
+  }
+
+  try {
+    const body = await c.req.json();
+
+    // Residents can only edit address
+    // Admins can edit more fields through the admin endpoint
+    const editableFields: string[] = [];
+    const values: any[] = [];
+
+    if (body.address !== undefined) {
+      editableFields.push('address = ?');
+      values.push(body.address);
+    }
+
+    if (editableFields.length === 0) {
+      return c.json({ error: 'No valid fields to update' }, 400);
+    }
+
+    values.push(id);
+    await c.env.DB.prepare(
+      `UPDATE households SET ${editableFields.join(', ')} WHERE id = ?`
+    ).bind(...values).run();
+
+    // Get updated household
+    const updated = await c.env.DB.prepare(`
+      SELECT
+        h.*,
+        GROUP_CONCAT(r.first_name || ' ' || r.last_name, ', ') as resident_names
+      FROM households h
+      LEFT JOIN residents r ON h.id = r.household_id
+      WHERE h.id = ?
+      GROUP BY h.id
+    `).bind(id).first();
+
+    return c.json({ household: updated });
+  } catch (error) {
+    console.error('Error updating household:', error);
+    return c.json({ error: 'Failed to update household' }, 500);
+  }
+});
