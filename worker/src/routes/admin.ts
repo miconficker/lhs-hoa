@@ -1395,24 +1395,27 @@ adminRouter.post('/dues-rates', async (c) => {
     const body = await c.req.json();
     const { rate_per_sqm, year, effective_date } = body;
 
-    if (!rate_per_sqm || !year || !effective_date) {
-      return c.json({ error: 'rate_per_sqm, year, and effective_date are required' }, 400);
+    if (!rate_per_sqm || !effective_date) {
+      return c.json({ error: 'rate_per_sqm and effective_date are required' }, 400);
     }
 
-    // Check if rate already exists for this year
+    // year is now optional metadata for historical reference
+    const year = body.year;
+
+    // Check if rate already exists for this effective_date
     const existing = await c.env.DB.prepare(
-      'SELECT id FROM dues_rates WHERE year = ?'
-    ).bind(year).first();
+      'SELECT id FROM dues_rates WHERE effective_date = ?'
+    ).bind(effective_date).first();
 
     if (existing) {
-      return c.json({ error: 'Dues rate already exists for this year' }, 409);
+      return c.json({ error: 'Dues rate already exists for this effective_date' }, 409);
     }
 
     const id = generateId();
     await c.env.DB.prepare(
       `INSERT INTO dues_rates (id, rate_per_sqm, year, effective_date, created_by)
        VALUES (?, ?, ?, ?, ?)`
-    ).bind(id, rate_per_sqm, year, effective_date, authUser.userId).run();
+    ).bind(id, rate_per_sqm, year || null, effective_date, authUser.userId).run();
 
     const newRate = await c.env.DB.prepare(
       `SELECT * FROM dues_rates WHERE id = ?`
@@ -1563,13 +1566,14 @@ adminRouter.post('/payment-demands/create', async (c) => {
       return c.json({ error: 'year, demand_sent_date, and due_date are required' }, 400);
     }
 
-    // Get current active dues rate
+    // Get the dues rate that was effective on the demand date
+    // This ensures historical accuracy when creating demands for past years
     const rateResult = await c.env.DB.prepare(`
       SELECT rate_per_sqm FROM dues_rates
-      WHERE year <= ? AND effective_date <= DATE('now')
-      ORDER BY year DESC, effective_date DESC
+      WHERE effective_date <= ?
+      ORDER BY effective_date DESC
       LIMIT 1
-    `).bind(year).first();
+    `).bind(demand_sent_date).first();
 
     if (!rateResult) {
       return c.json({ error: 'No active dues rate found for this year' }, 400);
