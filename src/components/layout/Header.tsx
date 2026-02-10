@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationBell } from "@/components/NotificationBell";
+import lhsLogo from "@/assets/lhs-logo.svg";
 
 export function Header() {
   const { user, clearAuth } = useAuth();
@@ -10,13 +11,7 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center gap-2">
-            <svg
-              className="w-8 h-8 text-primary-600"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-            </svg>
+            <img src={lhsLogo} alt="Laguna Hills HOA" className="h-10 w-auto" />
             <span className="text-xl font-bold text-gray-900">
               Laguna Hills HOA
             </span>
