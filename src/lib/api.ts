@@ -755,7 +755,7 @@ export const api = {
       }
       return apiUpload<DocumentResponse>("/documents", formData);
     },
-    getDownloadUrl: (id: string) => `/documents/${id}/download`,
+    getDownloadUrl: (id: string) => `/api/documents/${id}/download`,
     delete: (id: string) =>
       apiRequest<{ success: boolean }>(`/documents/${id}`, {
         method: "DELETE",
