@@ -408,9 +408,9 @@ adminRouter.put('/households/:id', async (c) => {
     return c.json({ error: 'Invalid input', details: result.error.flatten() }, 400);
   }
 
-  const { address, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id, owner_email } = result.data;
+  const { address, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id, owner_email, residents } = result.data;
 
-  console.log('[Admin] Parsed data - owner_email:', owner_email, 'owner_id:', owner_id);
+  console.log('[Admin] Parsed data - owner_email:', owner_email, 'owner_id:', owner_id, 'residents:', residents);
 
   // Check if household exists
   const existing = await c.env.DB.prepare(
@@ -485,6 +485,28 @@ adminRouter.put('/households/:id', async (c) => {
   await c.env.DB.prepare(
     `UPDATE households SET ${updates.join(', ')} WHERE id = ?`
   ).bind(...values).run();
+
+  // Handle residents update
+  // First, delete all existing residents for this household
+  await c.env.DB.prepare('DELETE FROM residents WHERE household_id = ?').bind(id).run();
+
+  // Then insert new residents if provided
+  if (residents && residents.length > 0) {
+    for (const resident of residents) {
+      const residentId = generateId();
+      await c.env.DB.prepare(`
+        INSERT INTO residents (id, household_id, user_id, first_name, last_name, is_primary)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).bind(
+        residentId,
+        id,
+        resident.user_id || null,
+        resident.first_name,
+        resident.last_name,
+        resident.is_primary ? 1 : 0
+      ).run();
+    }
+  }
 
   // Get updated household
   const household = await c.env.DB.prepare(
