@@ -88,6 +88,7 @@ const navItems = [
     roles: ["admin", "resident", "staff"],
   },
   { separator: true, roles: ["admin", "resident", "staff"] },
+  { sectionHeader: "Admin Panel", roles: ["admin"] },
   {
     to: "/admin/lots",
     icon: Building2,
@@ -148,6 +149,16 @@ export function Sidebar() {
                 key={`separator-${index}`}
                 className="my-2 border-t border-gray-200"
               />
+            );
+          }
+          if (item.sectionHeader) {
+            return (
+              <div
+                key={`section-${index}`}
+                className="my-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide"
+              >
+                {item.sectionHeader}
+              </div>
             );
           }
           if (!item.to) return null;
