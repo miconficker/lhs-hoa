@@ -18,14 +18,20 @@ type Env = {
   DB: D1Database;
   R2: R2Bucket;
   JWT_SECRET: string;
+  ALLOWED_ORIGINS: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use('/*', cors({
-  origin: 'http://localhost:5173',
-  credentials: true,
-}));
+app.use('/*', async (c, next) => {
+  const allowedOrigins = c.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:8788', 'http://localhost:5173'];
+  const origin = c.req.header('Origin');
+
+  return cors({
+    origin: origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0],
+    credentials: true,
+  })(c, next);
+});
 
 // Health check
 app.get('/', (c) => c.json({ message: 'Laguna Hills HOA API' }));

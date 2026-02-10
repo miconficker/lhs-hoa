@@ -19,7 +19,7 @@ DB_CHECK=$(curl -s http://localhost:8788/api/health 2>/dev/null)
 if [ -z "$DB_CHECK" ]; then
     echo -e "${YELLOW}Starting Pages Functions and running database setup...${NC}"
     npm run build > /dev/null 2>&1
-    npx wrangler pages dev dist --config wrangler.jsonc --local --port 8788 > /tmp/pages.log 2>&1 &
+    npx wrangler pages dev dist --local --port 8788 > /tmp/pages.log 2>&1 &
     PAGES_PID=$!
 
     # Wait for Pages Functions to start
@@ -59,7 +59,7 @@ if curl -s http://localhost:8788/api/health > /dev/null 2>&1; then
 else
     echo -e "${BLUE}Starting Cloudflare Pages with Functions...${NC}"
     npm run build > /dev/null 2>&1
-    npx wrangler pages dev dist --config wrangler.jsonc --local --port 8788 > /tmp/pages.log 2>&1 &
+    npx wrangler pages dev dist --local --port 8788 > /tmp/pages.log 2>&1 &
     PAGES_PID=$!
 
     # Wait for Pages to be ready
@@ -80,10 +80,6 @@ echo -e "${GREEN}  Pages Functions is running!${NC}"
 echo -e "${GREEN}=================================${NC}"
 echo ""
 echo -e "${BLUE}App URL:${NC}   http://localhost:8788"
-echo ""
-echo -e "${YELLOW}Login Credentials:${NC}"
-echo -e "  ${NC}Admin:    ${BLUE}admin@lagunahills.com${NC} / ${GREEN}admin123${NC}"
-echo -e "  ${NC}Resident: ${BLUE}resident@test.com${NC}  / ${GREEN}resident123${NC}"
 echo ""
 echo -e "${YELLOW}Press Ctrl+C to stop the server${NC}"
 echo ""
