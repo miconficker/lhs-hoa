@@ -25,6 +25,32 @@ function generateId(): string {
   return crypto.randomUUID();
 }
 
+// Helper function to check if a user belongs to a household
+// A user belongs to a household if they are:
+// 1. The owner of the household (households.owner_user_id)
+// 2. A resident in the household (residents.user_id)
+async function userBelongsToHousehold(
+  db: D1Database,
+  userId: string,
+  householdId: string
+): Promise<boolean> {
+  // Check if user is the owner
+  const ownerCheck = await db.prepare(
+    'SELECT id FROM households WHERE id = ? AND owner_user_id = ?'
+  ).bind(householdId, userId).first();
+
+  if (ownerCheck) {
+    return true;
+  }
+
+  // Check if user is a resident
+  const residentCheck = await db.prepare(
+    'SELECT id FROM residents WHERE household_id = ? AND user_id = ?'
+  ).bind(householdId, userId).first();
+
+  return !!residentCheck;
+}
+
 // Get all reservations (with optional filters)
 reservationsRouter.get('/', async (c) => {
   const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
@@ -164,9 +190,11 @@ reservationsRouter.get('/my/:householdId', async (c) => {
   const householdId = c.req.param('householdId');
 
   // Check permission - users can only view their own household's reservations
-  // For now, allow access - should be enhanced with user-household relation
   if (authUser.role !== 'admin' && authUser.role !== 'staff') {
-    // TODO: Verify user belongs to this household
+    const belongsToHousehold = await userBelongsToHousehold(c.env.DB, authUser.id, householdId);
+    if (!belongsToHousehold) {
+      return c.json({ error: 'Forbidden - you do not have access to this household' }, 403);
+    }
   }
 
   const reservations = await c.env.DB.prepare(
@@ -195,10 +223,12 @@ reservationsRouter.get('/:id', async (c) => {
     return c.json({ error: 'Reservation not found' }, 404);
   }
 
-  // Check permission
+  // Check permission - users can only view their own household's reservations
   if (authUser.role !== 'admin' && authUser.role !== 'staff') {
-    // TODO: Check if user belongs to the household
-    // For now, allow access
+    const belongsToHousehold = await userBelongsToHousehold(c.env.DB, authUser.id, reservation.household_id as string);
+    if (!belongsToHousehold) {
+      return c.json({ error: 'Forbidden - you do not have access to this reservation' }, 403);
+    }
   }
 
   return c.json({ reservation });
@@ -219,6 +249,14 @@ reservationsRouter.post('/', async (c) => {
   }
 
   const { household_id, amenity_type, date, slot, purpose } = result.data;
+
+  // Non-admin users can only create reservations for their own household
+  if (authUser.role !== 'admin' && authUser.role !== 'staff') {
+    const belongsToHousehold = await userBelongsToHousehold(c.env.DB, authUser.id, household_id);
+    if (!belongsToHousehold) {
+      return c.json({ error: 'Forbidden - you can only create reservations for your own household' }, 403);
+    }
+  }
 
   // Check for double-booking - prevent same date/slot/amenity
   const existingReservation = await c.env.DB.prepare(
@@ -275,12 +313,14 @@ reservationsRouter.put('/:id', async (c) => {
 
   // Check permission - admin/staff can update any, users can only cancel their own
   if (authUser.role !== 'admin' && authUser.role !== 'staff') {
-    // For cancellation, allow users to cancel their own reservations
+    // For cancellation, allow users to cancel their own household's reservations
     if (body.status === 'cancelled') {
-      // TODO: Verify user belongs to the household
-      // For now, allow
+      const belongsToHousehold = await userBelongsToHousehold(c.env.DB, authUser.id, existing.household_id as string);
+      if (!belongsToHousehold) {
+        return c.json({ error: 'Forbidden - you can only cancel your own household reservations' }, 403);
+      }
     } else {
-      return c.json({ error: 'Forbidden' }, 403);
+      return c.json({ error: 'Forbidden - only admin/staff can change reservation status' }, 403);
     }
   }
 
