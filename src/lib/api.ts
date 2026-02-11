@@ -922,6 +922,31 @@ export const api = {
       }>("/admin/sync-lots", {
         method: "POST",
       }),
+    // Import lot polygons from static GeoJSON to database
+    importLotPolygons: (): Promise<
+      ApiResponse<{
+        success: boolean;
+        results: {
+          total: number;
+          updated: number;
+          skipped: number;
+          errors: number;
+          errorDetails: string[];
+        };
+      }>
+    > =>
+      apiRequest<{
+        success: boolean;
+        results: {
+          total: number;
+          updated: number;
+          skipped: number;
+          errors: number;
+          errorDetails: string[];
+        };
+      }>("/admin/lots/import-polygons", {
+        method: "POST",
+      }),
     // Dues Rates Management
     getDuesRates: (): Promise<ApiResponse<{ dues_rates: DuesRate[] }>> =>
       apiGet<{ dues_rates: DuesRate[] }>("/admin/dues-rates"),

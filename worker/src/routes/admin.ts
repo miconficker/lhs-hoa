@@ -2704,3 +2704,105 @@ adminRouter.put('/pass-management/fees', async (c) => {
     return c.json({ error: 'Failed to update pass fees' }, 500);
   }
 });
+
+// =============================================================================
+// ADMIN: Lot Polygon Import
+// =============================================================================
+
+/**
+ * POST /api/admin/lots/import-polygons
+ * Import lot polygons from static GeoJSON file to database (admin only)
+ * One-time import to migrate from file-based to database-first architecture
+ */
+adminRouter.post('/lots/import-polygons', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    // Fetch the static GeoJSON file
+    const url = new URL(c.req.raw.url);
+    const geoUrl = `${url.origin}/data/lots.geojson`;
+    const response = await fetch(geoUrl);
+
+    if (!response.ok) {
+      return c.json({ error: 'Failed to fetch GeoJSON file' }, 500);
+    }
+
+    const geojson = await response.json() as {
+      type: string;
+      features: Array<{
+        id?: string;
+        properties: {
+          path_id: string;
+        };
+        geometry: {
+          type: string;
+          coordinates: number[][][];
+        };
+      }>;
+    };
+
+    if (geojson.type !== 'FeatureCollection' || !geojson.features) {
+      return c.json({ error: 'Invalid GeoJSON format' }, 400);
+    }
+
+    let updated = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+
+    for (const feature of geojson.features) {
+      try {
+        const lotId = feature.id || feature.properties?.path_id;
+        if (!lotId) {
+          skipped++;
+          continue;
+        }
+
+        // Verify lot exists in database
+        const lot = await c.env.DB.prepare(
+          'SELECT id FROM households WHERE id = ?'
+        ).bind(lotId).first();
+
+        if (!lot) {
+          errors.push(`Lot ${lotId}: not found in database`);
+          skipped++;
+          continue;
+        }
+
+        // Extract polygon coordinates
+        if (feature.geometry?.type === 'Polygon' && feature.geometry?.coordinates) {
+          const polygon = feature.geometry.coordinates[0]; // Outer ring
+          const polygonJson = JSON.stringify(polygon);
+
+          // Update lot_polygon in database
+          await c.env.DB.prepare(
+            'UPDATE households SET lot_polygon = ? WHERE id = ?'
+          ).bind(polygonJson, lotId).run();
+
+          updated++;
+        } else {
+          errors.push(`Lot ${lotId}: no polygon geometry found`);
+          skipped++;
+        }
+      } catch (error) {
+        errors.push(`${feature.id || feature.properties?.path_id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    return c.json({
+      success: true,
+      results: {
+        total: geojson.features.length,
+        updated,
+        skipped,
+        errors: errors.length,
+        errorDetails: errors.slice(0, 20), // Return first 20 errors
+      },
+    });
+  } catch (error) {
+    console.error('Error importing lot polygons:', error);
+    return c.json({ error: 'Failed to import lot polygons' }, 500);
+  }
+});

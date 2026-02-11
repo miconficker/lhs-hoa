@@ -37,10 +37,10 @@ app.use('/*', async (c, next) => {
 app.get('/', (c) => c.json({ message: 'Laguna Hills HOA API' }));
 app.get('/api/health', (c) => c.json({ status: 'ok' }));
 
-// Public GeoJSON endpoint for the map - always returns live data from database
+// Public GeoJSON endpoint for the map - generates from database (lot_polygon column)
 app.get('/api/data/lots.geojson', async (c) => {
   try {
-    // Get all lots with ownership info from database
+    // Get all lots with ownership and polygon data from database
     const lots = await c.env.DB.prepare(`
       SELECT
         h.id as path_id,
@@ -52,58 +52,49 @@ app.get('/api/data/lots.geojson', async (c) => {
         h.owner_id,
         h.lot_label,
         h.lot_description,
+        h.lot_polygon,
         u.email as owner_email
       FROM households h
       LEFT JOIN users u ON h.owner_id = u.id
       ORDER BY h.street, h.block, h.lot
     `).all();
 
-    // Read the original GeoJSON to get geometries
-    // In production, this would be cached or served from CDN
-    let originalGeojson: any;
-    try {
-      // Get the origin from the current request and use relative path
-      const url = new URL(c.req.raw.url);
-      const geojsonUrl = `${url.origin}/data/lots.geojson`;
-      const response = await fetch(geojsonUrl);
-      if (response.ok) {
-        originalGeojson = await response.json();
-      } else {
-        throw new Error('Failed to fetch GeoJSON');
-      }
-    } catch {
-      // Fallback to empty feature collection
-      originalGeojson = { type: 'FeatureCollection', features: [] };
-    }
+    // Generate GeoJSON features from database
+    const features = (lots.results || [])
+      .filter((lot: any) => lot.lot_polygon) // Only include lots with polygon data
+      .map((lot: any) => {
+        let geometry: any = null;
 
-    // Create a map of database lots by path_id
-    const dbLotsMap = new Map(
-      (lots.results || []).map((lot: any) => [lot.path_id, lot])
-    );
+        // Parse lot_polygon JSON
+        try {
+          const polygon = JSON.parse(lot.lot_polygon);
+          geometry = {
+            type: 'Polygon',
+            coordinates: [polygon], // GeoJSON Polygon expects array of rings
+          };
+        } catch {
+          // Invalid polygon data, skip this lot
+          return null;
+        }
 
-    // Merge database data with original geometries
-    const features = originalGeojson.features.map((feature: any) => {
-      const dbLot = dbLotsMap.get(feature.properties?.path_id || feature.id);
-
-      if (dbLot) {
         return {
-          ...feature,
+          type: 'Feature',
+          id: lot.path_id,
+          geometry,
           properties: {
-            ...feature.properties,
-            block_number: dbLot.block || null,
-            lot_number: dbLot.lot || null,
-            lot_size_sqm: dbLot.lot_size_sqm || null,
-            status: dbLot.lot_status || 'vacant_lot',
-            owner_user_id: dbLot.owner_id || null,
-            owner_email: dbLot.owner_email || null,
-            lot_label: dbLot.lot_label || null,
-            lot_description: dbLot.lot_description || null,
+            path_id: lot.path_id,
+            block_number: lot.block || null,
+            lot_number: lot.lot || null,
+            lot_size_sqm: lot.lot_size_sqm || null,
+            status: lot.lot_status || 'vacant_lot',
+            owner_user_id: lot.owner_id || null,
+            owner_email: lot.owner_email || null,
+            lot_label: lot.lot_label || null,
+            lot_description: lot.lot_description || null,
           },
         };
-      }
-
-      return feature;
-    });
+      })
+      .filter((feature: any) => feature !== null); // Remove null entries
 
     return c.json({
       type: 'FeatureCollection',
