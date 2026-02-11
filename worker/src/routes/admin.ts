@@ -2030,6 +2030,15 @@ adminRouter.put('/payments/:paymentId/verify', async (c) => {
           `).bind((payment as any).household_id).run();
         }
 
+        // For employee IDs - update employee status
+        if (paymentType === 'employee_id') {
+          await c.env.DB.prepare(`
+            UPDATE household_employees
+            SET status = 'active', issued_date = DATE('now')
+            WHERE household_id = ? AND status = 'pending'
+          `).bind((payment as any).household_id).run();
+        }
+
         // For dues - update payment demand status
         if (paymentType === 'dues') {
           await c.env.DB.prepare(`

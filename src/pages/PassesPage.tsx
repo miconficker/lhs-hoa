@@ -23,6 +23,7 @@ import type {
   EmployeeType,
   PassType,
 } from "@/types";
+import { PayNowModal } from "@/components/PayNowModal";
 
 const employeeStatusColors: Record<EmployeeStatus, string> = {
   pending: "bg-yellow-100 text-yellow-700",
@@ -83,6 +84,9 @@ export function PassesPage() {
   // Modal states
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
   const [showVehicleForm, setShowVehicleForm] = useState(false);
+  const [showPayNowModal, setShowPayNowModal] = useState(false);
+  const [paymentForVehicle, setPaymentForVehicle] =
+    useState<VehicleRegistration | null>(null);
 
   // Form states
   const [employeeForm, setEmployeeForm] = useState<EmployeeForm>({
@@ -224,6 +228,11 @@ export function PassesPage() {
   function getFeeForType(passType: PassType): number {
     const fee = fees.find((f) => f.fee_type === passType);
     return fee?.amount || 0;
+  }
+
+  function handlePayNow(vehicle: VehicleRegistration) {
+    setPaymentForVehicle(vehicle);
+    setShowPayNowModal(true);
   }
 
   function getStats() {
@@ -727,14 +736,27 @@ export function PassesPage() {
                     )}
                   </div>
                 </div>
-                {vehicle.status !== "cancelled" && (
-                  <button
-                    onClick={() => handleDeleteVehicle(vehicle.id)}
-                    className="px-3 py-1 text-sm border border-red-300 text-red-600 rounded-lg hover:bg-red-50"
-                  >
-                    Cancel
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {/* Pay Now button for unpaid vehicles */}
+                  {vehicle.payment_status === "unpaid" &&
+                    vehicle.amount_due && (
+                      <button
+                        onClick={() => handlePayNow(vehicle)}
+                        className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1.5"
+                      >
+                        <CreditCard className="w-3.5 h-3.5" />
+                        Pay ₱{vehicle.amount_due.toFixed(0)}
+                      </button>
+                    )}
+                  {vehicle.status !== "cancelled" && (
+                    <button
+                      onClick={() => handleDeleteVehicle(vehicle.id)}
+                      className="px-3 py-1 text-sm border border-red-300 text-red-600 rounded-lg hover:bg-red-50"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -745,6 +767,26 @@ export function PassesPage() {
           </div>
         )}
       </div>
+
+      {/* Pay Now Modal */}
+      <PayNowModal
+        isOpen={showPayNowModal}
+        onClose={() => {
+          setShowPayNowModal(false);
+          setPaymentForVehicle(null);
+        }}
+        onSuccess={() => {
+          loadData();
+          setShowPayNowModal(false);
+          setPaymentForVehicle(null);
+        }}
+        householdId={householdId}
+        defaultType="vehicle_pass"
+        defaultAmount={
+          paymentForVehicle?.amount_due ||
+          getFeeForType(paymentForVehicle?.pass_type || "sticker")
+        }
+      />
     </div>
   );
 }
