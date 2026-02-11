@@ -210,6 +210,36 @@ paymentsRouter.get('/:id', async (c) => {
 // Payment Verification & Proof Upload Endpoints
 // =============================================================================
 
+// Helper: Create notification
+async function createNotification(
+  db: D1Database,
+  userId: string,
+  type: string,
+  title: string,
+  content: string,
+  link?: string
+): Promise<void> {
+  const notificationId = crypto.randomUUID();
+  await db.prepare(`
+    INSERT INTO notifications (id, user_id, type, title, content, link)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).bind(notificationId, userId, type, title, content, link || null).run();
+}
+
+// Helper: Notify all admins
+async function notifyAdmins(
+  db: D1Database,
+  type: string,
+  title: string,
+  content: string,
+  link?: string
+): Promise<void> {
+  const admins = await db.prepare("SELECT id FROM users WHERE role = 'admin'").all();
+  for (const admin of (admins.results || [])) {
+    await createNotification(db, admin.id as string, type, title, content, link);
+  }
+}
+
 // Get user's pending verification requests
 paymentsRouter.get('/my-pending/verifications', async (c) => {
   const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
@@ -318,6 +348,16 @@ paymentsRouter.post('/initiate', async (c) => {
       ) VALUES (?, ?, ?, ?, ?, ?, ?)
     `).bind(queueId, paymentId, authUser.id, household.id, paymentType, amount, referenceNumber || null).run();
 
+    // Notify all admins about pending verification
+    const paymentTypeLabel = paymentType === 'dues' ? 'HOA Dues' : paymentType === 'vehicle_pass' ? 'Vehicle Pass' : 'Employee ID';
+    await notifyAdmins(
+      c.env.DB,
+      'payment_verification_requested',
+      `New ${paymentTypeLabel} Payment Verification`,
+      `Payment of PHP ${amount.toFixed(2)} awaiting verification from ${authUser.email}`,
+      `/admin?tab=payments`
+    );
+
     // Get created payment with details
     const payment = await c.env.DB.prepare(
       'SELECT * FROM payments WHERE id = ?'
@@ -396,6 +436,15 @@ paymentsRouter.put('/:paymentId/proof', async (c) => {
       SET verification_status = 'pending', proof_uploaded_at = datetime('now')
       WHERE id = ?
     `).bind(paymentId).run();
+
+    // Notify all admins about re-submitted proof
+    await notifyAdmins(
+      c.env.DB,
+      'payment_verification_requested',
+      'Payment Proof Re-submitted',
+      `Re-submitted payment proof from ${authUser.email} awaiting verification`,
+      `/admin?tab=payments`
+    );
 
     return c.json({ message: 'Proof uploaded successfully', file_url: fileUrl });
 

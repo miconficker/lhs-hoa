@@ -25,6 +25,22 @@ function generateId(): string {
   return crypto.randomUUID();
 }
 
+// Helper: Create notification
+async function createNotification(
+  db: D1Database,
+  userId: string,
+  type: string,
+  title: string,
+  content: string,
+  link?: string
+): Promise<void> {
+  const notificationId = crypto.randomUUID();
+  await db.prepare(`
+    INSERT INTO notifications (id, user_id, type, title, content, link)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).bind(notificationId, userId, type, title, content, link || null).run();
+}
+
 // ==================== User Management ====================
 
 // List all users
@@ -2022,6 +2038,17 @@ adminRouter.put('/payments/:paymentId/verify', async (c) => {
             WHERE user_id = ? AND year = CAST(? AS INTEGER) AND status = 'pending'
           `).bind(verification.user_id, (payment as any).period).run();
         }
+
+        // Notify resident of approval
+        const paymentTypeLabel = paymentType === 'dues' ? 'HOA Dues' : paymentType === 'vehicle_pass' ? 'Vehicle Pass' : 'Employee ID';
+        await createNotification(
+          c.env.DB,
+          verification.user_id,
+          'payment_verified',
+          'Payment Verified',
+          `Your ${paymentTypeLabel.toLowerCase()} payment of PHP ${((payment as any).amount as number).toFixed(2)} has been verified and approved.`,
+          `/payments`
+        );
       }
 
     } else {
@@ -2037,6 +2064,16 @@ adminRouter.put('/payments/:paymentId/verify', async (c) => {
         SET verification_status = 'pending'
         WHERE id = ?
       `).bind(paymentId).run();
+
+      // Notify resident of rejection
+      await createNotification(
+        c.env.DB,
+        verification.user_id,
+        'payment_rejected',
+        'Payment Rejected',
+        `Your payment proof was rejected. Reason: ${rejection_reason}. Please re-upload a corrected proof.`,
+        `/payments`
+      );
     }
 
     return c.json({ message: `Payment ${action}d successfully` });
