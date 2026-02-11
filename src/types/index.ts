@@ -55,7 +55,7 @@ export interface Household {
   longitude?: number;
   map_marker_x?: number;
   map_marker_y?: number;
-  owner_user_id?: string; // UPDATED: Can be null (using existing owner_id in DB)
+  owner_user_id?: string; // Nullable for HOA-owned lots (developer-owner), required for residential
   lot_status?: LotStatus; // NEW: built, vacant_lot, under_construction
   lot_type?: LotType; // NEW: residential, resort, commercial, community, utility, open_space
   lot_size_sqm?: number; // NEW: Lot size in m² (nullable)
@@ -185,9 +185,7 @@ export type PaymentMethod =
   | "instapay"
   | "bank_transfer"
   | "cash"
-  | "cash"
-  | "in-person"
-  | "bank_transfer";
+  | "in-person";
 export type PaymentStatus = "pending" | "completed" | "failed";
 export type PaymentCategory = "dues" | "vehicle_pass" | "employee_id";
 export type PaymentVerificationStatus = "pending" | "verified" | "not_required";
@@ -207,7 +205,7 @@ export interface Payment {
   late_fee_amount?: number; // Accumulated late fees
   late_fee_months?: number; // Number of months late fee calculated for
   received_by?: string; // Admin who recorded in-person payment
-  payment_category?: PaymentCategory; // Type of payment
+  payment_category: PaymentCategory; // Type of payment (required for verification system)
   verification_status?: PaymentVerificationStatus; // Proof verification status
   proof_uploaded_at?: string; // When proof was uploaded
   household_address?: string; // Populated by JOIN in admin queries
