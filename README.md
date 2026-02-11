@@ -219,6 +219,9 @@ npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0005_user_names.sql
 npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0006_household_grouping.sql --local
 npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0007_lot_types_labels.sql --local
 npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0008_pass_management.sql --local
+npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0003_payment_verification.sql --local
+npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0004_add_payment_notification_types.sql --local
+npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0005_late_fee_config.sql --local
 ```
 
 5. **Seed initial users**
@@ -395,6 +398,18 @@ Authorization: Bearer <token>
 | GET | `/payments` | List payments |
 | POST | `/payments` | Create payment |
 | GET | `/households/:id/payments` | Household payment history |
+| POST | `/payments/initiate` | Initiate payment with proof upload |
+| PUT | `/payments/:paymentId/proof` | Re-upload proof for rejected payment |
+| GET | `/payments/my-pending/verifications` | Get pending verifications (resident) |
+| GET | `/admin/payments/verify` | Get verification queue (admin) |
+| PUT | `/admin/payments/:paymentId/verify` | Approve/reject payment (admin) |
+| GET | `/admin/payments/settings` | Get payment settings (admin) |
+| PUT | `/admin/payments/settings` | Update payment settings (admin) |
+| GET | `/admin/payments/export` | Export payments with filters (admin) |
+
+**Payment Documentation**:
+- [User Guide](docs/payment-management-guide.md) - How to use payment features
+- [API Reference](docs/payment-api-reference.md) - Technical API documentation
 
 #### Documents
 
@@ -658,7 +673,15 @@ npx wrangler deploy
 # Run migrations on production
 npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0001_schema.sql
 npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0002_add_lot_ownership.sql
-# ... etc
+npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0003_lot_type_dues_demands.sql
+npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0004_notifications.sql
+npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0005_user_names.sql
+npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0006_household_grouping.sql
+npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0007_lot_types_labels.sql
+npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0008_pass_management.sql
+npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0003_payment_verification.sql
+npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0004_add_payment_notification_types.sql
+npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0005_late_fee_config.sql
 ```
 
 ### Environment Setup for Production
