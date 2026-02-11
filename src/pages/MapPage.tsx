@@ -145,35 +145,6 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
 
   if (!data) return null;
 
-  // Generate a consistent color for each owner based on their ID
-  const getOwnerColor = (ownerId: string | undefined): string => {
-    if (!ownerId) return "#9ca3af"; // gray for unowned
-
-    // List of distinct colors for different owners
-    const colors = [
-      "#22c55e", // green
-      "#3b82f6", // blue
-      "#ef4444", // red
-      "#f59e0b", // amber
-      "#8b5cf6", // purple
-      "#ec4899", // pink
-      "#14b8a6", // teal
-      "#f97316", // orange
-      "#06b6d4", // cyan
-      "#84cc16", // lime
-      "#6366f1", // indigo
-      "#eab308", // yellow
-    ];
-
-    // Simple hash to get consistent color index
-    let hash = 0;
-    for (let i = 0; i < ownerId.length; i++) {
-      hash = ownerId.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const index = Math.abs(hash) % colors.length;
-    return colors[index];
-  };
-
   const style = (
     feature?: GeoJSON.Feature<GeoJSON.Geometry, LotFeatureProperties>,
   ) => {
@@ -182,32 +153,36 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
 
     // Get ownership data for this lot
     const ownershipData = lotsOwnership?.get(lotId || "");
-    const lotType = ownershipData?.lot_type;
-    const ownerId = ownershipData?.owner_user_id;
+    const lotType = ownershipData?.lot_type || props?.lot_type;
+    const ownerId = ownershipData?.owner_user_id || props?.owner_user_id;
     const isMerged = ownershipData?.household_group_id;
-    const isCommunityLot =
-      lotType === "community" ||
-      lotType === "utility" ||
-      lotType === "open_space";
 
-    let fillColor = "#9ca3af"; // default gray
+    // Check if this lot is owned by the current user
+    const isMyLot = user && ownerId === user.id;
 
-    // For community/utility/open space lots, use specific colors
-    if (isCommunityLot) {
-      fillColor =
-        lotType === "utility"
-          ? "#f97316" // orange for utility
-          : lotType === "open_space"
-            ? "#14b8a6" // teal for open space
-            : "#8b5cf6"; // purple for community
+    let fillColor = "#e5e7eb"; // Light gray (vacant/unowned)
+
+    // Priority: my lots > HOA lots > other owned > status > default
+    if (isMyLot) {
+      fillColor = "#3b82f6"; // Blue - MY lots
     } else if (ownerId) {
-      // For private lots, color by owner
-      fillColor = getOwnerColor(ownerId);
+      fillColor = "#d1d5db"; // Darker gray - other people's lots
+    } else if (lotType === "community") {
+      fillColor = "#a855f7"; // Purple - community areas
+    } else if (lotType === "utility") {
+      fillColor = "#ef4444"; // Red - utility areas
+    } else if (lotType === "open_space") {
+      fillColor = "#14b8a6"; // Teal - open space
+    } else {
+      // Unowned residential lots - color by status
+      const status = ownershipData?.lot_status || props?.status;
+      if (status === "built") fillColor = "#22c55e"; // Green
+      if (status === "under_construction") fillColor = "#f59e0b"; // Orange
     }
 
-    // For merged lots, use same color across group (shade of purple)
+    // For merged lots, use purple highlight
     if (isMerged) {
-      fillColor = ownershipData?.is_primary_lot ? "#8b5cf6" : "#a78bfa";
+      fillColor = isMyLot ? fillColor : "#a78bfa"; // Light purple for merged (not primary)
     }
 
     // Map fill color to border color

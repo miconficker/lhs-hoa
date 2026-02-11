@@ -248,16 +248,33 @@ export function AdminLotsPage() {
     const isHighlighted =
       highlightOwnerId && props?.owner_user_id === highlightOwnerId;
 
-    let fillColor = "#9ca3af";
-    if (props?.status === "built") fillColor = "#22c55e";
-    if (props?.status === "under_construction") fillColor = "#f59e0b";
+    // Check if this lot is owned by the current user
+    const isMyLot = props?.owner_user_id === user?.id;
+
+    let fillColor = "#e5e7eb"; // Light gray (vacant/unowned)
+
+    // Priority: my lots > HOA lots > status > default
+    if (isMyLot) {
+      fillColor = "#3b82f6"; // Blue - MY lots
+    } else if (props?.owner_user_id) {
+      fillColor = "#d1d5db"; // Darker gray - other people's lots
+    } else if (props?.lot_type === "community") {
+      fillColor = "#a855f7"; // Purple - community areas
+    } else if (props?.lot_type === "utility") {
+      fillColor = "#ef4444"; // Red - utility areas
+    } else if (props?.lot_type === "open_space") {
+      fillColor = "#14b8a6"; // Teal - open space
+    } else if (props?.status === "built") {
+      fillColor = "#22c55e"; // Green - built, unowned
+    } else if (props?.status === "under_construction") {
+      fillColor = "#f59e0b"; // Orange - under construction, unowned
+    }
 
     return {
-      color: isSelected ? "#2563eb" : isHighlighted ? "#eab308" : "#6b7280",
-      weight: isSelected || isMultiSelected || isHighlighted ? 3 : 2,
+      color: isSelected ? "#1d4ed8" : isHighlighted ? "#eab308" : "#6b7280",
+      weight: isSelected || isMultiSelected || isHighlighted ? 3 : 1.5,
       fillColor,
-      fillOpacity:
-        isSelected || isMultiSelected ? 0.5 : isHighlighted ? 0.4 : 0.2,
+      fillOpacity: isSelected || isMultiSelected ? 0.6 : isMyLot ? 0.4 : 0.25,
     };
   }
 

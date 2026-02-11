@@ -272,9 +272,13 @@ export interface LotFeatureProperties {
   block_number: string | null;
   area_sqm: number | null;
   status: LotStatus; // CHANGED: now uses LotStatus type
+  lot_type?: LotType; // Lot type
   owner_user_id?: string; // NEW
   owner_name?: string; // NEW: only included for admin users
+  owner_email?: string; // Owner email
   lot_size_sqm?: number; // NEW
+  lot_label?: string | null; // Lot label
+  lot_description?: string | null; // Lot description
   household_id?: string;
   residents?: string;
 }
