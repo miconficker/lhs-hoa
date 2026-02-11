@@ -10,9 +10,9 @@
 
 This document consolidates **32 identified issues** across the codebase that require discussion, decisions, or fixes. Issues are categorized by severity and type:
 
-- 🔴 **Critical Security** (3 issues) - **1 resolved, 1 false positive, 1 documented**
+- 🔴 **Critical Security** (3 issues) - **All addressed**
 - 🟡 **Business Logic** (8 issues) - Board/Policy decisions needed
-- 🟠 **Technical Debt** (12 issues) - Implementation improvements needed
+- 🟠 **Technical Debt** (12 issues) - **5 resolved, 7 remaining**
 - 🔵 **Code Quality** (9 issues) - Best practices and maintenance
 
 ---
@@ -127,28 +127,20 @@ This document consolidates **32 identified issues** across the codebase that req
 
 ## 🟠 Technical Debt (Implementation Work Needed)
 
-### 13. Payment Method Type Definition
-**Location:** `src/types/index.ts` (lines 182-190)
+### 13. ✅ Payment Method Type Definition (RESOLVED)
+**Location:** `src/types/index.ts`
 - **Issue:** Duplicate values in PaymentMethod type
-```typescript
-export type PaymentMethod =
-  | "gcash"
-  | "paymaya"
-  | "instapay"
-  | "bank_transfer"
-  | "cash"        // ← May have duplication
-```
-- **Fix:** Clean up type definition
+- **Fix Applied:** Removed duplicate "cash" and "bank_transfer" values
 
-### 14. owner_user_id Nullable Type Mismatch
-**Location:** `src/types/index.ts` (line 58)
-- **Issue:** Marked as optional but populated with JOINs
-- **Fix:** Either make non-nullable or handle nulls properly
+### 14. ✅ owner_user_id Nullable Type Mismatch (RESOLVED)
+**Location:** `src/types/index.ts`
+- **Issue:** Comment was misleading about nullable status
+- **Fix Applied:** Updated comment to clarify it's nullable for HOA-owned lots
 
-### 15. Payment Category Optional vs Required
-**Location:** `src/types/index.ts` (lines 210-211)
-- **Issue:** `payment_category` is optional but business logic requires it
-- **Fix:** Make required or handle consistently
+### 15. ✅ Payment Category Optional vs Required (RESOLVED)
+**Location:** `src/types/index.ts`
+- **Issue:** `payment_category` was optional but business logic requires it
+- **Fix Applied:** Made `payment_category` required field
 
 ### 16. Hardcoded Configuration Values
 **Locations:** Throughout codebase
@@ -160,22 +152,18 @@ export type PaymentMethod =
 - **Decision:** Move to system configuration table
 - **Estimated Effort:** 8-16 hours
 
-### 17. TODO Comments - Incomplete Features
+### 17. ✅ TODO Comments - Incomplete Features (PARTIALLY RESOLVED)
 **Locations:** Multiple files
-- **worker/src/routes/reservations.ts:** Missing user verification
-- **worker/src/routes/households.ts:** Payment status calculation placeholder
-- **Functions/routes:** Various TODOs
-- **Estimated Effort:** 16-24 hours
+- ✅ `worker/src/routes/reservations.ts:` User verification implemented
+- `worker/src/routes/households.ts:` Payment status calculation placeholder (remains)
+- Other TODOs in various routes remain
+- **Estimated Effort Remaining:** 8-12 hours
 
-### 18. Debug Logging in Production
-**Location:** `src/lib/api.ts` (line 66)
-- **Issue:** Debug logging in production code
-```typescript
-if (import.meta.env.DEV) {
-  console.log(`[API] ${options.method || "GET"} ${API_BASE}${endpoint}`, ...);
-}
-```
-- **Fix:** Use proper logging library with levels
+### 18. ✅ Debug Logging in Production (NOT AN ISSUE)
+**Location:** `src/lib/api.ts`
+- **Issue:** Originally flagged as debug logging in production
+- **Status:** Already correctly implemented - only logs when `import.meta.env.DEV` is true
+- **No action needed** - DEV-only logging is standard practice for SPAs
 
 ### 19. Database Index Missing
 **Location:** Migration files
@@ -190,10 +178,11 @@ if (import.meta.env.DEV) {
 - **Issue:** Multiple database queries in loops
 - **Fix:** Implement batch operations and proper JOINs
 
-### 21. Foreign Key Constraint Enforcement
+### 21. ✅ Foreign Key Constraint Enforcement (NOT AN ISSUE)
 **Location:** Database operations
-- **Issue:** Inconsistent FK constraint enforcement
-- **Fix:** Ensure `PRAGMA foreign_keys = ON` is set
+- **Issue:** Originally flagged as potential FK enforcement issue
+- **Status:** All migrations include `PRAGMA foreign_keys = ON;` and D1 has FK enabled by default
+- **No action needed**
 
 ### 22. Missing Rollback Strategy for Migrations
 **Location:** Migration files
@@ -332,10 +321,13 @@ Use this section to track decisions made:
 | 1 | User-household verification | 2025-02-12 | ✅ Implemented | Added `userBelongsToHousehold()` helper checking both owners and residents |
 | 2 | SQL injection audit | 2025-02-12 | ✅ No action needed | All queries use `.bind()` parameterization |
 | 3 | Token storage approach | 2025-02-12 | ✅ Documented | Keep localStorage (standard SPA), focus on XSS prevention |
-| 4 | Co-ownership model | TBD | Pending | See separate discussion doc |
-| 5 | Voting rights for unpaid dues | TBD | Pending | Board input needed |
-| 6 | Late fee defaults | TBD | Pending | Board to approve |
-| 7 | Proxy voting mechanism | TBD | Pending | Board policy needed |
+| 4 | Type definition cleanup | 2025-02-12 | ✅ Fixed | Removed PaymentMethod duplicates, made payment_category required |
+| 5 | Debug logging check | 2025-02-12 | ✅ Verified | DEV-only logging is correct for SPAs |
+| 6 | FK constraint enforcement | 2025-02-12 | ✅ Verified | All migrations have PRAGMA foreign_keys = ON |
+| 7 | Co-ownership model | TBD | Pending | See separate discussion doc |
+| 8 | Voting rights for unpaid dues | TBD | Pending | Board input needed |
+| 9 | Late fee defaults | TBD | Pending | Board to approve |
+| 10 | Proxy voting mechanism | TBD | Pending | Board policy needed |
 
 ---
 
