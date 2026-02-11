@@ -853,6 +853,13 @@ export const api = {
       apiPut<{ success: boolean }>(`/admin/lots/${lotId}/description`, {
         lot_description: description,
       }),
+    updateLotPolygon: (
+      lotId: string,
+      polygon: number[][],
+    ): Promise<ApiResponse<{ success: boolean }>> =>
+      apiPut<{ success: boolean }>(`/admin/lots/${lotId}/polygon`, {
+        lot_polygon: polygon,
+      }),
     getHomeowners: (): Promise<ApiResponse<{ homeowners: User[] }>> =>
       apiGet<{ homeowners: User[] }>("/admin/homeowners"),
     batchAssignOwner: (

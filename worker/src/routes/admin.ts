@@ -1078,6 +1078,62 @@ adminRouter.put('/lots/:lotId/description', async (c) => {
 });
 
 /**
+ * PUT /api/admin/lots/:lotId/polygon
+ * Update lot polygon geometry (admin only)
+ * Stores GeoJSON polygon coordinates for the lot boundary
+ */
+adminRouter.put('/lots/:lotId/polygon', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const lotId = c.req.param('lotId');
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON' }, 400);
+  }
+  const { lot_polygon } = body;
+
+  // Verify lot exists
+  const lot = await c.env.DB.prepare(
+    'SELECT id FROM households WHERE id = ?'
+  ).bind(lotId).first();
+
+  if (!lot) {
+    return c.json({ error: 'Lot not found' }, 404);
+  }
+
+  // Validate polygon is an array of coordinate pairs
+  if (lot_polygon !== null && lot_polygon !== undefined) {
+    if (!Array.isArray(lot_polygon)) {
+      return c.json({ error: 'Invalid lot_polygon: must be an array' }, 400);
+    }
+    // Validate each coordinate is [lng, lat] pair
+    for (const coord of lot_polygon) {
+      if (!Array.isArray(coord) || coord.length !== 2 ||
+          typeof coord[0] !== 'number' || typeof coord[1] !== 'number') {
+        return c.json({ error: 'Invalid lot_polygon: each coordinate must be [number, number]' }, 400);
+      }
+    }
+  }
+
+  try {
+    // Store polygon as JSON string
+    await c.env.DB.prepare(
+      'UPDATE households SET lot_polygon = ? WHERE id = ?'
+    ).bind(lot_polygon ? JSON.stringify(lot_polygon) : null, lotId).run();
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Error updating lot polygon:', error);
+    return c.json({ error: 'Failed to update lot polygon' }, 500);
+  }
+});
+
+/**
  * GET /api/admin/homeowners
  * Get list of all homeowners for dropdown (admin only)
  */

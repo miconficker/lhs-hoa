@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { MapContainer, ImageOverlay, GeoJSON } from "react-leaflet";
 import { LatLngBoundsExpression } from "leaflet";
 import L from "leaflet";
+import { FeatureGroup } from "react-leaflet";
+import { EditControl } from "react-leaflet-draw";
+import "leaflet-draw";
+import "react-leaflet-draw";
 import { api } from "@/lib/api";
 import {
   LotOwnership,
@@ -23,6 +27,17 @@ L.Icon.Default.mergeOptions({
   shadowUrl:
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
+
+// Extend Leaflet types for leaflet-draw
+declare module "leaflet" {
+  namespace Draw {
+    enum Event {
+      CREATED = "draw:created",
+      EDITED = "draw:edited",
+      DELETED = "draw:deleted",
+    }
+  }
+}
 
 const MAP_WIDTH = 2304;
 const MAP_HEIGHT = 3456;
@@ -107,6 +122,30 @@ export function AdminLotsPage() {
       newSelected.add(lotId);
     }
     setSelectedLots(newSelected);
+  }
+
+  function handleLotBoundaryCreated(e: any) {
+    const layer = e.layer;
+    const latlngs = layer.getLatLngs()[0];
+    const polygon = latlngs.map((ll: L.LatLng) => [ll.lng, ll.lat]);
+    console.log("Lot boundary created:", polygon);
+
+    // If a lot is selected, save its polygon
+    if (selectedLot) {
+      api.admin.updateLotPolygon(selectedLot.lot_id, polygon);
+    }
+  }
+
+  function handleLotBoundaryEdited(e: any) {
+    const layers = e.layers.getLayers();
+    layers.forEach((layer: any) => {
+      const latlngs = layer.getLatLngs()[0];
+      const polygon = latlngs.map((ll: L.LatLng) => [ll.lng, ll.lat]);
+      console.log("Lot boundary edited:", polygon);
+
+      // Find the lot that matches this polygon and update it
+      // For now, this is a simplified implementation
+    });
   }
 
   async function handleSave() {
@@ -310,6 +349,20 @@ export function AdminLotsPage() {
                 bounds={mapBounds}
                 opacity={1}
               />
+              <FeatureGroup>
+                <EditControl
+                  position="topright"
+                  draw={{
+                    rectangle: false,
+                    circle: false,
+                    circlemarker: false,
+                    marker: false,
+                    polyline: false,
+                  }}
+                  onCreated={handleLotBoundaryCreated}
+                  onEdited={handleLotBoundaryEdited}
+                />
+              </FeatureGroup>
               {geojsonData && (
                 <GeoJSON
                   data={geojsonData}
