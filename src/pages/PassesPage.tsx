@@ -87,6 +87,8 @@ export function PassesPage() {
   const [showPayNowModal, setShowPayNowModal] = useState(false);
   const [paymentForVehicle, setPaymentForVehicle] =
     useState<VehicleRegistration | null>(null);
+  const [paymentForEmployee, setPaymentForEmployee] =
+    useState<HouseholdEmployee | null>(null);
 
   // Form states
   const [employeeForm, setEmployeeForm] = useState<EmployeeForm>({
@@ -232,6 +234,13 @@ export function PassesPage() {
 
   function handlePayNow(vehicle: VehicleRegistration) {
     setPaymentForVehicle(vehicle);
+    setPaymentForEmployee(null);
+    setShowPayNowModal(true);
+  }
+
+  function handlePayForEmployee(employee: HouseholdEmployee) {
+    setPaymentForEmployee(employee);
+    setPaymentForVehicle(null);
     setShowPayNowModal(true);
   }
 
@@ -530,15 +539,27 @@ export function PassesPage() {
                     )}
                   </div>
                 </div>
-                {employee.status !== "revoked" &&
-                  employee.status !== "expired" && (
+                <div className="flex items-center gap-2">
+                  {/* Pay Now button for pending employees */}
+                  {employee.status === "pending" && (
                     <button
-                      onClick={() => handleDeleteEmployee(employee.id)}
-                      className="px-3 py-1 text-sm border border-red-300 text-red-600 rounded-lg hover:bg-red-50"
+                      onClick={() => handlePayForEmployee(employee)}
+                      className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1.5"
                     >
-                      Revoke
+                      <CreditCard className="w-3.5 h-3.5" />
+                      Pay Now
                     </button>
                   )}
+                  {employee.status !== "revoked" &&
+                    employee.status !== "expired" && (
+                      <button
+                        onClick={() => handleDeleteEmployee(employee.id)}
+                        className="px-3 py-1 text-sm border border-red-300 text-red-600 rounded-lg hover:bg-red-50"
+                      >
+                        Revoke
+                      </button>
+                    )}
+                </div>
               </div>
             ))}
           </div>
@@ -774,17 +795,26 @@ export function PassesPage() {
         onClose={() => {
           setShowPayNowModal(false);
           setPaymentForVehicle(null);
+          setPaymentForEmployee(null);
         }}
         onSuccess={() => {
           loadData();
           setShowPayNowModal(false);
           setPaymentForVehicle(null);
+          setPaymentForEmployee(null);
         }}
         householdId={householdId}
-        defaultType="vehicle_pass"
+        defaultType={
+          paymentForVehicle
+            ? "vehicle_pass"
+            : paymentForEmployee
+              ? "employee_id"
+              : "dues"
+        }
         defaultAmount={
           paymentForVehicle?.amount_due ||
-          getFeeForType(paymentForVehicle?.pass_type || "sticker")
+          getFeeForType(paymentForVehicle?.pass_type || "sticker") ||
+          (paymentForEmployee ? 100 : 0) // Default employee ID fee
         }
       />
     </div>
