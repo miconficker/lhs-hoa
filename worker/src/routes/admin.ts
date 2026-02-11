@@ -302,7 +302,7 @@ adminRouter.get('/households', async (c) => {
 
 // Create household
 const createHouseholdSchema = z.object({
-  address: z.string().min(1),
+  // address is auto-generated from street, block, lot
   street: z.string().optional(),
   block: z.string().optional(),
   lot: z.string().optional(),
@@ -332,7 +332,10 @@ adminRouter.post('/households', async (c) => {
     return c.json({ error: 'Invalid input', details: result.error.flatten() }, 400);
   }
 
-  const { address, street, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id, residents } = result.data;
+  const { street, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id, residents } = result.data;
+
+  // Auto-generate address from street, block, lot
+  const generatedAddress = `${street || ''}${street ? ', ' : ''}Block ${block || '?'}, Lot ${lot || '?'}`;
 
   // Verify owner exists if provided
   if (owner_id) {
@@ -350,7 +353,7 @@ adminRouter.post('/households', async (c) => {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     householdId,
-    address,
+    generatedAddress,
     street || null,
     block || null,
     lot || null,
@@ -411,7 +414,7 @@ adminRouter.put('/households/:id', async (c) => {
     return c.json({ error: 'Invalid input', details: result.error.flatten() }, 400);
   }
 
-  const { address, street, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id, owner_email, residents } = result.data;
+  const { street, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id, owner_email, residents } = result.data;
 
   console.log('[Admin] Parsed data - owner_email:', owner_email, 'owner_id:', owner_id, 'residents:', residents);
 
@@ -445,10 +448,23 @@ adminRouter.put('/households/:id', async (c) => {
   const updates: string[] = [];
   const values: any[] = [];
 
-  if (address) {
+  // If street, block, or lot is being updated, also update address
+  const needsAddressUpdate = street !== undefined || block !== undefined || lot !== undefined;
+  if (needsAddressUpdate) {
+    // Get existing values to generate new address
+    const existing = await c.env.DB.prepare(
+      'SELECT street, block, lot FROM households WHERE id = ?'
+    ).bind(id).first() as any;
+
+    const finalStreet = street !== undefined ? street : (existing?.street || '');
+    const finalBlock = block !== undefined ? block : (existing?.block || '');
+    const finalLot = lot !== undefined ? lot : (existing?.lot || '');
+
+    const generatedAddress = `${finalStreet || ''}${finalStreet ? ', ' : ''}Block ${finalBlock || '?'}, Lot ${finalLot || '?'}`;
     updates.push('address = ?');
-    values.push(address);
+    values.push(generatedAddress);
   }
+
   if (street !== undefined) {
     updates.push('street = ?');
     values.push(street || null);

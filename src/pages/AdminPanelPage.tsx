@@ -589,6 +589,7 @@ export function AdminPanelPage() {
                       <div>
                         <h3 className="font-semibold">{household.address}</h3>
                         <p className="text-sm text-gray-500">
+                          {household.street && `${household.street}, `}
                           {household.block && `Block ${household.block}`}
                           {household.block && household.lot && " - "}
                           {household.lot && `Lot ${household.lot}`}
@@ -973,9 +974,12 @@ function HouseholdModal({
   onSave: (data: any) => void;
   onClose: () => void;
 }) {
-  const [address, setAddress] = useState(household?.address || "");
+  const [street, setStreet] = useState(household?.street || "");
   const [block, setBlock] = useState(household?.block || "");
   const [lot, setLot] = useState(household?.lot || "");
+
+  // Generate address from street, block, lot
+  const generatedAddress = `${street || ""}${street ? ", " : ""}Block ${block || "?"}, Lot ${lot || "?"}`;
   const [latitude, setLatitude] = useState(
     household?.latitude?.toString() || "",
   );
@@ -1017,7 +1021,8 @@ function HouseholdModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const data: any = {
-      address,
+      // address is auto-generated on backend from street, block, lot
+      street: street || undefined,
       block: block || undefined,
       lot: lot || undefined,
       latitude: latitude ? parseFloat(latitude) : undefined,
@@ -1040,14 +1045,14 @@ function HouseholdModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Address
+              Street
             </label>
             <input
               type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
+              value={street}
+              onChange={(e) => setStreet(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              required
+              placeholder="e.g., Mahogany Street"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -1073,6 +1078,15 @@ function HouseholdModal({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
+          </div>
+          {/* Read-only preview of auto-generated address */}
+          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              Generated Address (auto-generated)
+            </label>
+            <p className="text-sm text-gray-900 font-medium">
+              {generatedAddress}
+            </p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

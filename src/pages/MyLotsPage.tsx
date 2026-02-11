@@ -216,6 +216,9 @@ export function MyLotsPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Street
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Block
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -244,6 +247,9 @@ export function MyLotsPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {lots.map((lot) => (
                 <tr key={lot.lot_id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {lot.street || "—"}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {lot.block || "—"}
                   </td>
@@ -349,6 +355,7 @@ export function MyLotsPage() {
               />
             </div>
             <div className="text-sm text-gray-500">
+              <p>Street: {editingLot?.street || "—"}</p>
               <p>Block: {editingLot?.block || "—"}</p>
               <p>Lot: {editingLot?.lot || "—"}</p>
             </div>

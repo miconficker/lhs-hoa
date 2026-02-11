@@ -404,6 +404,7 @@ export interface UpdateAdminUserInput {
 export interface AdminHousehold {
   id: string;
   address: string;
+  street?: string;
   block?: string;
   lot?: string;
   latitude?: number;
@@ -435,6 +436,7 @@ export interface AdminHouseholdResponse {
 
 export interface CreateAdminHouseholdInput {
   address: string;
+  street?: string;
   block?: string;
   lot?: string;
   latitude?: number;
@@ -452,6 +454,7 @@ export interface CreateAdminHouseholdInput {
 
 export interface UpdateAdminHouseholdInput {
   address?: string;
+  street?: string;
   block?: string;
   lot?: string;
   latitude?: number;
@@ -463,6 +466,7 @@ export interface UpdateAdminHouseholdInput {
 
 export interface ImportHouseholdInput {
   address: string;
+  street?: string;
   block?: string;
   lot?: string;
   latitude?: number;

@@ -88,8 +88,8 @@ function HouseholdMarker({ household }: HouseholdMarkerProps) {
       <Popup>
         <div className="p-2 min-w-[200px]">
           <h3 className="font-semibold text-gray-900 mb-1">
-            {household.block && household.lot
-              ? `Block ${household.block}, Lot ${household.lot}`
+            {household.street || household.block || household.lot
+              ? `${household.street ? household.street + ", " : ""}Block ${household.block}, Lot ${household.lot}`
               : household.address}
           </h3>
           <div className="flex items-center gap-2 mb-2">

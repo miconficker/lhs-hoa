@@ -339,7 +339,7 @@ export function AdminLotsPage() {
                             ${
                               lot?.lot_label ||
                               (lot?.block_number && lot?.lot_number
-                                ? `Block ${lot.block_number}, Lot ${lot.lot_number}`
+                                ? `${lot.street || ""}${lot.street ? ", " : ""}Block ${lot.block_number}, Lot ${lot.lot_number}`
                                 : props?.path_id || "Unnamed Lot")
                             }
                           </h3>
@@ -401,7 +401,7 @@ export function AdminLotsPage() {
                 <div className="space-y-4">
                   <p className="text-sm font-medium text-gray-700">
                     {selectedLot.block_number && selectedLot.lot_number
-                      ? `Block ${selectedLot.block_number}, Lot ${selectedLot.lot_number}`
+                      ? `${selectedLot.street || ""}${selectedLot.street ? ", " : ""}Block ${selectedLot.block_number}, Lot ${selectedLot.lot_number}`
                       : selectedLot.address || "Unnamed Lot"}
                   </p>
 
