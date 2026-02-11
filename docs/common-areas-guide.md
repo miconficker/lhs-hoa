@@ -24,7 +24,7 @@ Common areas are HOA-owned properties that:
 
 3. **Set Owner to "No Owner"**
    - In the "Owner" dropdown, select **"No Owner (HOA-Owned / Common Area)"**
-   - This sets `owner_id = NULL` in the database
+   - This sets `owner_user_id = 'developer-owner'` in the database
 
 4. **Set the Lot Type**
    - In the "Lot Type" dropdown, select the appropriate type:
@@ -51,29 +51,29 @@ UPDATE households
 SET lot_type = 'community',
     lot_label = 'Basketball Court',
     lot_description = 'Multi-use sport court with basketball and volleyball hoops',
-    owner_id = NULL
-WHERE id = 'B01-L01';
+    owner_user_id = 'developer-owner'
+WHERE block = 'B' AND lot = '01';
 
 -- Mark a lot as utility (e.g., water tower, drainage)
 UPDATE households
 SET lot_type = 'utility',
     lot_label = 'Water Tower #1',
     lot_description = 'Pressurized water system for the subdivision',
-    owner_id = NULL
-WHERE id = 'U01';
+    owner_user_id = 'developer-owner'
+WHERE block = 'U' AND lot = '01';
 
 -- Mark a lot as open space (e.g., garden, green belt)
 UPDATE households
 SET lot_type = 'open_space',
     lot_label = 'Central Park',
     lot_description = 'Main garden area with walking paths',
-    owner_id = NULL
-WHERE id = 'C02';
+    owner_user_id = 'developer-owner'
+WHERE block = 'C' AND lot = '02';
 
 -- Batch: Mark all lots with block "C" as community areas
 UPDATE households
 SET lot_type = 'community',
-    owner_id = NULL
+    owner_user_id = 'developer-owner'
 WHERE block = 'C';
 ```
 
@@ -117,7 +117,7 @@ Labels and descriptions help identify common areas on the map and admin pages:
 -- Add a helpful label
 UPDATE households
 SET lot_label = 'Basketball Court & Playground'
-WHERE id = 'C01';
+WHERE block = 'C' AND lot = '01';
 
 -- Add a detailed description
 UPDATE households
@@ -126,7 +126,7 @@ SET lot_description = 'Multi-purpose recreational area with:
 - Children''s playground with swings and slides
 - Benches and shaded seating areas
 - Night lighting until 10 PM'
-WHERE id = 'C01';
+WHERE block = 'C' AND lot = '01';
 ```
 
 ## Best Practices
@@ -144,7 +144,7 @@ WHERE id = 'C01';
    - Example: "Drainage canal - cleaned quarterly before rainy season"
 
 4. **Keep Ownership Clear**
-   - Always set `owner_id = NULL` for common areas
+   - Always set `owner_user_id = 'developer-owner'` for common areas
    - This prevents them from appearing in resident accounts
 
 ## Troubleshooting
@@ -169,12 +169,12 @@ Here's a helpful script to mark multiple lots as common areas:
 -- Example: Mark all lots with block "C" as community areas
 UPDATE households
 SET lot_type = 'community',
-    owner_id = NULL
+    owner_user_id = 'developer-owner'
 WHERE block = 'C';
 
 -- Example: Mark specific lots as utility
 UPDATE households
 SET lot_type = 'utility',
-    owner_id = NULL
-WHERE id IN ('U01', 'U02', 'U03');
+    owner_user_id = 'developer-owner'
+WHERE block IN ('U') AND lot IN ('01', '02', '03');
 ```

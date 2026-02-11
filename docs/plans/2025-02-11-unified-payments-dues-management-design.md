@@ -1,12 +1,35 @@
 # Unified Payments & Dues Management System - Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **Status:** Partially Complete (see Implementation Status below)
+>
+> **Last Updated:** 2025-02-11
 
 **Goal:** Build a unified payment management system supporting resident-initiated payments, admin verification, and streamlined dues collection for vehicle passes and employee IDs.
 
 **Architecture:** Single payment system for all payment types (dues, vehicle_pass, employee_id) with resident self-service "Pay Now" flows and admin verification of uploaded proof. Admin-first workflow with configurable late fees and manual demand triggers.
 
 **Tech Stack:** React 18, TypeScript, Tailwind CSS, Cloudflare Workers, D1 Database, R2 Storage, Hono framework
+
+---
+
+## Implementation Status
+
+| Task | Description | Status | Notes |
+|------|-------------|--------|-------|
+| 1 | Database Migration (payment verification) | ✅ Complete | migrations/0003_payment_verification.sql |
+| 2 | R2 Upload Configuration | ✅ Complete | File upload working in worker |
+| 3 | Admin "Verify Proof" Tab | ✅ Complete | PaymentVerificationQueue component |
+| 4 | Resident "Pay Now" Modal | ✅ Complete | PayNowModal component |
+| 5 | Notification System Integration | ✅ Complete | Payment notification types added |
+| 6 | Late Fee Rules Management | ✅ Complete | LateFeeConfig component |
+| 7 | Vehicle Pass "Pay Now" Integration | ✅ Complete | Integrated in PassesPage |
+| 8 | Employee ID "Pay Now" Integration | ✅ Complete | Integrated in PassesPage |
+| 9 | Partial Payment Support | ❌ Deferred | D1/SQLite limitations with ALTER TABLE |
+| 10 | Payment History & Export | ✅ Complete | CSV export with filters |
+
+**Documentation:**
+- User Guide: `docs/payment-management-guide.md`
+- API Reference: `docs/payment-api-reference.md`
 
 ---
 
@@ -22,7 +45,7 @@ This document outlines the complete implementation of a unified payment and dues
 
 ## Current State
 
-**Already Implemented:**
+**Already Implemented (before this project):**
 - Dues rate configuration (`DuesConfigPage.tsx`)
 - Payment demand generation (API exists)
 - In-person payment recording with late fee calculation (`InPersonPaymentsPage.tsx`)
@@ -31,13 +54,29 @@ This document outlines the complete implementation of a unified payment and dues
 - Employee pass tracking
 - Payment history table with `payment_category` (dues, vehicle_pass, employee_id)
 
-**Missing/Incomplete:**
-- Resident self-service payment interface
-- Payment proof upload and verification
-- Admin notification for pending verifications
-- Real online payment integration (GCash/PayMaya)
-- Resident vehicle pass self-service
-- Unified payment management dashboard
+**Completed (this project):**
+- ✅ Resident self-service payment interface (`PayNowModal.tsx`)
+- ✅ Payment proof upload and verification (R2 storage, `payment_proofs` table)
+- ✅ Admin notification for pending verifications
+- ✅ Admin verification queue (`PaymentVerificationQueue.tsx`)
+- ✅ Late fee configuration system (`LateFeeConfig.tsx`, `late_fee_config` table)
+- ✅ Vehicle pass "Pay Now" integration
+- ✅ Employee ID "Pay Now" integration
+- ✅ CSV export with filters (`PaymentExport.tsx`)
+- ✅ Payment documentation (user guide + API reference)
+
+**Not Implemented (deferred):**
+- ❌ Partial payment support (complex schema changes required, D1/SQLite limitations)
+- ❌ Real online payment integration (GCash/PayMaya APIs - out of scope)
+
+**Out of Scope (future enhancements):**
+- Real GCash/PayMaya API integration
+- Automated payment reminders (email/SMS)
+- PDF invoice generation
+- Installment plan management UI
+- Payment analytics dashboard
+- Recurring payment setup
+- Refund processing workflow
 
 ## Database Schema Changes
 
