@@ -2094,20 +2094,32 @@ adminRouter.get('/payments/settings', async (c) => {
     return c.json({ error: 'Admin access required' }, 403);
   }
 
-  // For now, return default settings
-  // TODO: Store these in database settings table
+  // Get late fee config from database
+  const lateFeeConfig = await c.env.DB.prepare(`
+    SELECT * FROM late_fee_config WHERE id = 'default'
+  `).first();
+
+  // Bank details are currently hardcoded (could be moved to DB later)
+  const bankDetails = {
+    bank_name: 'BPI',
+    account_name: 'Laguna Hills HOA',
+    account_number: '1234-5678-90',
+  };
+
+  const gcashDetails = {
+    name: 'Laguna Hills HOA',
+    number: '0917-XXX-XXXX',
+  };
+
   return c.json({
-    bank_details: {
-      bank_name: 'BPI',
-      account_name: 'Laguna Hills HOA',
-      account_number: '1234-5678-90',
-    },
-    gcash_details: {
-      name: 'Laguna Hills HOA',
-      number: '0917-XXX-XXXX',
-    },
-    late_fee_config: {
-      rate_percent: 1, // 1% per month
+    bank_details: bankDetails,
+    gcash_details: gcashDetails,
+    late_fee_config: lateFeeConfig ? {
+      rate_percent: (lateFeeConfig as any).rate_percent,
+      grace_period_days: (lateFeeConfig as any).grace_period_days,
+      max_months: (lateFeeConfig as any).max_months,
+    } : {
+      rate_percent: 1,
       grace_period_days: 30,
       max_months: 12,
     },
@@ -2126,10 +2138,61 @@ adminRouter.put('/payments/settings', async (c) => {
 
   try {
     const body = await c.req.json();
+    const { late_fee_config } = body;
 
-    // TODO: Store these in database settings table
-    // For now, just return success
-    return c.json({ message: 'Settings updated successfully', settings: body });
+    if (late_fee_config) {
+      const { rate_percent, grace_period_days, max_months } = late_fee_config;
+
+      // Validate inputs
+      if (rate_percent !== undefined && (rate_percent < 0 || rate_percent > 100)) {
+        return c.json({ error: 'rate_percent must be between 0 and 100' }, 400);
+      }
+      if (grace_period_days !== undefined && grace_period_days < 0) {
+        return c.json({ error: 'grace_period_days must be non-negative' }, 400);
+      }
+      if (max_months !== undefined && max_months < 0) {
+        return c.json({ error: 'max_months must be non-negative' }, 400);
+      }
+
+      // Update late fee config in database
+      await c.env.DB.prepare(`
+        UPDATE late_fee_config
+        SET rate_percent = COALESCE(?, rate_percent),
+            grace_period_days = COALESCE(?, grace_period_days),
+            max_months = COALESCE(?, max_months),
+            updated_at = datetime('now')
+        WHERE id = 'default'
+      `).bind(
+        rate_percent,
+        grace_period_days,
+        max_months
+      ).run();
+    }
+
+    // Return updated settings
+    const updatedConfig = await c.env.DB.prepare(`
+      SELECT * FROM late_fee_config WHERE id = 'default'
+    `).first();
+
+    return c.json({
+      message: 'Settings updated successfully',
+      settings: {
+        bank_details: body.bank_details || {
+          bank_name: 'BPI',
+          account_name: 'Laguna Hills HOA',
+          account_number: '1234-5678-90',
+        },
+        gcash_details: body.gcash_details || {
+          name: 'Laguna Hills HOA',
+          number: '0917-XXX-XXXX',
+        },
+        late_fee_config: updatedConfig ? {
+          rate_percent: (updatedConfig as any).rate_percent,
+          grace_period_days: (updatedConfig as any).grace_period_days,
+          max_months: (updatedConfig as any).max_months,
+        } : late_fee_config,
+      },
+    });
 
   } catch (error) {
     console.error('Error updating settings:', error);

@@ -3,6 +3,7 @@ import { api, type AdminUser, type AdminHousehold } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import type { LotOwnership, LotStatus, User } from "@/types";
 import { PaymentVerificationQueue } from "@/components/PaymentVerificationQueue";
+import { LateFeeConfig } from "@/components/LateFeeConfig";
 
 type Tab = "users" | "households" | "lots" | "import" | "payments" | "settings";
 
@@ -291,6 +292,9 @@ export function AdminPanelPage() {
   const [paymentStatus, setPaymentStatus] = useState<
     "pending" | "approved" | "rejected"
   >("pending");
+  const [paymentSubTab, setPaymentSubTab] = useState<
+    "verifications" | "settings"
+  >("verifications");
 
   useEffect(() => {
     if (activeTab === "users") loadUsers();
@@ -727,40 +731,79 @@ export function AdminPanelPage() {
 
         {activeTab === "payments" && (
           <div>
-            <h2 className="text-xl font-semibold mb-6">Payment Verification</h2>
+            <h2 className="text-xl font-semibold mb-6">Payment Management</h2>
 
-            <div className="bg-white rounded-lg shadow">
-              <div className="border-b border-gray-200">
-                <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                  {[
-                    { id: "pending", label: "Pending Verifications" },
-                    { id: "approved", label: "Approved" },
-                    { id: "rejected", label: "Rejected" },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setPaymentStatus(tab.id as any)}
-                      className={`${
-                        paymentStatus === tab.id
-                          ? "border-blue-500 text-blue-600"
-                          : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                      } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </nav>
-              </div>
-
-              <div className="p-6">
-                <PaymentVerificationQueue
-                  status={paymentStatus}
-                  onRefresh={() => {
-                    // Optional: refresh logic
-                  }}
-                />
-              </div>
+            {/* Sub-tabs */}
+            <div className="mb-4 border-b border-gray-200">
+              <nav className="-mb-px flex space-x-8" aria-label="Payment tabs">
+                <button
+                  onClick={() => setPaymentSubTab("verifications")}
+                  className={`${
+                    paymentSubTab === "verifications"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                >
+                  Verification Queue
+                </button>
+                <button
+                  onClick={() => setPaymentSubTab("settings")}
+                  className={`${
+                    paymentSubTab === "settings"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                >
+                  Settings
+                </button>
+              </nav>
             </div>
+
+            {/* Verification Queue Sub-tab */}
+            {paymentSubTab === "verifications" && (
+              <div className="bg-white rounded-lg shadow">
+                <div className="border-b border-gray-200">
+                  <nav
+                    className="-mb-px flex space-x-8"
+                    aria-label="Status tabs"
+                  >
+                    {[
+                      { id: "pending", label: "Pending" },
+                      { id: "approved", label: "Approved" },
+                      { id: "rejected", label: "Rejected" },
+                    ].map((tab) => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setPaymentStatus(tab.id as any)}
+                        className={`${
+                          paymentStatus === tab.id
+                            ? "border-blue-500 text-blue-600"
+                            : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+
+                <div className="p-6">
+                  <PaymentVerificationQueue
+                    status={paymentStatus}
+                    onRefresh={() => {
+                      // Optional: refresh logic
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Settings Sub-tab */}
+            {paymentSubTab === "settings" && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <LateFeeConfig />
+              </div>
+            )}
           </div>
         )}
 
