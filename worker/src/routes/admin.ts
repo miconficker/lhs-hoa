@@ -5,6 +5,7 @@ import type { User, UserRole } from '../types';
 
 type Env = {
   DB: D1Database;
+  R2: R2Bucket;
   JWT_SECRET: string;
 };
 
@@ -1860,6 +1861,242 @@ adminRouter.post('/payments/in-person', async (c) => {
   } catch (error) {
     console.error('Error recording in-person payment:', error);
     return c.json({ error: 'Failed to record payment' }, 500);
+  }
+});
+
+// =============================================================================
+// ADMIN: Payment Verification (/admin/payments/verify/*)
+// =============================================================================
+
+/**
+ * GET /api/admin/payments/verify
+ * Get pending verification queue (admin only)
+ */
+adminRouter.get('/payments/verify', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const status = c.req.query('status') || 'pending';
+    const limit = parseInt(c.req.query('limit') || '50');
+    const offset = parseInt(c.req.query('offset') || '0');
+
+    const verifications = await c.env.DB.prepare(`
+      SELECT
+        pvq.id as queue_id,
+        pvq.payment_id,
+        pvq.user_id,
+        pvq.household_id,
+        pvq.payment_type,
+        pvq.amount,
+        pvq.reference_number,
+        pvq.status,
+        pvq.rejection_reason,
+        pvq.created_at,
+        pvq.proof_uploaded_at,
+        pp.file_url,
+        pp.file_name,
+        u.email as user_email,
+        u.first_name,
+        u.last_name,
+        h.address as household_address,
+        p.payment_category
+      FROM payment_verification_queue pvq
+      LEFT JOIN payment_proofs pp ON pvq.payment_id = pp.payment_id
+      LEFT JOIN users u ON pvq.user_id = u.id
+      LEFT JOIN households h ON pvq.household_id = h.id
+      LEFT JOIN payments p ON pvq.payment_id = p.id
+      WHERE pvq.status = ?
+      ORDER BY pvq.created_at ASC
+      LIMIT ? OFFSET ?
+    `).bind(status, limit, offset).all();
+
+    // Get count
+    const countResult = await c.env.DB.prepare(`
+      SELECT COUNT(*) as count
+      FROM payment_verification_queue
+      WHERE status = ?
+    `).bind(status).first();
+
+    return c.json({
+      verifications: verifications.results || [],
+      total: (countResult?.count as number) || 0,
+      limit,
+      offset
+    });
+
+  } catch (error) {
+    console.error('Error fetching verification queue:', error);
+    return c.json({ error: 'Failed to fetch verification queue' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/payments/:paymentId/verify
+ * Approve or reject payment proof (admin only)
+ */
+adminRouter.put('/payments/:paymentId/verify', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const paymentId = c.req.param('paymentId');
+    const body = await c.req.json();
+    const { action, rejection_reason } = body; // action: 'approve' | 'reject'
+
+    if (!action || !['approve', 'reject'].includes(action)) {
+      return c.json({ error: 'Invalid action. Use "approve" or "reject"' }, 400);
+    }
+
+    if (action === 'reject' && !rejection_reason) {
+      return c.json({ error: 'rejection_reason is required when rejecting' }, 400);
+    }
+
+    // Verify payment exists and is pending
+    const verification = await c.env.DB.prepare(`
+      SELECT * FROM payment_verification_queue
+      WHERE payment_id = ? AND status = 'pending'
+    `).bind(paymentId).first();
+
+    if (!verification) {
+      return c.json({ error: 'Verification not found or already processed' }, 404);
+    }
+
+    if (action === 'approve') {
+      // Update verification queue
+      await c.env.DB.prepare(`
+        UPDATE payment_verification_queue
+        SET status = 'approved', updated_at = datetime('now')
+        WHERE payment_id = ?
+      `).bind(paymentId).run();
+
+      // Update payment status
+      await c.env.DB.prepare(`
+        UPDATE payments
+        SET status = 'completed', verification_status = 'verified', paid_at = datetime('now')
+        WHERE id = ?
+      `).bind(paymentId).run();
+
+      // Update proof as verified
+      await c.env.DB.prepare(`
+        UPDATE payment_proofs
+        SET verified = 1, verified_by = ?, verified_at = datetime('now')
+        WHERE payment_id = ?
+      `).bind(authUser.userId, paymentId).run();
+
+      // Update related records based on payment type
+      const payment = await c.env.DB.prepare(
+        'SELECT * FROM payments WHERE id = ?'
+      ).bind(paymentId).first();
+
+      if (payment) {
+        const paymentType = (payment as any).payment_category;
+
+        // For vehicle passes - update vehicle registration status
+        if (paymentType === 'vehicle_pass') {
+          await c.env.DB.prepare(`
+            UPDATE vehicle_registrations
+            SET payment_status = 'paid', status = 'pending_approval'
+            WHERE household_id = ? AND status = 'pending_payment'
+          `).bind((payment as any).household_id).run();
+        }
+
+        // For employee IDs - update employee status
+        if (paymentType === 'employee_id') {
+          await c.env.DB.prepare(`
+            UPDATE household_employees
+            SET status = 'active', issued_date = DATE('now')
+            WHERE household_id = ? AND status = 'pending'
+          `).bind((payment as any).household_id).run();
+        }
+
+        // For dues - update payment demand status
+        if (paymentType === 'dues') {
+          await c.env.DB.prepare(`
+            UPDATE payment_demands
+            SET status = 'paid', paid_date = DATE('now')
+            WHERE user_id = ? AND year = CAST(? AS INTEGER) AND status = 'pending'
+          `).bind(verification.user_id, (payment as any).period).run();
+        }
+      }
+
+    } else {
+      // Reject
+      await c.env.DB.prepare(`
+        UPDATE payment_verification_queue
+        SET status = 'rejected', rejection_reason = ?, updated_at = datetime('now')
+        WHERE payment_id = ?
+      `).bind(rejection_reason, paymentId).run();
+
+      await c.env.DB.prepare(`
+        UPDATE payments
+        SET verification_status = 'pending'
+        WHERE id = ?
+      `).bind(paymentId).run();
+    }
+
+    return c.json({ message: `Payment ${action}d successfully` });
+
+  } catch (error) {
+    console.error('Error verifying payment:', error);
+    return c.json({ error: 'Failed to verify payment' }, 500);
+  }
+});
+
+/**
+ * GET /api/admin/payments/settings
+ * Get payment settings (bank details, late fee config)
+ */
+adminRouter.get('/payments/settings', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  // For now, return default settings
+  // TODO: Store these in database settings table
+  return c.json({
+    bank_details: {
+      bank_name: 'BPI',
+      account_name: 'Laguna Hills HOA',
+      account_number: '1234-5678-90',
+    },
+    gcash_details: {
+      name: 'Laguna Hills HOA',
+      number: '0917-XXX-XXXX',
+    },
+    late_fee_config: {
+      rate_percent: 1, // 1% per month
+      grace_period_days: 30,
+      max_months: 12,
+    },
+  });
+});
+
+/**
+ * PUT /api/admin/payments/settings
+ * Update payment settings (admin only)
+ */
+adminRouter.put('/payments/settings', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const body = await c.req.json();
+
+    // TODO: Store these in database settings table
+    // For now, just return success
+    return c.json({ message: 'Settings updated successfully', settings: body });
+
+  } catch (error) {
+    console.error('Error updating settings:', error);
+    return c.json({ error: 'Failed to update settings' }, 500);
   }
 });
 

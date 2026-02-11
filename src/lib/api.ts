@@ -10,6 +10,7 @@ import type {
   AmenityAvailability,
   Payment,
   PaymentMethod,
+  PaymentCategory,
   Poll,
   PollWithResults,
   Document,
@@ -44,6 +45,9 @@ import type {
   EmployeeStatus,
   VehicleStatus,
   VehiclePaymentStatus,
+  PaymentVerificationQueue,
+  InitiatePaymentResponse,
+  PaymentSettings,
 } from "@/types";
 
 const API_BASE = "/api";
@@ -716,6 +720,36 @@ export const api = {
         method: "PUT",
         body: JSON.stringify({ status }),
       }),
+    // Payment verification endpoints
+    getMyPendingVerifications: () =>
+      apiRequest<{ verifications: PaymentVerificationQueue[] }>(
+        "/payments/my-pending/verifications",
+      ),
+    initiatePayment: (input: {
+      payment_type: PaymentCategory;
+      amount: number;
+      method: PaymentMethod;
+      reference_number?: string;
+      proof: File;
+    }) => {
+      const formData = new FormData();
+      formData.append("payment_type", input.payment_type);
+      formData.append("amount", input.amount.toString());
+      formData.append("method", input.method);
+      if (input.reference_number) {
+        formData.append("reference_number", input.reference_number);
+      }
+      formData.append("proof", input.proof);
+      return apiUpload<InitiatePaymentResponse>("/payments/initiate", formData);
+    },
+    uploadProof: (paymentId: string, proof: File) => {
+      const formData = new FormData();
+      formData.append("proof", proof);
+      return apiUpload<{ message: string; file_url: string }>(
+        `/payments/${paymentId}/proof`,
+        formData,
+      );
+    },
   },
   polls: {
     list: () => apiRequest<PollsResponse>("/polls"),
@@ -1035,6 +1069,42 @@ export const api = {
         "/admin/payments/in-person",
         {
           method: "POST",
+          body: JSON.stringify(input),
+        },
+      ),
+    // Payment verification endpoints
+    getVerificationQueue: (params?: {
+      status?: "pending" | "approved" | "rejected";
+      limit?: number;
+      offset?: number;
+    }) => {
+      const query = new URLSearchParams();
+      if (params?.status) query.append("status", params.status);
+      if (params?.limit) query.append("limit", params.limit.toString());
+      if (params?.offset) query.append("offset", params.offset.toString());
+      const queryString = query.toString();
+      return apiRequest<{
+        verifications: PaymentVerificationQueue[];
+        total: number;
+        limit: number;
+        offset: number;
+      }>(`/admin/payments/verify${queryString ? "?" + queryString : ""}`);
+    },
+    verifyPayment: (
+      paymentId: string,
+      input: { action: "approve" | "reject"; rejection_reason?: string },
+    ) =>
+      apiRequest<{ message: string }>(`/admin/payments/${paymentId}/verify`, {
+        method: "PUT",
+        body: JSON.stringify(input),
+      }),
+    getPaymentSettings: () =>
+      apiRequest<PaymentSettings>("/admin/payments/settings"),
+    updatePaymentSettings: (input: PaymentSettings) =>
+      apiRequest<{ message: string; settings: PaymentSettings }>(
+        "/admin/payments/settings",
+        {
+          method: "PUT",
           body: JSON.stringify(input),
         },
       ),

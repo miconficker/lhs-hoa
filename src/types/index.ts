@@ -184,8 +184,12 @@ export type PaymentMethod =
   | "paymaya"
   | "instapay"
   | "cash"
-  | "in-person";
+  | "in-person"
+  | "bank_transfer";
 export type PaymentStatus = "pending" | "completed" | "failed";
+export type PaymentCategory = "dues" | "vehicle_pass" | "employee_id";
+export type PaymentVerificationStatus = "pending" | "verified" | "not_required";
+export type VerificationQueueStatus = "pending" | "approved" | "rejected";
 
 export interface Payment {
   id: string;
@@ -198,15 +202,94 @@ export interface Payment {
   period: string; // "2025" format for annual dues
   created_at: string;
   paid_at?: string;
-  late_fee_amount?: number; // NEW: Accumulated late fees
-  late_fee_months?: number; // NEW: Number of months late fee calculated for
-  received_by?: string; // NEW: Admin who recorded in-person payment
+  late_fee_amount?: number; // Accumulated late fees
+  late_fee_months?: number; // Number of months late fee calculated for
+  received_by?: string; // Admin who recorded in-person payment
+  payment_category?: PaymentCategory; // Type of payment
+  verification_status?: PaymentVerificationStatus; // Proof verification status
+  proof_uploaded_at?: string; // When proof was uploaded
 }
 
 export interface OutstandingBalance {
   household_id: string;
   total_due: number;
   periods_due: string[];
+}
+
+// =============================================================================
+// Payment Verification System
+// =============================================================================
+
+export interface PaymentProof {
+  id: string;
+  payment_id: string;
+  file_url: string;
+  file_name?: string;
+  uploaded_at: string;
+  verified: boolean;
+  verified_by?: string;
+  verified_at?: string;
+  notes?: string;
+  created_at: string;
+}
+
+export interface PaymentVerificationQueue {
+  id: string; // queue_id
+  payment_id: string;
+  user_id: string;
+  household_id?: string;
+  payment_type: PaymentCategory;
+  amount: number;
+  reference_number?: string;
+  proof_uploaded_at: string;
+  status: VerificationQueueStatus;
+  rejection_reason?: string;
+  notified_admin: boolean;
+  created_at: string;
+  updated_at: string;
+  // Joined fields
+  file_url?: string;
+  file_name?: string;
+  user_email?: string;
+  first_name?: string;
+  last_name?: string;
+  household_address?: string;
+}
+
+export interface InitiatePaymentInput {
+  payment_type: PaymentCategory;
+  amount: number;
+  method: PaymentMethod;
+  reference_number?: string;
+  proof: File;
+}
+
+export interface InitiatePaymentResponse {
+  payment: Payment;
+  proof: { id: string; file_url: string };
+  queue_id: string;
+}
+
+export interface VerifyPaymentInput {
+  action: "approve" | "reject";
+  rejection_reason?: string;
+}
+
+export interface PaymentSettings {
+  bank_details: {
+    bank_name: string;
+    account_name: string;
+    account_number: string;
+  };
+  gcash_details: {
+    name: string;
+    number: string;
+  };
+  late_fee_config: {
+    rate_percent: number;
+    grace_period_days: number;
+    max_months: number;
+  };
 }
 
 // Documents
