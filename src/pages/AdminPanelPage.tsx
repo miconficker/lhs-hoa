@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { api, type AdminUser, type AdminHousehold } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import type { LotOwnership, LotStatus, User } from "@/types";
+import { PaymentVerificationQueue } from "@/components/PaymentVerificationQueue";
 
-type Tab = "users" | "households" | "lots" | "import" | "settings";
+type Tab = "users" | "households" | "lots" | "import" | "payments" | "settings";
 
 interface AdminLotsTabProps {
   lots: LotOwnership[];
@@ -286,6 +287,11 @@ export function AdminPanelPage() {
   // Stats state
   const [stats, setStats] = useState<any>(null);
 
+  // Payments state
+  const [paymentStatus, setPaymentStatus] = useState<
+    "pending" | "approved" | "rejected"
+  >("pending");
+
   useEffect(() => {
     if (activeTab === "users") loadUsers();
     if (activeTab === "households") loadHouseholds();
@@ -426,6 +432,7 @@ export function AdminPanelPage() {
     { id: "households" as Tab, label: "Households", icon: "🏠" },
     { id: "lots" as Tab, label: "Lots", icon: "🏘️" },
     { id: "import" as Tab, label: "Import", icon: "📥" },
+    { id: "payments" as Tab, label: "Payments", icon: "💳" },
     { id: "settings" as Tab, label: "Stats", icon: "📊" },
   ];
 
@@ -714,6 +721,45 @@ export function AdminPanelPage() {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "payments" && (
+          <div>
+            <h2 className="text-xl font-semibold mb-6">Payment Verification</h2>
+
+            <div className="bg-white rounded-lg shadow">
+              <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                  {[
+                    { id: "pending", label: "Pending Verifications" },
+                    { id: "approved", label: "Approved" },
+                    { id: "rejected", label: "Rejected" },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setPaymentStatus(tab.id as any)}
+                      className={`${
+                        paymentStatus === tab.id
+                          ? "border-blue-500 text-blue-600"
+                          : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                      } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </nav>
+              </div>
+
+              <div className="p-6">
+                <PaymentVerificationQueue
+                  status={paymentStatus}
+                  onRefresh={() => {
+                    // Optional: refresh logic
+                  }}
+                />
+              </div>
             </div>
           </div>
         )}
