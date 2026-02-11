@@ -95,6 +95,20 @@ npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0001_schema.sql --l
 
 - **Linter auto-formatting**: Prettier converts single quotes to double quotes on save. Expect formatting-only diffs.
 
+- **Household access control**: Users belong to households via `households.owner_user_id` OR `residents.user_id`. Use helper pattern:
+  ```sql
+  -- Check owner
+  SELECT id FROM households WHERE id = ? AND owner_user_id = ?
+  -- Check resident
+  SELECT id FROM residents WHERE household_id = ? AND user_id = ?
+  ```
+
+- **Common areas**: HOA-owned lots use `owner_user_id = 'developer-owner'` with `lot_type IN ('community', 'utility', 'open_space')`. These don't pay dues or vote.
+
+- **SQL injection safety**: Queries using `.bind()` parameterization are safe. String interpolation in queries is the red flag.
+
+- **Late fee configuration**: Fully configurable via UI at Admin Panel → Payments → Settings (see `LateFeeConfig.tsx`)
+
 ## Documents in Repository
 
 - `Concept-Paper_2.2(2).docx` - Full project concept and requirements
