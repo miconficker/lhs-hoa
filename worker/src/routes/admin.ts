@@ -2210,6 +2210,85 @@ adminRouter.put('/payments/settings', async (c) => {
 });
 
 // =============================================================================
+// ADMIN: Payment Export (/admin/payments/export)
+// =============================================================================
+
+/**
+ * GET /api/admin/payments/export
+ * Get all payments with filters for CSV export (admin only)
+ */
+adminRouter.get('/payments/export', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const startDate = c.req.query('start_date');
+    const endDate = c.req.query('end_date');
+    const paymentType = c.req.query('payment_type');
+    const status = c.req.query('status');
+    const method = c.req.query('method');
+
+    let query = `
+      SELECT
+        p.id,
+        p.household_id,
+        h.address as household_address,
+        p.amount,
+        p.currency,
+        p.method,
+        p.status,
+        p.reference_number,
+        p.period,
+        p.payment_category,
+        p.late_fee_amount,
+        p.late_fee_months,
+        p.received_by,
+        p.created_at,
+        p.paid_at,
+        p.verification_status,
+        p.proof_uploaded_at
+      FROM payments p
+      LEFT JOIN households h ON p.household_id = h.id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+
+    if (startDate) {
+      query += ' AND date(p.created_at) >= ?';
+      params.push(startDate);
+    }
+    if (endDate) {
+      query += ' AND date(p.created_at) <= ?';
+      params.push(endDate);
+    }
+    if (paymentType) {
+      query += ' AND p.payment_category = ?';
+      params.push(paymentType);
+    }
+    if (status) {
+      query += ' AND p.status = ?';
+      params.push(status);
+    }
+    if (method) {
+      query += ' AND p.method = ?';
+      params.push(method);
+    }
+
+    query += ' ORDER BY p.created_at DESC';
+
+    const result = await c.env.DB.prepare(query).bind(...params).all();
+
+    return c.json({ payments: result.results || [] });
+
+  } catch (error) {
+    console.error('Error fetching payments for export:', error);
+    return c.json({ error: 'Failed to fetch payments' }, 500);
+  }
+});
+
+// =============================================================================
 // ADMIN: Pass Management (/admin/pass-management/*)
 // =============================================================================
 

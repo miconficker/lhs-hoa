@@ -1108,6 +1108,26 @@ export const api = {
           body: JSON.stringify(input),
         },
       ),
+    // Export payments with filters
+    exportPayments: (filters?: {
+      start_date?: string;
+      end_date?: string;
+      payment_type?: string;
+      status?: string;
+      method?: string;
+    }) => {
+      const params = new URLSearchParams();
+      if (filters?.start_date) params.append("start_date", filters.start_date);
+      if (filters?.end_date) params.append("end_date", filters.end_date);
+      if (filters?.payment_type)
+        params.append("payment_type", filters.payment_type);
+      if (filters?.status) params.append("status", filters.status);
+      if (filters?.method) params.append("method", filters.method);
+      const queryString = params.toString();
+      return apiRequest<{ payments: Payment[] }>(
+        `/admin/payments/export${queryString ? `?${queryString}` : ""}`,
+      );
+    },
     // Record in-person vote
     recordInPersonVote: (
       pollId: string,

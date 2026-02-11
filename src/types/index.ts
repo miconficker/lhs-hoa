@@ -183,6 +183,8 @@ export type PaymentMethod =
   | "gcash"
   | "paymaya"
   | "instapay"
+  | "bank_transfer"
+  | "cash"
   | "cash"
   | "in-person"
   | "bank_transfer";
@@ -208,6 +210,7 @@ export interface Payment {
   payment_category?: PaymentCategory; // Type of payment
   verification_status?: PaymentVerificationStatus; // Proof verification status
   proof_uploaded_at?: string; // When proof was uploaded
+  household_address?: string; // Populated by JOIN in admin queries
 }
 
 export interface OutstandingBalance {

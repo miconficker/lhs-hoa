@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import type { LotOwnership, LotStatus, User } from "@/types";
 import { PaymentVerificationQueue } from "@/components/PaymentVerificationQueue";
 import { LateFeeConfig } from "@/components/LateFeeConfig";
+import { PaymentExport } from "@/components/PaymentExport";
 
 type Tab = "users" | "households" | "lots" | "import" | "payments" | "settings";
 
@@ -293,7 +294,7 @@ export function AdminPanelPage() {
     "pending" | "approved" | "rejected"
   >("pending");
   const [paymentSubTab, setPaymentSubTab] = useState<
-    "verifications" | "settings"
+    "verifications" | "settings" | "export"
   >("verifications");
 
   useEffect(() => {
@@ -756,6 +757,16 @@ export function AdminPanelPage() {
                 >
                   Settings
                 </button>
+                <button
+                  onClick={() => setPaymentSubTab("export")}
+                  className={`${
+                    paymentSubTab === "export"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                >
+                  Export
+                </button>
               </nav>
             </div>
 
@@ -802,6 +813,13 @@ export function AdminPanelPage() {
             {paymentSubTab === "settings" && (
               <div className="bg-white rounded-lg shadow p-6">
                 <LateFeeConfig />
+              </div>
+            )}
+
+            {/* Export Sub-tab */}
+            {paymentSubTab === "export" && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <PaymentExport />
               </div>
             )}
           </div>
