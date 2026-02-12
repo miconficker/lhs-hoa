@@ -13,6 +13,8 @@ import { documentsRouter } from './routes/documents';
 import { adminRouter } from './routes/admin';
 import { notificationsRouter } from './routes/notifications';
 import { passManagementRouter } from './routes/pass-management';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { logger } from './lib/logger';
 
 type Env = {
   DB: D1Database;
@@ -23,6 +25,10 @@ type Env = {
 
 const app = new Hono<{ Bindings: Env }>();
 
+// Error handler middleware (must be first)
+app.use('/*', errorHandler);
+
+// CORS middleware
 app.use('/*', async (c, next) => {
   const allowedOrigins = c.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:8788', 'http://localhost:5173'];
   const origin = c.req.header('Origin');
@@ -103,7 +109,10 @@ app.get('/api/data/lots.geojson', async (c) => {
       features,
     });
   } catch (error) {
-    console.error('Error generating lots GeoJSON:', error);
+    logger.error('Error generating lots GeoJSON', error, {
+      endpoint: '/api/data/lots.geojson',
+      method: 'GET',
+    });
     return c.json({ type: 'FeatureCollection', features: [] }, 500);
   }
 });
@@ -122,5 +131,8 @@ app.route('/api/documents', documentsRouter);
 app.route('/api/notifications', notificationsRouter);
 app.route('/api/admin', adminRouter);
 app.route('/api/pass-requests', passManagementRouter);
+
+// 404 handler - must be last
+app.notFound(notFoundHandler);
 
 export default app;

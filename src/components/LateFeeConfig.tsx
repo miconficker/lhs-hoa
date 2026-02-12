@@ -56,7 +56,7 @@ export function LateFeeConfig({ onSettingsChange }: LateFeeConfigProps) {
         },
         gcash_details: settings?.gcash_details || {
           name: "Laguna Hills HOA",
-          number: "0917-XXX-XXXX",
+          number: "",
         },
         late_fee_config: {
           rate_percent: ratePercent,

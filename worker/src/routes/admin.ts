@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { getUserFromRequest, hashPassword } from '../lib/auth';
 import type { User, UserRole } from '../types';
+import { logger } from '../lib/logger';
 
 type Env = {
   DB: D1Database;
@@ -264,7 +265,7 @@ adminRouter.delete('/users/:id', async (c) => {
 
     return c.json({ success: true });
   } catch (error) {
-    console.error('Error deleting user:', error);
+    logger.error('Error deleting user', error, { action: 'delete_user' });
     return c.json({ error: 'Failed to delete user' }, 500);
   }
 });
@@ -805,7 +806,7 @@ adminRouter.get('/lots/ownership', async (c) => {
 
     return c.json({ lots: lots.results || [] });
   } catch (error) {
-    console.error('Error fetching lot ownership:', error);
+    logger.error('Error fetching lot ownership', error, { action: 'fetch_lot_ownership' });
     return c.json({ error: 'Failed to fetch lot ownership' }, 500);
   }
 });
@@ -864,7 +865,7 @@ adminRouter.put('/lots/:lotId/owner', async (c) => {
 
     return c.json({ success: true });
   } catch (error) {
-    console.error('Error updating lot owner:', error);
+    logger.error('Error updating lot owner', error, { action: 'update_lot_owner' });
     return c.json({ error: 'Failed to update lot owner' }, 500);
   }
 });
@@ -908,7 +909,7 @@ adminRouter.put('/lots/:lotId/status', async (c) => {
 
     return c.json({ success: true });
   } catch (error) {
-    console.error('Error updating lot status:', error);
+    logger.error('Error updating lot status', error, { action: 'update_lot_status' });
     return c.json({ error: 'Failed to update lot status' }, 500);
   }
 });
@@ -952,7 +953,7 @@ adminRouter.put('/lots/:lotId/type', async (c) => {
 
     return c.json({ success: true });
   } catch (error) {
-    console.error('Error updating lot type:', error);
+    logger.error('Error updating lot type', error, { action: 'update_lot_type' });
     return c.json({ error: 'Failed to update lot type' }, 500);
   }
 });
@@ -997,7 +998,7 @@ adminRouter.put('/lots/:lotId/size', async (c) => {
 
     return c.json({ success: true });
   } catch (error) {
-    console.error('Error updating lot size:', error);
+    logger.error('Error updating lot size', error, { action: 'update_lot_size' });
     return c.json({ error: 'Failed to update lot size' }, 500);
   }
 });
@@ -1043,7 +1044,7 @@ adminRouter.put('/lots/:lotId/label', async (c) => {
 
     return c.json({ success: true });
   } catch (error) {
-    console.error('Error updating lot label:', error);
+    logger.error('Error updating lot label', error, { action: 'update_lot_label' });
     return c.json({ error: 'Failed to update lot label' }, 500);
   }
 });
@@ -1089,7 +1090,7 @@ adminRouter.put('/lots/:lotId/description', async (c) => {
 
     return c.json({ success: true });
   } catch (error) {
-    console.error('Error updating lot description:', error);
+    logger.error('Error updating lot description', error, { action: 'update_lot_description' });
     return c.json({ error: 'Failed to update lot description' }, 500);
   }
 });
@@ -1145,7 +1146,7 @@ adminRouter.put('/lots/:lotId/polygon', async (c) => {
 
     return c.json({ success: true });
   } catch (error) {
-    console.error('Error updating lot polygon:', error);
+    logger.error('Error updating lot polygon', error, { action: 'update_lot_polygon' });
     return c.json({ error: 'Failed to update lot polygon' }, 500);
   }
 });
@@ -1174,7 +1175,7 @@ adminRouter.get('/homeowners', async (c) => {
 
     return c.json({ homeowners: homeowners.results || [] });
   } catch (error) {
-    console.error('Error fetching homeowners:', error);
+    logger.error('Error fetching homeowners', error, { action: 'fetch_homeowners' });
     return c.json({ error: 'Failed to fetch homeowners' }, 500);
   }
 });
@@ -1228,7 +1229,7 @@ adminRouter.put('/lots/batch/owner', async (c) => {
 
     return c.json({ success: true, count: lot_ids.length });
   } catch (error) {
-    console.error('Error batch updating lot owner:', error);
+    logger.error('Error batch updating lot owner', error, { action: 'batch_update_lot_owner' });
     return c.json({ error: 'Failed to batch update lot owner' }, 500);
   }
 });
@@ -1298,7 +1299,7 @@ adminRouter.post('/households/merge', async (c) => {
       lots: lots.results.map((l: any) => ({ lot_id: l.id, address: l.address }))
     });
   } catch (error) {
-    console.error('Error merging lots:', error);
+    logger.error('Error merging lots', error, { action: 'merge_lots' });
     return c.json({ error: 'Failed to merge lots' }, 500);
   }
 });
@@ -1330,7 +1331,7 @@ adminRouter.post('/households/unmerge', async (c) => {
 
     return c.json({ success: true, lot_id });
   } catch (error) {
-    console.error('Error unmerging lot:', error);
+    logger.error('Error unmerging lot', error, { action: 'unmerge_lot' });
     return c.json({ error: 'Failed to unmerge lot' }, 500);
   }
 });
@@ -1462,7 +1463,7 @@ adminRouter.post('/sync-lots', async (c) => {
       },
     });
   } catch (error) {
-    console.error('Error syncing lots:', error);
+    logger.error('Error syncing lots', error, { action: 'sync_lots' });
     return c.json({ error: 'Failed to sync lots' }, 500);
   }
 });
@@ -1497,7 +1498,7 @@ adminRouter.get('/dues-rates', async (c) => {
 
     return c.json({ dues_rates: rates.results || [] });
   } catch (error) {
-    console.error('Error fetching dues rates:', error);
+    logger.error('Error fetching dues rates', error, { action: 'fetch_dues_rates' });
     return c.json({ error: 'Failed to fetch dues rates' }, 500);
   }
 });
@@ -1544,7 +1545,7 @@ adminRouter.post('/dues-rates', async (c) => {
 
     return c.json({ dues_rate: newRate }, 201);
   } catch (error) {
-    console.error('Error creating dues rate:', error);
+    logger.error('Error creating dues rate', error, { action: 'create_dues_rate' });
     return c.json({ error: 'Failed to create dues rate' }, 500);
   }
 });
@@ -1602,7 +1603,7 @@ adminRouter.put('/dues-rates/:id', async (c) => {
 
     return c.json({ dues_rate: updated });
   } catch (error) {
-    console.error('Error updating dues rate:', error);
+    logger.error('Error updating dues rate', error, { action: 'update_dues_rate' });
     return c.json({ error: 'Failed to update dues rate' }, 500);
   }
 });
@@ -1634,7 +1635,7 @@ adminRouter.delete('/dues-rates/:id', async (c) => {
 
     return c.json({ success: true });
   } catch (error) {
-    console.error('Error deleting dues rate:', error);
+    logger.error('Error deleting dues rate', error, { action: 'delete_dues_rate' });
     return c.json({ error: 'Failed to delete dues rate' }, 500);
   }
 });
@@ -1660,7 +1661,7 @@ adminRouter.get('/dues-rates/active', async (c) => {
 
     return c.json({ active_rate: active || null });
   } catch (error) {
-    console.error('Error fetching active dues rate:', error);
+    logger.error('Error fetching active dues rate', error, { action: 'fetch_active_dues_rate' });
     return c.json({ error: 'Failed to fetch active dues rate' }, 500);
   }
 });
@@ -1752,7 +1753,7 @@ adminRouter.post('/payment-demands/create', async (c) => {
 
     return c.json({ results });
   } catch (error) {
-    console.error('Error creating payment demands:', error);
+    logger.error('Error creating payment demands', error, { action: 'create_payment_demands' });
     return c.json({ error: 'Failed to create payment demands' }, 500);
   }
 });
@@ -1810,7 +1811,7 @@ adminRouter.get('/payment-demands', async (c) => {
 
     return c.json({ payment_demands: demands.results || [] });
   } catch (error) {
-    console.error('Error fetching payment demands:', error);
+    logger.error('Error fetching payment demands', error, { action: 'fetch_payment_demands' });
     return c.json({ error: 'Failed to fetch payment demands' }, 500);
   }
 });
@@ -1875,7 +1876,7 @@ adminRouter.post('/payments/in-person', async (c) => {
 
     return c.json({ payment, late_fees: lateFeeAmount }, 201);
   } catch (error) {
-    console.error('Error recording in-person payment:', error);
+    logger.error('Error recording in-person payment', error, { action: 'record_in_person_payment' });
     return c.json({ error: 'Failed to record payment' }, 500);
   }
 });
@@ -1944,7 +1945,7 @@ adminRouter.get('/payments/verify', async (c) => {
     });
 
   } catch (error) {
-    console.error('Error fetching verification queue:', error);
+    logger.error('Error fetching verification queue', error, { action: 'fetch_verification_queue' });
     return c.json({ error: 'Failed to fetch verification queue' }, 500);
   }
 });
@@ -2088,7 +2089,7 @@ adminRouter.put('/payments/:paymentId/verify', async (c) => {
     return c.json({ message: `Payment ${action}d successfully` });
 
   } catch (error) {
-    console.error('Error verifying payment:', error);
+    logger.error('Error verifying payment', error, { action: 'verify_payment' });
     return c.json({ error: 'Failed to verify payment' }, 500);
   }
 });
@@ -2275,7 +2276,7 @@ adminRouter.put('/payments/settings', async (c) => {
     });
 
   } catch (error) {
-    console.error('Error updating settings:', error);
+    logger.error('Error updating settings', error, { action: 'update_settings' });
     return c.json({ error: 'Failed to update settings' }, 500);
   }
 });
@@ -2308,7 +2309,7 @@ adminRouter.get('/settings', async (c) => {
 
     return c.json({ settings: settingsObj });
   } catch (error) {
-    console.error('Error fetching system settings:', error);
+    logger.error('Error fetching system settings', error, { action: 'fetch_system_settings' });
     return c.json({ error: 'Failed to fetch settings' }, 500);
   }
 });
@@ -2349,7 +2350,7 @@ adminRouter.put('/settings/:key', async (c) => {
       setting: updated,
     });
   } catch (error) {
-    console.error('Error updating system setting:', error);
+    logger.error('Error updating system setting', error, { action: 'update_system_setting' });
     return c.json({ error: 'Failed to update setting' }, 500);
   }
 });
@@ -2428,7 +2429,7 @@ adminRouter.get('/payments/export', async (c) => {
     return c.json({ payments: result.results || [] });
 
   } catch (error) {
-    console.error('Error fetching payments for export:', error);
+    logger.error('Error fetching payments for export', error, { action: 'fetch_payments_export' });
     return c.json({ error: 'Failed to fetch payments' }, 500);
   }
 });
@@ -2522,7 +2523,7 @@ adminRouter.get('/pass-management/stats', async (c) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching pass stats:', error);
+    logger.error('Error fetching pass stats', error, { action: 'fetch_pass_stats' });
     return c.json({ error: 'Failed to fetch pass statistics' }, 500);
   }
 });
@@ -2590,7 +2591,7 @@ adminRouter.get('/pass-management/employees', async (c) => {
 
     return c.json({ employees: employees.results || [] });
   } catch (error) {
-    console.error('Error fetching employees:', error);
+    logger.error('Error fetching employees', error, { action: 'fetch_employees' });
     return c.json({ error: 'Failed to fetch employees' }, 500);
   }
 });
@@ -2629,7 +2630,7 @@ adminRouter.get('/pass-management/employees/:id', async (c) => {
 
     return c.json({ employee });
   } catch (error) {
-    console.error('Error fetching employee:', error);
+    logger.error('Error fetching employee', error, { action: 'fetch_employee' });
     return c.json({ error: 'Failed to fetch employee' }, 500);
   }
 });
@@ -2744,7 +2745,7 @@ adminRouter.get('/pass-management/employees/:id/print', async (c) => {
 
     return c.html(idCardHtml);
   } catch (error) {
-    console.error('Error generating ID card:', error);
+    logger.error('Error generating ID card', error, { action: 'generate_id_card' });
     return c.json({ error: 'Failed to generate ID card' }, 500);
   }
 });
@@ -2809,7 +2810,7 @@ adminRouter.put('/pass-management/employees/:id/status', async (c) => {
 
     return c.json({ employee: updated });
   } catch (error) {
-    console.error('Error updating employee status:', error);
+    logger.error('Error updating employee status', error, { action: 'update_employee_status' });
     return c.json({ error: 'Failed to update employee status' }, 500);
   }
 });
@@ -2883,7 +2884,7 @@ adminRouter.get('/pass-management/vehicles', async (c) => {
 
     return c.json({ vehicles: vehicles.results || [] });
   } catch (error) {
-    console.error('Error fetching vehicles:', error);
+    logger.error('Error fetching vehicles', error, { action: 'fetch_vehicles' });
     return c.json({ error: 'Failed to fetch vehicles' }, 500);
   }
 });
@@ -2922,7 +2923,7 @@ adminRouter.get('/pass-management/vehicles/:id', async (c) => {
 
     return c.json({ vehicle });
   } catch (error) {
-    console.error('Error fetching vehicle:', error);
+    logger.error('Error fetching vehicle', error, { action: 'fetch_vehicle' });
     return c.json({ error: 'Failed to fetch vehicle' }, 500);
   }
 });
@@ -2982,7 +2983,7 @@ adminRouter.put('/pass-management/vehicles/:id/status', async (c) => {
 
     return c.json({ vehicle: updated });
   } catch (error) {
-    console.error('Error updating vehicle status:', error);
+    logger.error('Error updating vehicle status', error, { action: 'update_vehicle_status' });
     return c.json({ error: 'Failed to update vehicle status' }, 500);
   }
 });
@@ -3049,7 +3050,7 @@ adminRouter.put('/pass-management/vehicles/:id/assign-rfid', async (c) => {
 
     return c.json({ vehicle: updated });
   } catch (error) {
-    console.error('Error assigning RFID:', error);
+    logger.error('Error assigning RFID', error, { action: 'assign_rfid' });
     return c.json({ error: 'Failed to assign RFID' }, 500);
   }
 });
@@ -3116,7 +3117,7 @@ adminRouter.put('/pass-management/vehicles/:id/assign-sticker', async (c) => {
 
     return c.json({ vehicle: updated });
   } catch (error) {
-    console.error('Error assigning sticker:', error);
+    logger.error('Error assigning sticker', error, { action: 'assign_sticker' });
     return c.json({ error: 'Failed to assign sticker' }, 500);
   }
 });
@@ -3181,7 +3182,7 @@ adminRouter.post('/pass-management/vehicles/:id/record-payment', async (c) => {
 
     return c.json({ vehicle: updated, payment_id: paymentId });
   } catch (error) {
-    console.error('Error recording payment:', error);
+    logger.error('Error recording payment', error, { action: 'record_payment' });
     return c.json({ error: 'Failed to record payment' }, 500);
   }
 });
@@ -3218,7 +3219,7 @@ adminRouter.get('/pass-management/fees', async (c) => {
 
     return c.json({ fees: Object.values(feeMap) });
   } catch (error) {
-    console.error('Error fetching pass fees:', error);
+    logger.error('Error fetching pass fees', error, { action: 'fetch_pass_fees' });
     return c.json({ error: 'Failed to fetch pass fees' }, 500);
   }
 });
@@ -3270,7 +3271,7 @@ adminRouter.put('/pass-management/fees', async (c) => {
 
     return c.json({ fees: updated });
   } catch (error) {
-    console.error('Error updating pass fees:', error);
+    logger.error('Error updating pass fees', error, { action: 'update_pass_fees' });
     return c.json({ error: 'Failed to update pass fees' }, 500);
   }
 });
@@ -3372,7 +3373,7 @@ adminRouter.post('/lots/import-polygons', async (c) => {
       },
     });
   } catch (error) {
-    console.error('Error importing lot polygons:', error);
+    logger.error('Error importing lot polygons', error, { action: 'import_lot_polygons' });
     return c.json({ error: 'Failed to import lot polygons' }, 500);
   }
 });

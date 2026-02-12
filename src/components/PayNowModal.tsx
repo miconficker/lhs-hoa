@@ -99,7 +99,7 @@ export function PayNowModal({
           account_name: "Laguna Hills HOA",
           account_number: "1234-5678-90",
         });
-        setGcashDetails({ name: "Laguna Hills HOA", number: "0917-XXX-XXXX" });
+        setGcashDetails({ name: "Laguna Hills HOA", number: "" });
       }
     };
     if (isOpen) {

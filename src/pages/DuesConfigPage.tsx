@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { DuesRate } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
+import { logger } from "@/lib/logger";
 import {
   DollarSign,
   Plus,
@@ -40,7 +41,9 @@ export function DuesConfigPage() {
         setRates(result.data.dues_rates);
       }
     } catch (error) {
-      console.error("Error loading dues rates:", error);
+      logger.error("Error loading dues rates", error, {
+        component: "DuesConfigPage",
+      });
       showMessage("error", "Failed to load dues rates");
     }
     setLoading(false);
@@ -121,7 +124,9 @@ export function DuesConfigPage() {
 
       handleCancel();
     } catch (error: any) {
-      console.error("Error saving dues rate:", error);
+      logger.error("Error saving dues rate", error, {
+        component: "DuesConfigPage",
+      });
       showMessage("error", error.message || "Failed to save dues rate");
     }
 
@@ -142,7 +147,9 @@ export function DuesConfigPage() {
       showMessage("success", "Dues rate deleted successfully");
       setRates(rates.filter((r) => r.id !== rate.id));
     } catch (error: any) {
-      console.error("Error deleting dues rate:", error);
+      logger.error("Error deleting dues rate", error, {
+        component: "DuesConfigPage",
+      });
       showMessage("error", error.message || "Failed to delete dues rate");
     }
   }

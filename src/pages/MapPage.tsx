@@ -25,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { logger } from "@/lib/logger";
 
 // Fix for default marker icons in React Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -462,7 +463,7 @@ export function MapPage() {
           setBlocksData(blocks);
         }
       } catch (err) {
-        console.error("Error loading map data:", err);
+        logger.error("Error loading map data", err, { component: "MapPage" });
         setError("Failed to load map data");
       }
 

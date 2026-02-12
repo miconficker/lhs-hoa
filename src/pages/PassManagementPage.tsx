@@ -22,6 +22,7 @@ import { Badge as UIBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { logger } from "@/lib/logger";
 import {
   Select,
   SelectContent,
@@ -219,7 +220,9 @@ export function PassManagementPage() {
         });
       }
     } catch (err) {
-      console.error("Error loading data:", err);
+      logger.error("Error loading data", err, {
+        component: "PassManagementPage",
+      });
       setError("Failed to load pass management data");
     }
 

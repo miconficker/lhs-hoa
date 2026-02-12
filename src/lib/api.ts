@@ -50,6 +50,8 @@ import type {
   PaymentSettings,
 } from "@/types";
 
+import { logger } from "@/lib/logger";
+
 const API_BASE = "/api";
 
 interface ApiResponse<T = any> {
@@ -95,7 +97,7 @@ export async function apiRequest<T>(
 
   // Debug logging for errors
   if (import.meta.env.DEV && !response.ok) {
-    console.error(`[API Error] ${endpoint}`, {
+    logger.error(`API error: ${endpoint}`, {
       status: response.status,
       statusText: response.statusText,
       responseBody: text,
@@ -116,7 +118,7 @@ export async function apiRequest<T>(
     }
     return { data };
   } catch (e) {
-    console.error("JSON parse error:", e, "Response text:", text);
+    logger.error("JSON parse error", e, { responseText: text });
     return { error: "Invalid response from server" };
   }
 }
@@ -149,7 +151,7 @@ export async function apiUpload<T>(
 
   // Debug logging for errors
   if (import.meta.env.DEV && !response.ok) {
-    console.error(`[API Error] ${endpoint}`, {
+    logger.error(`API error: ${endpoint}`, {
       status: response.status,
       statusText: response.statusText,
       responseBody: text,
@@ -170,7 +172,7 @@ export async function apiUpload<T>(
     }
     return { data };
   } catch (e) {
-    console.error("JSON parse error:", e, "Response text:", text);
+    logger.error("JSON parse error", e, { responseText: text });
     return { error: "Invalid response from server" };
   }
 }

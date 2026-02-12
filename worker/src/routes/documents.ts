@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
-import { z } from 'zod';
+
+import { logger } from '../lib/logger';import { z } from 'zod';
 import { getUserFromRequest } from '../lib/auth';
 
 type Env = {
@@ -132,7 +133,7 @@ documentsRouter.post('/', async (c) => {
 
     return c.json({ document }, 201);
   } catch (error) {
-    console.error('Upload error:', error);
+    logger.error('Upload error', error, { action: 'upload' });
     return c.json({ error: 'Failed to upload document' }, 500);
   }
 });

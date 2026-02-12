@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { Trees, Building2, Droplets } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { logger } from "@/lib/logger";
 
 interface CommunityLot {
   lot_id: string;
@@ -37,7 +38,9 @@ export function CommonAreasPage() {
         setLots(commonLots as CommunityLot[]);
       }
     } catch (error) {
-      console.error("Error loading common lots:", error);
+      logger.error("Error loading common lots", error, {
+        component: "CommonAreasPage",
+      });
     }
     setLoading(false);
   }

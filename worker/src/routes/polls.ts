@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
-import { z } from 'zod';
+
+import { logger } from '../lib/logger';import { z } from 'zod';
 import { getUserFromRequest } from '../lib/auth';
 
 type Env = {
@@ -394,7 +395,7 @@ pollsRouter.post('/:id/record-vote', async (c) => {
       message: `In-person vote recorded for ${lotCount} lot(s)`
     }, 201);
   } catch (error) {
-    console.error('Error recording in-person vote:', error);
+    logger.error('Error recording in-person vote', error, { action: 'record_in_person_vote' });
     return c.json({ error: 'Failed to record vote' }, 500);
   }
 });

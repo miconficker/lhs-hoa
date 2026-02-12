@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
-import { z } from 'zod';
+
+import { logger } from '../lib/logger';import { z } from 'zod';
 import {
   hashPassword,
   verifyPassword,
@@ -207,7 +208,7 @@ authRouter.get('/google/callback', async (c) => {
     return c.redirect(`${new URL(c.req.url).origin}/login?token=${token}&provider=google`);
 
   } catch (err) {
-    console.error('Google OAuth error:', err);
+    logger.error('Google OAuth error', err, { action: 'google_oauth' });
     return c.redirect(
       `${new URL(c.req.url).origin}/login?error=oauth_error&message=${encodeURIComponent('Failed to complete login')}`
     );

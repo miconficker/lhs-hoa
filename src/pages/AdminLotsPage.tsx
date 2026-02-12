@@ -16,6 +16,7 @@ import {
 } from "@/types";
 import { Map, Save, X, Link2, Unlink } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { logger } from "@/lib/logger";
 
 // Fix for default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -96,7 +97,7 @@ export function AdminLotsPage() {
         setGeojsonData(geo);
       }
     } catch (error) {
-      console.error("Error loading data:", error);
+      logger.error("Error loading data", error, { component: "AdminLotsPage" });
     }
     setLoading(false);
   }
@@ -171,7 +172,7 @@ export function AdminLotsPage() {
       await loadData();
       setSelectedLot(null);
     } catch (error) {
-      console.error("Error saving lot:", error);
+      logger.error("Error saving lot", error, { component: "AdminLotsPage" });
       alert("Failed to save lot changes");
     }
     setSaving(false);
@@ -197,7 +198,9 @@ export function AdminLotsPage() {
       await loadData();
       setSelectedLots(new Set());
     } catch (error) {
-      console.error("Error batch assigning:", error);
+      logger.error("Error batch assigning", error, {
+        component: "AdminLotsPage",
+      });
       alert("Failed to batch assign lots");
     }
     setSaving(false);
@@ -216,7 +219,7 @@ export function AdminLotsPage() {
       setSelectedLots(new Set());
       await loadData();
     } catch (error) {
-      console.error("Error merging lots:", error);
+      logger.error("Error merging lots", error, { component: "AdminLotsPage" });
       alert("Failed to merge lots");
     }
     setSaving(false);
@@ -231,7 +234,9 @@ export function AdminLotsPage() {
       await api.admin.unmergeHousehold(lotId);
       await loadData();
     } catch (error) {
-      console.error("Error unmerging lot:", error);
+      logger.error("Error unmerging lot", error, {
+        component: "AdminLotsPage",
+      });
       alert("Failed to unmerge lot");
     }
     setSaving(false);

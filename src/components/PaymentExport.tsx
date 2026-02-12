@@ -6,6 +6,7 @@ import {
   generateExportFilename,
 } from "@/lib/paymentExport";
 import { Download, FileText } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface ExportFilters {
   start_date?: string;
@@ -45,7 +46,7 @@ export function PaymentExport() {
       const filename = generateExportFilename("payments");
       downloadCSV(csvContent, filename);
     } catch (error) {
-      console.error("Export error:", error);
+      logger.error("Export error", error, { component: "PaymentExport" });
       alert("Failed to export payments");
     } finally {
       setIsExporting(false);

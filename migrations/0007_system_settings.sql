@@ -16,7 +16,7 @@ CREATE INDEX IF NOT EXISTS idx_system_settings_category ON system_settings(categ
 -- Seed default settings
 INSERT OR REPLACE INTO system_settings (id, setting_key, setting_value, category, description) VALUES
   ('config-gcash-name', 'gcash_name', 'Laguna Hills HOA', 'payment', 'GCash account name'),
-  ('config-gcash-number', 'gcash_number', '0917-XXX-XXXX', 'payment', 'GCash contact number'),
+  ('config-gcash-number', 'gcash_number', '', 'payment', 'GCash contact number'),
   ('config-bank-name', 'bank_name', 'BPI', 'payment', 'Bank name'),
   ('config-bank-account', 'bank_account', '1234-5678-90', 'payment', 'Bank account number'),
   ('config-bank-account-name', 'bank_account_name', 'Laguna Hills HOA', 'payment', 'Bank account name'),

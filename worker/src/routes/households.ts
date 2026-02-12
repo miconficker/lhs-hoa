@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
-import { getUserFromRequest } from '../lib/auth';
+
+import { logger } from '../lib/logger';import { getUserFromRequest } from '../lib/auth';
 
 type Env = {
   DB: D1Database;
@@ -217,7 +218,7 @@ householdsRouter.get('/my-lots', async (c) => {
       lots: myLots,
     });
   } catch (error) {
-    console.error('Error fetching my lots:', error);
+    logger.error('Error fetching my lots', error, { action: 'fetch_my_lots' });
     return c.json({ error: 'Failed to fetch my lots' }, 500);
   }
 });
@@ -256,7 +257,7 @@ householdsRouter.get('/lots', async (c) => {
 
     return c.json({ lots: lots.results || [] });
   } catch (error) {
-    console.error('Error fetching lots:', error);
+    logger.error('Error fetching lots', error, { action: 'fetch_lots' });
     return c.json({ error: 'Failed to fetch lots' }, 500);
   }
 });
@@ -394,7 +395,7 @@ householdsRouter.put('/:id', async (c) => {
 
     return c.json({ household: updated });
   } catch (error) {
-    console.error('Error updating household:', error);
+    logger.error('Error updating household', error, { action: 'update_household' });
     return c.json({ error: 'Failed to update household' }, 500);
   }
 });

@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
-import { getUserFromRequest } from '../lib/auth';
+
+import { logger } from '../lib/logger';import { getUserFromRequest } from '../lib/auth';
 
 type Env = {
   DB: D1Database;
@@ -138,7 +139,7 @@ passManagementRouter.get('/employees', async (c) => {
 
     return c.json({ employees: employees.results || [] });
   } catch (error) {
-    console.error('Error fetching employees:', error);
+    logger.error('Error fetching employees', error, { action: 'fetch_employees' });
     return c.json({ error: 'Failed to fetch employees' }, 500);
   }
 });
@@ -233,7 +234,7 @@ passManagementRouter.post('/employees', async (c) => {
 
     return c.json({ employee }, 201);
   } catch (error) {
-    console.error('Error creating employee:', error);
+    logger.error('Error creating employee', error, { action: 'create_employee' });
     return c.json({ error: 'Failed to create employee' }, 500);
   }
 });
@@ -316,7 +317,7 @@ passManagementRouter.put('/employees/:id', async (c) => {
 
     return c.json({ employee: updated });
   } catch (error) {
-    console.error('Error updating employee:', error);
+    logger.error('Error updating employee', error, { action: 'update_employee' });
     return c.json({ error: 'Failed to update employee' }, 500);
   }
 });
@@ -356,7 +357,7 @@ passManagementRouter.delete('/employees/:id', async (c) => {
 
     return c.json({ success: true });
   } catch (error) {
-    console.error('Error revoking employee:', error);
+    logger.error('Error revoking employee', error, { action: 'revoke_employee' });
     return c.json({ error: 'Failed to revoke employee' }, 500);
   }
 });
@@ -399,7 +400,7 @@ passManagementRouter.get('/vehicles', async (c) => {
 
     return c.json({ vehicles: vehicles.results || [] });
   } catch (error) {
-    console.error('Error fetching vehicles:', error);
+    logger.error('Error fetching vehicles', error, { action: 'fetch_vehicles' });
     return c.json({ error: 'Failed to fetch vehicles' }, 500);
   }
 });
@@ -497,7 +498,7 @@ passManagementRouter.post('/vehicles', async (c) => {
 
     return c.json({ vehicle }, 201);
   } catch (error) {
-    console.error('Error creating vehicle:', error);
+    logger.error('Error creating vehicle', error, { action: 'create_vehicle' });
     return c.json({ error: 'Failed to create vehicle' }, 500);
   }
 });
@@ -571,7 +572,7 @@ passManagementRouter.put('/vehicles/:id', async (c) => {
 
     return c.json({ vehicle: updated });
   } catch (error) {
-    console.error('Error updating vehicle:', error);
+    logger.error('Error updating vehicle', error, { action: 'update_vehicle' });
     return c.json({ error: 'Failed to update vehicle' }, 500);
   }
 });
@@ -611,7 +612,7 @@ passManagementRouter.delete('/vehicles/:id', async (c) => {
 
     return c.json({ success: true });
   } catch (error) {
-    console.error('Error cancelling vehicle:', error);
+    logger.error('Error cancelling vehicle', error, { action: 'cancel_vehicle' });
     return c.json({ error: 'Failed to cancel vehicle' }, 500);
   }
 });

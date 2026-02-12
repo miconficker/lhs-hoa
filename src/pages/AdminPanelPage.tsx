@@ -5,6 +5,7 @@ import type { LotOwnership, LotStatus, User } from "@/types";
 import { PaymentVerificationQueue } from "@/components/PaymentVerificationQueue";
 import { LateFeeConfig } from "@/components/LateFeeConfig";
 import { PaymentExport } from "@/components/PaymentExport";
+import { logger } from "@/lib/logger";
 
 type Tab = "users" | "households" | "lots" | "import" | "payments" | "settings";
 
@@ -41,7 +42,7 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
       setEditingLot(null);
       onRefresh();
     } catch (error) {
-      console.error("Error saving lot:", error);
+      logger.error("Error saving lot", error, { component: "AdminPanelPage" });
       alert("Failed to save");
     }
   }
@@ -320,7 +321,9 @@ export function AdminPanelPage() {
         setHomeowners(homeownersResult.data.homeowners);
       }
     } catch (error) {
-      console.error("Error loading lots:", error);
+      logger.error("Error loading lots", error, {
+        component: "AdminPanelPage",
+      });
     } finally {
       setLoading(false);
     }

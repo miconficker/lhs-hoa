@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { logger } from "@/lib/logger";
 
 export function MyLotsPage() {
   const { user } = useAuth();
@@ -35,7 +36,7 @@ export function MyLotsPage() {
         setData(result.data);
       }
     } catch (error) {
-      console.error("Error loading my lots:", error);
+      logger.error("Error loading my lots", error, { component: "MyLotsPage" });
     }
     setLoading(false);
   }
@@ -79,7 +80,9 @@ export function MyLotsPage() {
         alert(error.error || "Failed to update address");
       }
     } catch (error) {
-      console.error("Error updating address:", error);
+      logger.error("Error updating address", error, {
+        component: "MyLotsPage",
+      });
       alert("Failed to update address");
     } finally {
       setSaving(false);

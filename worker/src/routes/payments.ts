@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { getUserFromRequest } from '../lib/auth';
+import { logger } from '../lib/logger';
 
 type Env = {
   DB: D1Database;
@@ -370,7 +371,7 @@ paymentsRouter.post('/initiate', async (c) => {
     }, 201);
 
   } catch (error) {
-    console.error('Error initiating payment:', error);
+    logger.error('Error initiating payment', error, { endpoint: '/payments/initiate', method: 'POST' });
     return c.json({ error: 'Failed to initiate payment' }, 500);
   }
 });
@@ -449,7 +450,7 @@ paymentsRouter.put('/:paymentId/proof', async (c) => {
     return c.json({ message: 'Proof uploaded successfully', file_url: fileUrl });
 
   } catch (error) {
-    console.error('Error uploading proof:', error);
+    logger.error('Error uploading proof', error, { endpoint: '/payments/:paymentId/proof', method: 'PUT' });
     return c.json({ error: 'Failed to upload proof' }, 500);
   }
 });
