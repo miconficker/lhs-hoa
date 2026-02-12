@@ -28,7 +28,6 @@ const methodIcons: Record<PaymentMethod, React.ReactNode> = {
   instapay: <Landmark className="w-5 h-5" />,
   cash: <Banknote className="w-5 h-5" />,
   "in-person": <Plus className="w-5 h-5" />,
-  bank_transfer: <Landmark className="w-5 h-5" />,
 };
 
 const methodLabels: Record<PaymentMethod, string> = {
@@ -37,7 +36,6 @@ const methodLabels: Record<PaymentMethod, string> = {
   instapay: "Instapay",
   cash: "Cash",
   "in-person": "In-Person",
-  bank_transfer: "Bank Transfer",
 };
 
 export function PaymentsPage() {

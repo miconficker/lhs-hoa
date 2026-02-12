@@ -134,13 +134,27 @@ householdsRouter.get('/my-lots', async (c) => {
     // Check voting eligibility (can vote if no unpaid periods past 30 days)
     const today = new Date();
     let votingStatus: 'eligible' | 'suspended' = 'eligible';
+
+    // Calculate payment status based on unpaid payment demands
+    let paymentStatus: 'current' | 'overdue' | 'suspended' = 'current';
+
     for (const demand of demands.results || []) {
       if (demand.status === 'pending' || demand.status === 'suspended') {
         const dueDate = new Date(demand.due_date as string);
         const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (24 * 60 * 60 * 1000));
+
+        // Check for suspended status
+        if (demand.status === 'suspended') {
+          paymentStatus = 'suspended';
+        }
+        // Check for overdue (more than 30 days past due)
+        else if (daysOverdue > 30) {
+          paymentStatus = 'overdue';
+        }
+
+        // Voting is suspended if any demand is >30 days overdue
         if (daysOverdue >= 30) {
           votingStatus = 'suspended';
-          break;
         }
       }
     }
@@ -185,7 +199,7 @@ householdsRouter.get('/my-lots', async (c) => {
       lot_type: lot.lot_type || 'residential',
       lot_size_sqm: lot.lot_size_sqm,
       annual_dues: lot.annual_dues,
-      payment_status: 'current', // TODO: Calculate per-lot based on payment demands
+      payment_status: paymentStatus, // Calculated from payment demands
       household_group_id: lot.household_group_id,
       is_primary_lot: lot.is_primary_lot,
       merged_lots: lot.merged_lots,

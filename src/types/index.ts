@@ -183,7 +183,6 @@ export type PaymentMethod =
   | "gcash"
   | "paymaya"
   | "instapay"
-  | "bank_transfer"
   | "cash"
   | "in-person";
 export type PaymentStatus = "pending" | "completed" | "failed";
@@ -543,7 +542,10 @@ export type NotificationType =
   | "reminder"
   | "late_notice"
   | "announcement"
-  | "alert";
+  | "alert"
+  | "payment_verification_requested"
+  | "payment_verified"
+  | "payment_rejected";
 
 export interface Notification {
   id: string;

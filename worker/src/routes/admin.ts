@@ -2108,16 +2108,32 @@ adminRouter.get('/payments/settings', async (c) => {
     SELECT * FROM late_fee_config WHERE id = 'default'
   `).first();
 
-  // Bank details are currently hardcoded (could be moved to DB later)
+  // Get bank and GCash details from system_settings
+  const bankNameSetting = await c.env.DB.prepare(`
+    SELECT setting_value FROM system_settings WHERE setting_key = 'bank_name'
+  `).first();
+  const bankAccountSetting = await c.env.DB.prepare(`
+    SELECT setting_value FROM system_settings WHERE setting_key = 'bank_account'
+  `).first();
+  const bankAccountNameSetting = await c.env.DB.prepare(`
+    SELECT setting_value FROM system_settings WHERE setting_key = 'bank_account_name'
+  `).first();
+  const gcashNameSetting = await c.env.DB.prepare(`
+    SELECT setting_value FROM system_settings WHERE setting_key = 'gcash_name'
+  `).first();
+  const gcashNumberSetting = await c.env.DB.prepare(`
+    SELECT setting_value FROM system_settings WHERE setting_key = 'gcash_number'
+  `).first();
+
   const bankDetails = {
-    bank_name: 'BPI',
-    account_name: 'Laguna Hills HOA',
-    account_number: '1234-5678-90',
+    bank_name: (bankNameSetting as any)?.setting_value || 'BPI',
+    account_name: (bankAccountNameSetting as any)?.setting_value || 'Laguna Hills HOA',
+    account_number: (bankAccountSetting as any)?.setting_value || '1234-5678-90',
   };
 
   const gcashDetails = {
-    name: 'Laguna Hills HOA',
-    number: '0917-XXX-XXXX',
+    name: (gcashNameSetting as any)?.setting_value || 'Laguna Hills HOA',
+    number: (gcashNumberSetting as any)?.setting_value || '0917-XXX-XXXX',
   };
 
   return c.json({
@@ -2147,7 +2163,7 @@ adminRouter.put('/payments/settings', async (c) => {
 
   try {
     const body = await c.req.json();
-    const { late_fee_config } = body;
+    const { late_fee_config, bank_details, gcash_details } = body;
 
     if (late_fee_config) {
       const { rate_percent, grace_period_days, max_months } = late_fee_config;
@@ -2178,22 +2194,77 @@ adminRouter.put('/payments/settings', async (c) => {
       ).run();
     }
 
+    // Update bank details in system_settings if provided
+    if (bank_details) {
+      if (bank_details.bank_name !== undefined) {
+        await c.env.DB.prepare(`
+          UPDATE system_settings SET setting_value = ?, updated_at = datetime('now')
+          WHERE setting_key = 'bank_name'
+        `).bind(bank_details.bank_name).run();
+      }
+      if (bank_details.account_name !== undefined) {
+        await c.env.DB.prepare(`
+          UPDATE system_settings SET setting_value = ?, updated_at = datetime('now')
+          WHERE setting_key = 'bank_account_name'
+        `).bind(bank_details.account_name).run();
+      }
+      if (bank_details.account_number !== undefined) {
+        await c.env.DB.prepare(`
+          UPDATE system_settings SET setting_value = ?, updated_at = datetime('now')
+          WHERE setting_key = 'bank_account'
+        `).bind(bank_details.account_number).run();
+      }
+    }
+
+    // Update GCash details in system_settings if provided
+    if (gcash_details) {
+      if (gcash_details.name !== undefined) {
+        await c.env.DB.prepare(`
+          UPDATE system_settings SET setting_value = ?, updated_at = datetime('now')
+          WHERE setting_key = 'gcash_name'
+        `).bind(gcash_details.name).run();
+      }
+      if (gcash_details.number !== undefined) {
+        await c.env.DB.prepare(`
+          UPDATE system_settings SET setting_value = ?, updated_at = datetime('now')
+          WHERE setting_key = 'gcash_number'
+        `).bind(gcash_details.number).run();
+      }
+    }
+
     // Return updated settings
     const updatedConfig = await c.env.DB.prepare(`
       SELECT * FROM late_fee_config WHERE id = 'default'
     `).first();
 
+    // Fetch updated bank and GCash details
+    const bankNameSetting = await c.env.DB.prepare(`
+      SELECT setting_value FROM system_settings WHERE setting_key = 'bank_name'
+    `).first();
+    const bankAccountSetting = await c.env.DB.prepare(`
+      SELECT setting_value FROM system_settings WHERE setting_key = 'bank_account'
+    `).first();
+    const bankAccountNameSetting = await c.env.DB.prepare(`
+      SELECT setting_value FROM system_settings WHERE setting_key = 'bank_account_name'
+    `).first();
+    const gcashNameSetting = await c.env.DB.prepare(`
+      SELECT setting_value FROM system_settings WHERE setting_key = 'gcash_name'
+    `).first();
+    const gcashNumberSetting = await c.env.DB.prepare(`
+      SELECT setting_value FROM system_settings WHERE setting_key = 'gcash_number'
+    `).first();
+
     return c.json({
       message: 'Settings updated successfully',
       settings: {
-        bank_details: body.bank_details || {
-          bank_name: 'BPI',
-          account_name: 'Laguna Hills HOA',
-          account_number: '1234-5678-90',
+        bank_details: {
+          bank_name: (bankNameSetting as any)?.setting_value || 'BPI',
+          account_name: (bankAccountNameSetting as any)?.setting_value || 'Laguna Hills HOA',
+          account_number: (bankAccountSetting as any)?.setting_value || '1234-5678-90',
         },
-        gcash_details: body.gcash_details || {
-          name: 'Laguna Hills HOA',
-          number: '0917-XXX-XXXX',
+        gcash_details: {
+          name: (gcashNameSetting as any)?.setting_value || 'Laguna Hills HOA',
+          number: (gcashNumberSetting as any)?.setting_value || '0917-XXX-XXXX',
         },
         late_fee_config: updatedConfig ? {
           rate_percent: (updatedConfig as any).rate_percent,
@@ -2206,6 +2277,80 @@ adminRouter.put('/payments/settings', async (c) => {
   } catch (error) {
     console.error('Error updating settings:', error);
     return c.json({ error: 'Failed to update settings' }, 500);
+  }
+});
+
+// =============================================================================
+// ADMIN: System Settings (/admin/settings)
+// =============================================================================
+
+/**
+ * GET /api/admin/settings
+ * Get all system settings (admin only)
+ */
+adminRouter.get('/settings', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const settings = await c.env.DB.prepare(`
+      SELECT * FROM system_settings
+      ORDER BY category, setting_key
+    `).all();
+
+    // Convert to key-value object for easier frontend consumption
+    const settingsObj: Record<string, string> = {};
+    for (const setting of settings.results || []) {
+      settingsObj[(setting as any).setting_key] = (setting as any).setting_value;
+    }
+
+    return c.json({ settings: settingsObj });
+  } catch (error) {
+    console.error('Error fetching system settings:', error);
+    return c.json({ error: 'Failed to fetch settings' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/settings/:key
+ * Update a system setting (admin only)
+ */
+adminRouter.put('/settings/:key', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const key = c.req.param('key');
+    const body = await c.req.json();
+    const { value } = body;
+
+    if (!value) {
+      return c.json({ error: 'value is required' }, 400);
+    }
+
+    // Update the setting
+    await c.env.DB.prepare(`
+      UPDATE system_settings
+      SET setting_value = ?, updated_at = datetime('now')
+      WHERE setting_key = ?
+    `).bind(value, key).run();
+
+    // Return updated setting
+    const updated = await c.env.DB.prepare(`
+      SELECT * FROM system_settings WHERE setting_key = ?
+    `).bind(key).first();
+
+    return c.json({
+      message: 'Setting updated successfully',
+      setting: updated,
+    });
+  } catch (error) {
+    console.error('Error updating system setting:', error);
+    return c.json({ error: 'Failed to update setting' }, 500);
   }
 });
 

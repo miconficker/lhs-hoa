@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Upload, AlertCircle, CheckCircle2, Landmark } from "lucide-react";
 import { api } from "@/lib/api";
 import type { PaymentCategory, PaymentMethod } from "@/types";
@@ -35,11 +35,6 @@ const paymentMethods: {
   label: string;
   icon: React.ReactNode;
 }[] = [
-  {
-    value: "bank_transfer",
-    label: "Bank Transfer (BPI)",
-    icon: <Landmark className="w-4 h-4" />,
-  },
   { value: "gcash", label: "GCash", icon: <span className="text-sm">GC</span> },
   {
     value: "paymaya",
@@ -47,9 +42,19 @@ const paymentMethods: {
     icon: <span className="text-sm">PM</span>,
   },
   {
+    value: "instapay",
+    label: "InstaPay",
+    icon: <Landmark className="w-4 h-4" />,
+  },
+  {
     value: "cash",
     label: "Cash (In-Person)",
     icon: <span className="text-sm">💵</span>,
+  },
+  {
+    value: "in-person",
+    label: "In-Person (Other)",
+    icon: <span className="text-sm">👤</span>,
   },
 ];
 
@@ -63,13 +68,44 @@ export function PayNowModal({
 }: PayNowModalProps) {
   const [paymentType, setPaymentType] = useState<PaymentCategory>(defaultType);
   const [amount, setAmount] = useState(defaultAmount?.toString() || "");
-  const [method, setMethod] = useState<PaymentMethod>("bank_transfer");
+  const [method, setMethod] = useState<PaymentMethod>("gcash");
   const [referenceNumber, setReferenceNumber] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [step, setStep] = useState<"form" | "review" | "success">("form");
+
+  // Fetch payment settings on mount
+  const [bankDetails, setBankDetails] = useState({
+    bank_name: "",
+    account_name: "",
+    account_number: "",
+  });
+  const [gcashDetails, setGcashDetails] = useState({ name: "", number: "" });
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await api.admin.getPaymentSettings();
+        if (response.data) {
+          setBankDetails(response.data.bank_details);
+          setGcashDetails(response.data.gcash_details);
+        }
+      } catch {
+        // Use defaults if API fails
+        setBankDetails({
+          bank_name: "BPI",
+          account_name: "Laguna Hills HOA",
+          account_number: "1234-5678-90",
+        });
+        setGcashDetails({ name: "Laguna Hills HOA", number: "0917-XXX-XXXX" });
+      }
+    };
+    if (isOpen) {
+      loadSettings();
+    }
+  }, [isOpen]);
 
   // householdId is used for future features like fetching pending amounts
   void householdId;
@@ -125,7 +161,11 @@ export function PayNowModal({
       return;
     }
 
-    if (method !== "cash" && !referenceNumber.trim()) {
+    if (
+      method !== "cash" &&
+      method !== "in-person" &&
+      !referenceNumber.trim()
+    ) {
       setError("Please enter a reference number");
       return;
     }
@@ -167,17 +207,6 @@ export function PayNowModal({
     setPreview(null);
     setError("");
     onClose();
-  };
-
-  const bankDetails = {
-    bank_name: "BPI",
-    account_name: "Laguna Hills HOA",
-    account_number: "1234-5678-90",
-  };
-
-  const gcashDetails = {
-    name: "Laguna Hills HOA",
-    number: "0917-XXX-XXXX",
   };
 
   return (
@@ -300,11 +329,11 @@ export function PayNowModal({
               </div>
             </div>
 
-            {/* Bank Details (shown when bank_transfer is selected) */}
-            {method === "bank_transfer" && step === "form" && (
+            {/* InstaPay Details (shown when instapay is selected) */}
+            {method === "instapay" && step === "form" && (
               <div className="bg-blue-50 p-4 rounded-lg">
                 <h4 className="font-medium text-blue-900 mb-2">
-                  Bank Transfer Details
+                  InstaPay Details
                 </h4>
                 <div className="text-sm text-blue-800 space-y-1">
                   <p>
@@ -343,7 +372,7 @@ export function PayNowModal({
             )}
 
             {/* Reference Number */}
-            {method !== "cash" && (
+            {method !== "cash" && method !== "in-person" && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Reference Number

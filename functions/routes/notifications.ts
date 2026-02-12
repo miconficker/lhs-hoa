@@ -264,13 +264,17 @@ notificationsRouter.post("/admin/send", async (c) => {
       .bind(id, userId, type, title, content, link || null)
       .run();
 
-    const notification = await c.env.DB.prepare(
-      "SELECT * FROM notifications WHERE id = ?"
-    )
-      .bind(id)
-      .first();
-
-    notifications.push(notification);
+    // Return the notification data directly without a SELECT query
+    notifications.push({
+      id,
+      user_id: userId,
+      type,
+      title,
+      content,
+      link: link || null,
+      read: 0,
+      sent_at: send_now ? new Date().toISOString() : null,
+    });
   }
 
   return c.json({
@@ -311,7 +315,7 @@ export async function createNotification(
   title: string,
   content: string,
   link?: string
-): Promise<void> {
+): Promise<any> {
   const id = crypto.randomUUID();
   await db.prepare(
     `INSERT INTO notifications (id, user_id, type, title, content, link, read, sent_at)
@@ -319,6 +323,18 @@ export async function createNotification(
   )
     .bind(id, userId, type, title, content, link || null)
     .run();
+
+  // Return the notification data directly without a SELECT query
+  return {
+    id,
+    user_id: userId,
+    type,
+    title,
+    content,
+    link: link || null,
+    read: 0,
+    sent_at: new Date().toISOString(),
+  };
 }
 
 // Helper: Create notifications for multiple users
@@ -329,8 +345,11 @@ export async function createBulkNotifications(
   title: string,
   content: string,
   link?: string
-): Promise<void> {
+): Promise<any[]> {
+  const results = [];
   for (const userId of userIds) {
-    await createNotification(db, userId, type, title, content, link);
+    const notification = await createNotification(db, userId, type, title, content, link);
+    results.push(notification);
   }
+  return results;
 }

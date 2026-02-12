@@ -1108,6 +1108,14 @@ export const api = {
           body: JSON.stringify(input),
         },
       ),
+    // System settings
+    getSystemSettings: () =>
+      apiRequest<{ settings: Record<string, string> }>("/admin/settings"),
+    updateSystemSetting: (key: string, value: string) =>
+      apiRequest<{ message: string; setting: any }>(`/admin/settings/${key}`, {
+        method: "PUT",
+        body: JSON.stringify({ value }),
+      }),
     // Export payments with filters
     exportPayments: (filters?: {
       start_date?: string;
