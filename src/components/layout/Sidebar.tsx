@@ -140,14 +140,15 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 min-h-[calc(100vh-4rem)]">
-      <nav className="p-4 space-y-1">
+    <aside className="hidden lg:flex lg:w-64 lg:flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 min-h-[calc(100vh-4rem)]">
+      <nav className="p-4 space-y-1" aria-label="Main navigation">
         {visibleItems.map((item, index) => {
           if (item.separator) {
             return (
               <div
                 key={`separator-${index}`}
-                className="my-2 border-t border-gray-200"
+                className="my-2 border-t border-gray-200 dark:border-gray-700"
+                aria-hidden="true"
               />
             );
           }
@@ -155,7 +156,8 @@ export function Sidebar() {
             return (
               <div
                 key={`section-${index}`}
-                className="my-2 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide"
+                className="my-2 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide"
+                role="presentation"
               >
                 {item.sectionHeader}
               </div>
@@ -167,14 +169,16 @@ export function Sidebar() {
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 ${
                   isActive
-                    ? "bg-primary-50 text-primary-700 font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
+                    ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 font-medium"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                 }`
               }
             >
-              {item.icon && <item.icon className="w-5 h-5" />}
+              {item.icon && (
+                <item.icon className="w-5 h-5" aria-hidden="true" />
+              )}
               <span>{item.label}</span>
             </NavLink>
           );
