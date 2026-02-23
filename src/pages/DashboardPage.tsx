@@ -24,11 +24,13 @@ interface StatCardProps {
 
 function StatCard({ title, value, icon: Icon, color, to }: StatCardProps) {
   const content = (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-card rounded-lg shadow p-6">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          <p className="text-3xl font-bold text-card-foreground mt-2">
+            {value}
+          </p>
         </div>
         <div className={`p-3 rounded-lg ${color}`}>
           <Icon className="w-8 h-8 text-white" />
@@ -72,14 +74,14 @@ export function DashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+      <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-lg">
         {error}
       </div>
     );
@@ -90,8 +92,8 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <span className="text-sm text-gray-500">
+        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+        <span className="text-sm text-muted-foreground">
           Welcome back, {user?.email}
         </span>
       </div>
@@ -131,7 +133,7 @@ export function DashboardPage() {
           </>
         ) : (
           <div className="col-span-full">
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               Welcome to the Laguna Hills HOA portal. Use the sidebar to
               navigate.
             </p>
@@ -142,14 +144,14 @@ export function DashboardPage() {
       {/* Charts Section (for admin/staff) */}
       {isAdmin && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="bg-card rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-card-foreground mb-4">
               Payment Trends
             </h2>
             <PaymentChart height={250} />
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="bg-card rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-card-foreground mb-4">
               Service Request Status
             </h2>
             <RequestStatusChart height={250} />
@@ -159,13 +161,13 @@ export function DashboardPage() {
 
       {/* Recent Announcements */}
       {stats?.recentAnnouncements && stats.recentAnnouncements.length > 0 && (
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">
+        <div className="bg-card rounded-lg shadow">
+          <div className="p-6 border-b border-border">
+            <h2 className="text-lg font-semibold text-card-foreground">
               Recent Announcements
             </h2>
           </div>
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-border">
             {stats.recentAnnouncements.map((announcement) => (
               <div key={announcement.id} className="p-6">
                 <div className="flex items-start justify-between">
@@ -174,27 +176,29 @@ export function DashboardPage() {
                       {announcement.is_pinned && (
                         <AlertTriangle className="w-4 h-4 text-yellow-500" />
                       )}
-                      <h3 className="text-lg font-medium text-gray-900">
+                      <h3 className="text-lg font-medium text-card-foreground">
                         {announcement.title}
                       </h3>
                       {announcement.category && (
                         <span
                           className={`px-2 py-1 text-xs font-medium rounded-full ${
                             announcement.category === "urgent"
-                              ? "bg-red-100 text-red-700"
+                              ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                               : announcement.category === "event"
-                                ? "bg-blue-100 text-blue-700"
+                                ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                                 : announcement.category === "policy"
-                                  ? "bg-purple-100 text-purple-700"
-                                  : "bg-gray-100 text-gray-700"
+                                  ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                                  : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
                           }`}
                         >
                           {announcement.category}
                         </span>
                       )}
                     </div>
-                    <p className="text-gray-600 mt-1">{announcement.content}</p>
-                    <p className="text-sm text-gray-400 mt-2">
+                    <p className="text-muted-foreground mt-1">
+                      {announcement.content}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
                       {format(new Date(announcement.created_at), "MMM d, yyyy")}
                     </p>
                   </div>
@@ -202,10 +206,10 @@ export function DashboardPage() {
               </div>
             ))}
           </div>
-          <div className="p-4 bg-gray-50 border-t border-gray-200">
+          <div className="p-4 bg-muted border-t border-border">
             <Link
               to="/announcements"
-              className="text-primary-600 hover:text-primary-700 font-medium text-sm"
+              className="text-primary hover:text-primary/80 font-medium text-sm"
             >
               View all announcements →
             </Link>
@@ -215,40 +219,48 @@ export function DashboardPage() {
 
       {/* Quick Actions (for admin/staff) */}
       {isAdmin && (
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">
+        <div className="bg-card rounded-lg shadow">
+          <div className="p-6 border-b border-border">
+            <h2 className="text-lg font-semibold text-card-foreground">
               Quick Actions
             </h2>
           </div>
           <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
             <Link
               to="/service-requests"
-              className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex flex-col items-center p-4 border border-border rounded-lg hover:bg-muted transition-colors"
             >
-              <ClipboardList className="w-8 h-8 text-primary-600 mb-2" />
-              <span className="text-sm font-medium">New Request</span>
+              <ClipboardList className="w-8 h-8 text-primary mb-2" />
+              <span className="text-sm font-medium text-card-foreground">
+                New Request
+              </span>
             </Link>
             <Link
               to="/reservations"
-              className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex flex-col items-center p-4 border border-border rounded-lg hover:bg-muted transition-colors"
             >
-              <Calendar className="w-8 h-8 text-primary-600 mb-2" />
-              <span className="text-sm font-medium">Book Amenity</span>
+              <Calendar className="w-8 h-8 text-primary mb-2" />
+              <span className="text-sm font-medium text-card-foreground">
+                Book Amenity
+              </span>
             </Link>
             <Link
               to="/payments"
-              className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex flex-col items-center p-4 border border-border rounded-lg hover:bg-muted transition-colors"
             >
-              <DollarSign className="w-8 h-8 text-primary-600 mb-2" />
-              <span className="text-sm font-medium">Pay Dues</span>
+              <DollarSign className="w-8 h-8 text-primary mb-2" />
+              <span className="text-sm font-medium text-card-foreground">
+                Pay Dues
+              </span>
             </Link>
             <Link
               to="/admin"
-              className="flex flex-col items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex flex-col items-center p-4 border border-border rounded-lg hover:bg-muted transition-colors"
             >
-              <Settings className="w-8 h-8 text-primary-600 mb-2" />
-              <span className="text-sm font-medium">Admin Panel</span>
+              <Settings className="w-8 h-8 text-primary mb-2" />
+              <span className="text-sm font-medium text-card-foreground">
+                Admin Panel
+              </span>
             </Link>
           </div>
         </div>
