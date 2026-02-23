@@ -11,6 +11,8 @@ import {
   AlertTriangle,
   Settings,
 } from "lucide-react";
+import { PaymentChart } from "@/components/charts/PaymentChart";
+import { RequestStatusChart } from "@/components/charts/RequestStatusChart";
 
 interface StatCardProps {
   title: string;
@@ -136,6 +138,24 @@ export function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Charts Section (for admin/staff) */}
+      {isAdmin && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Payment Trends
+            </h2>
+            <PaymentChart height={250} />
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Service Request Status
+            </h2>
+            <RequestStatusChart height={250} />
+          </div>
+        </div>
+      )}
 
       {/* Recent Announcements */}
       {stats?.recentAnnouncements && stats.recentAnnouncements.length > 0 && (
