@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { CommandPalette } from "@/components/search/CommandPalette";
 import { MobileNav } from "./MobileNav";
 import lhsLogo from "@/assets/lhs-logo.svg";
 
@@ -33,6 +34,7 @@ export function Header() {
             className="flex items-center gap-2 sm:gap-4"
             aria-label="User menu"
           >
+            <CommandPalette />
             <ThemeToggle />
             {user ? (
               <>
