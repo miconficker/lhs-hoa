@@ -6,8 +6,11 @@
 
 /* Dark mode map filter */
 @layer components {
-  .dark .leaflet-image-layer {
-    filter: brightness(0.7) contrast(1.25) saturate(0.8);
+  /* Target map overlay images */
+  .dark .leaflet-overlay-layer img,
+  .dark .leaflet-image-layer,
+  .dark img.leaflet-image-layer {
+    filter: brightness(0.65) contrast(1.3) saturate(0.75) !important;
   }
 }
 
