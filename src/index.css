@@ -6,10 +6,10 @@
 
 /* Dark mode map filter */
 @layer components {
-  /* Apply filter to the map container itself in dark mode */
+  /* Apply negative/inverted filter for dramatic dark mode effect */
   html.dark .leaflet-container,
   html.dark .dark-map {
-    filter: brightness(0.7) contrast(1.2) saturate(0.8);
+    filter: invert(0.85) hue-rotate(180deg) brightness(0.7);
   }
 }
 
