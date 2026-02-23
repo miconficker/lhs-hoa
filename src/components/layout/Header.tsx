@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationBell } from "@/components/NotificationBell";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import lhsLogo from "@/assets/lhs-logo.svg";
 
 export function Header() {
@@ -18,6 +19,7 @@ export function Header() {
           </Link>
 
           <nav className="flex items-center gap-4">
+            <ThemeToggle />
             {user ? (
               <>
                 <NotificationBell />
