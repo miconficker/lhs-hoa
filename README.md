@@ -38,19 +38,22 @@ The Laguna Hills HOA Management System is a full-stack web application designed 
 
 ### For Residents
 
-- **Dashboard** - Personalized overview of account status, announcements, and quick actions
+- **Dashboard** - Personalized overview with interactive charts showing payment trends and request statistics
+- **Dark Mode** - Toggle between light and dark themes with automatic system preference detection
+- **Global Search** - Quick navigation command palette (Cmd/Ctrl + K) for fast access to pages and features
 - **Interactive Map** - View subdivision layout with lot ownership information
-- **Service Requests** - Submit and track maintenance requests
+- **Service Requests** - Submit and track maintenance requests with real-time toast notifications
 - **Amenity Reservations** - Book clubhouse, pool, and basketball court
-- **Payment Portal** - View dues and make online payments
+- **Payment Portal** - View dues and make online payments with clear status indicators
 - **Document Center** - Access HOA documents, forms, and policies
 - **Announcements & Events** - Stay updated with community news
 - **Polls & Voting** - Participate in community decisions
 - **Pass Management** - Manage employee IDs and vehicle registrations
+- **Mobile Navigation** - Responsive hamburger menu and bottom navigation bar for mobile devices
 
 ### For Administrators
 
-- **Admin Dashboard** - Overview of all system activities
+- **Admin Dashboard** - Overview with visual charts of payment trends, request status distribution, and key metrics
 - **Lot Management** - Manage property records and ownership
 - **Dues Configuration** - Set and update dues for different lot types
 - **Payment Recording** - Record in-person payments
@@ -58,6 +61,7 @@ The Laguna Hills HOA Management System is a full-stack web application designed 
 - **Pass Management** - Approve employee and vehicle passes
 - **User Management** - Manage resident accounts and permissions
 - **Notification System** - Send announcements and alerts
+- **Global Search** - Quick access to all admin features via command palette
 
 ### Role-Based Access Control
 
@@ -76,12 +80,15 @@ The Laguna Hills HOA Management System is a full-stack web application designed 
 - **Build Tool**: Vite 5
 - **Routing**: React Router v6
 - **State Management**: Zustand
-- **Styling**: Tailwind CSS 3
+- **Styling**: Tailwind CSS 3 with dark mode support
 - **UI Components**: shadcn/ui (Radix UI primitives)
 - **Icons**: Lucide React
 - **Mapping**: Leaflet + React Leaflet
 - **Forms**: React Hook Form + Zod validation
 - **HTTP Client**: TanStack Query (React Query)
+- **Notifications**: Sonner (toast notifications)
+- **Charts**: Recharts (dashboard visualizations)
+- **Command Palette**: Cmdk (global search)
 
 ### Backend
 
@@ -282,6 +289,9 @@ When creating new components:
 2. Follow existing patterns in `src/pages/`
 3. Use TypeScript for type safety
 4. Apply consistent styling via CSS variables
+5. Ensure accessibility with proper ARIA labels and keyboard navigation
+6. Support dark mode using Tailwind's `dark:` prefix
+7. Use plain, user-friendly language following UK plain language guidelines
 
 ### API Client
 
