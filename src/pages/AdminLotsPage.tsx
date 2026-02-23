@@ -367,6 +367,7 @@ export function AdminLotsPage() {
               crs={L.CRS.Simple}
               bounds={mapBounds}
               style={{ height: "100%", width: "100%" }}
+              className="dark-map"
             >
               <ImageOverlay
                 url="/LAGUNA-HILLS-MAP-v2.svg"
