@@ -284,7 +284,9 @@ export function PollsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-card-foreground">Community Polls</h1>
+        <h1 className="text-2xl font-bold text-card-foreground">
+          Community Polls
+        </h1>
         {isAdmin && (
           <button
             onClick={() => setShowCreateForm(!showCreateForm)}
@@ -444,7 +446,9 @@ export function PollsPage() {
                           }
                           className="w-4 h-4 text-primary-600 border-border focus:ring-primary-500"
                         />
-                        <span className="ml-3 text-card-foreground">{option}</span>
+                        <span className="ml-3 text-card-foreground">
+                          {option}
+                        </span>
                       </label>
                     ))}
                     <button

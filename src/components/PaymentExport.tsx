@@ -67,11 +67,11 @@ export function PaymentExport() {
         </h3>
       </div>
 
-      <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+      <div className="bg-gray-50 dark:bg-muted rounded-lg p-4 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Date Range */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
               Start Date
             </label>
             <input
@@ -83,11 +83,11 @@ export function PaymentExport() {
                   start_date: e.target.value || undefined,
                 })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
               End Date
             </label>
             <input
@@ -99,13 +99,13 @@ export function PaymentExport() {
                   end_date: e.target.value || undefined,
                 })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
           {/* Payment Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
               Payment Type
             </label>
             <select
@@ -116,7 +116,7 @@ export function PaymentExport() {
                   payment_type: e.target.value || undefined,
                 })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">All Types</option>
               <option value="dues">HOA Dues</option>
@@ -127,7 +127,7 @@ export function PaymentExport() {
 
           {/* Status */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
               Status
             </label>
             <select
@@ -135,7 +135,7 @@ export function PaymentExport() {
               onChange={(e) =>
                 setFilters({ ...filters, status: e.target.value || undefined })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">All Statuses</option>
               <option value="pending">Pending</option>
@@ -146,7 +146,7 @@ export function PaymentExport() {
 
           {/* Payment Method */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
               Payment Method
             </label>
             <select
@@ -154,7 +154,7 @@ export function PaymentExport() {
               onChange={(e) =>
                 setFilters({ ...filters, method: e.target.value || undefined })
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">All Methods</option>
               <option value="bank_transfer">Bank Transfer</option>
@@ -218,7 +218,7 @@ export function PaymentExport() {
         </button>
         <button
           onClick={handleClearFilters}
-          className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+          className="px-4 py-2 border border-gray-300 dark:border-border rounded-lg hover:bg-gray-50 dark:hover:bg-muted"
         >
           Clear Filters
         </button>

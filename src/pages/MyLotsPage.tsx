@@ -127,7 +127,9 @@ export function MyLotsPage() {
 
       {/* Summary Card */}
       <div className="bg-card rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-card-foreground mb-4">Summary</h2>
+        <h2 className="text-lg font-semibold text-card-foreground mb-4">
+          Summary
+        </h2>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
           <div className="space-y-1">

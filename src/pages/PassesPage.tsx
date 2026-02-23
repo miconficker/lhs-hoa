@@ -272,7 +272,9 @@ export function PassesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-card-foreground">Resident Passes</h1>
+        <h1 className="text-2xl font-bold text-card-foreground">
+          Resident Passes
+        </h1>
       </div>
 
       {/* Success/Error Messages */}
@@ -357,19 +359,23 @@ export function PassesPage() {
           Current Pass Fees
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-muted rounded-lg">
             <div className="flex items-center gap-3">
               <Badge className="w-5 h-5 text-blue-600" />
-              <span className="font-medium text-card-foreground">Sticker Pass</span>
+              <span className="font-medium text-card-foreground">
+                Sticker Pass
+              </span>
             </div>
             <span className="text-lg font-bold text-card-foreground">
               ₱{getFeeForType("sticker").toFixed(2)}
             </span>
           </div>
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-muted rounded-lg">
             <div className="flex items-center gap-3">
               <CreditCard className="w-5 h-5 text-green-600" />
-              <span className="font-medium text-card-foreground">RFID Pass</span>
+              <span className="font-medium text-card-foreground">
+                RFID Pass
+              </span>
             </div>
             <span className="text-lg font-bold text-card-foreground">
               ₱{getFeeForType("rfid").toFixed(2)}
@@ -399,14 +405,14 @@ export function PassesPage() {
 
         {/* Employee Form */}
         {showEmployeeForm && (
-          <div className="mb-6 p-6 bg-gray-50 rounded-lg">
+          <div className="mb-6 p-6 bg-gray-50 dark:bg-muted rounded-lg">
             <h3 className="text-md font-semibold text-card-foreground mb-4">
               Register New Employee Pass
             </h3>
             <form onSubmit={handleSubmitEmployee} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
                     Full Name
                   </label>
                   <input
@@ -418,12 +424,12 @@ export function PassesPage() {
                         full_name: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
                     Employee Type
                   </label>
                   <select
@@ -434,7 +440,7 @@ export function PassesPage() {
                         employee_type: e.target.value as EmployeeType,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                     required
                   >
                     <option value="driver">Driver</option>
@@ -444,7 +450,7 @@ export function PassesPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
                     Photo (Optional)
                   </label>
                   <input
@@ -456,11 +462,11 @@ export function PassesPage() {
                         photo: e.target.files?.[0],
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
                     Expiry Date (Optional)
                   </label>
                   <input
@@ -472,7 +478,7 @@ export function PassesPage() {
                         expiry_date: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
               </div>
@@ -592,14 +598,14 @@ export function PassesPage() {
 
         {/* Vehicle Form */}
         {showVehicleForm && (
-          <div className="mb-6 p-6 bg-gray-50 rounded-lg">
+          <div className="mb-6 p-6 bg-gray-50 dark:bg-muted rounded-lg">
             <h3 className="text-md font-semibold text-card-foreground mb-4">
               Register New Vehicle Pass
             </h3>
             <form onSubmit={handleSubmitVehicle} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
                     Plate Number
                   </label>
                   <input
@@ -611,12 +617,12 @@ export function PassesPage() {
                         plate_number: e.target.value.toUpperCase(),
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
                     Make
                   </label>
                   <input
@@ -625,12 +631,12 @@ export function PassesPage() {
                     onChange={(e) =>
                       setVehicleForm({ ...vehicleForm, make: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
                     Model
                   </label>
                   <input
@@ -639,12 +645,12 @@ export function PassesPage() {
                     onChange={(e) =>
                       setVehicleForm({ ...vehicleForm, model: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
                     Color
                   </label>
                   <input
@@ -653,12 +659,12 @@ export function PassesPage() {
                     onChange={(e) =>
                       setVehicleForm({ ...vehicleForm, color: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
                     Pass Type
                   </label>
                   <div className="grid grid-cols-3 gap-2">

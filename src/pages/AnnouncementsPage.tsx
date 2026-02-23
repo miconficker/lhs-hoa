@@ -67,7 +67,9 @@ export function AnnouncementsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-card-foreground">Announcements</h1>
+        <h1 className="text-2xl font-bold text-card-foreground">
+          Announcements
+        </h1>
         {isAdmin && (
           <button
             onClick={() => setShowCreateForm(!showCreateForm)}
@@ -183,7 +185,9 @@ export function AnnouncementsPage() {
                   <h3 className="text-lg font-semibold text-card-foreground">
                     {announcement.title}
                   </h3>
-                  <p className="text-muted-foreground mt-2">{announcement.content}</p>
+                  <p className="text-muted-foreground mt-2">
+                    {announcement.content}
+                  </p>
                   <p className="text-sm text-gray-400 mt-4">
                     {format(
                       new Date(announcement.created_at),

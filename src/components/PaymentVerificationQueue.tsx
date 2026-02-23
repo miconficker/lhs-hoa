@@ -141,7 +141,7 @@ export function PaymentVerificationQueue({
 
       {/* Empty State */}
       {verifications.length === 0 && (
-        <div className="text-center py-12 bg-gray-50 rounded-lg">
+        <div className="text-center py-12 bg-gray-50 dark:bg-muted rounded-lg">
           <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
           <p className="text-gray-500">No {status} verifications</p>
         </div>
@@ -152,7 +152,7 @@ export function PaymentVerificationQueue({
         {verifications.map((item) => (
           <div
             key={item.id}
-            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+            className="bg-white dark:bg-card border border-gray-200 dark:border-border rounded-lg p-4 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start justify-between gap-4">
               {/* Left: Details */}
@@ -250,7 +250,7 @@ export function PaymentVerificationQueue({
 
             {/* File Info */}
             {item.file_name && (
-              <div className="mt-3 pt-3 border-t border-gray-100">
+              <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   {getFileIcon(item.file_name)}
                   <span>{item.file_name}</span>
@@ -264,7 +264,7 @@ export function PaymentVerificationQueue({
       {/* Reject Confirmation Modal */}
       {showRejectModal && selectedItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+          <div className="bg-white dark:bg-card rounded-lg shadow-xl max-w-md w-full">
             <div className="p-4 border-b">
               <h3 className="text-lg font-semibold">Reject Payment</h3>
             </div>
@@ -283,14 +283,14 @@ export function PaymentVerificationQueue({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
                   Reason for Rejection *
                 </label>
                 <textarea
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Please explain why this payment is being rejected..."
                   required
                 />
@@ -310,7 +310,7 @@ export function PaymentVerificationQueue({
                   setRejectionReason("");
                   setError("");
                 }}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 border border-gray-300 dark:border-border text-gray-700 dark:text-card-foreground rounded-lg hover:bg-gray-50 dark:hover:bg-muted"
                 disabled={processing === selectedItem.payment_id}
               >
                 Cancel

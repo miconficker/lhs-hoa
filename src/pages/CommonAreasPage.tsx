@@ -91,7 +91,9 @@ export function CommonAreasPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-card-foreground">Common Areas</h1>
+          <h1 className="text-2xl font-bold text-card-foreground">
+            Common Areas
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Manage HOA-owned community areas, utilities, and open spaces
           </p>
@@ -150,7 +152,9 @@ export function CommonAreasPage() {
                   </td>
                   <td className="px-6 py-4 text-sm text-muted-foreground">
                     {lot.lot_label || (
-                      <span className="text-muted-foreground italic">Not labeled</span>
+                      <span className="text-muted-foreground italic">
+                        Not labeled
+                      </span>
                     )}
                   </td>
                   <td className="px-6 py-4 text-sm text-muted-foreground">

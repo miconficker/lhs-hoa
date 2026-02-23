@@ -85,7 +85,9 @@ export function WhitelistManagementPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-card-foreground">Email Whitelist</h1>
+          <h1 className="text-2xl font-bold text-card-foreground">
+            Email Whitelist
+          </h1>
           <p className="text-muted-foreground mt-1">
             Manage pre-approved emails for Google OAuth sign-in
           </p>
@@ -119,7 +121,7 @@ export function WhitelistManagementPage() {
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 placeholder="resident@example.com"
               />
             </div>
@@ -130,7 +132,7 @@ export function WhitelistManagementPage() {
               <select
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value as UserRole)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="resident">Resident</option>
                 <option value="admin">Admin</option>

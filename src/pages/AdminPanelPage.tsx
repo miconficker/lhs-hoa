@@ -96,9 +96,9 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
         </span>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="bg-white dark:bg-card rounded-lg shadow overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-muted">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Block
@@ -120,7 +120,7 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-card divide-y divide-gray-200 dark:divide-gray-700">
             {filteredLots.map((lot) => (
               <tr key={lot.lot_id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -168,14 +168,14 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
 
       {editingLot && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+          <div className="bg-white dark:bg-card rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Edit Lot - {editingLot.block_number}, {editingLot.lot_number}
             </h3>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
                   Owner
                 </label>
                 <select
@@ -186,7 +186,7 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
                       owner_user_id: e.target.value,
                     })
                   }
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="w-full px-3 py-2 border dark:border-border rounded-lg"
                 >
                   {homeowners.map((h) => (
                     <option key={h.id} value={h.id}>
@@ -197,7 +197,7 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
                   Status
                 </label>
                 <select
@@ -208,7 +208,7 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
                       lot_status: e.target.value as LotStatus,
                     })
                   }
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="w-full px-3 py-2 border dark:border-border rounded-lg"
                 >
                   <option value="built">Built</option>
                   <option value="vacant_lot">Vacant Lot</option>
@@ -217,7 +217,7 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
                   Size (m²)
                 </label>
                 <input
@@ -231,7 +231,7 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
                         : undefined,
                     })
                   }
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="w-full px-3 py-2 border dark:border-border rounded-lg"
                   min="0"
                   step="0.01"
                 />
@@ -246,7 +246,7 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
                 </button>
                 <button
                   onClick={() => setEditingLot(null)}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 border dark:border-border rounded-lg hover:bg-gray-50 dark:hover:bg-muted"
                 >
                   Cancel
                 </button>
@@ -466,7 +466,7 @@ export function AdminPanelPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-gray-200 dark:border-border">
         <nav className="-mb-px flex space-x-8">
           {tabs.map((tab) => (
             <button
@@ -486,7 +486,7 @@ export function AdminPanelPage() {
       </div>
 
       {/* Content */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white dark:bg-card rounded-lg shadow p-6">
         {activeTab === "users" && (
           <div>
             <div className="flex justify-between items-center mb-6">
@@ -506,8 +506,8 @@ export function AdminPanelPage() {
               <div className="text-center py-8">Loading...</div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-muted">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Email
@@ -526,7 +526,7 @@ export function AdminPanelPage() {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white dark:bg-card divide-y divide-gray-200 dark:divide-gray-700">
                     {users.map((user) => (
                       <tr key={user.id}>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -676,14 +676,14 @@ export function AdminPanelPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-2">
                   Paste JSON data or enter manually
                 </label>
                 <textarea
                   value={importData}
                   onChange={(e) => setImportData(e.target.value)}
                   rows={10}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono text-sm"
                   placeholder={`[
   {
     "address": "123 Main St",
@@ -709,7 +709,7 @@ export function AdminPanelPage() {
               </button>
 
               {importResult && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <div className="mt-4 p-4 bg-gray-50 dark:bg-muted rounded-lg">
                   <h3 className="font-semibold mb-2">Import Results</h3>
                   <p className="text-green-600">
                     ✓ {importResult.success} households imported
@@ -738,7 +738,7 @@ export function AdminPanelPage() {
             <h2 className="text-xl font-semibold mb-6">Payment Management</h2>
 
             {/* Sub-tabs */}
-            <div className="mb-4 border-b border-gray-200">
+            <div className="mb-4 border-b border-gray-200 dark:border-border">
               <nav className="-mb-px flex space-x-8" aria-label="Payment tabs">
                 <button
                   onClick={() => setPaymentSubTab("verifications")}
@@ -775,8 +775,8 @@ export function AdminPanelPage() {
 
             {/* Verification Queue Sub-tab */}
             {paymentSubTab === "verifications" && (
-              <div className="bg-white rounded-lg shadow">
-                <div className="border-b border-gray-200">
+              <div className="bg-white dark:bg-card rounded-lg shadow">
+                <div className="border-b border-gray-200 dark:border-border">
                   <nav
                     className="-mb-px flex space-x-8"
                     aria-label="Status tabs"
@@ -984,7 +984,7 @@ function UserModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+      <div className="bg-white dark:bg-card rounded-lg p-6 w-full max-w-md">
         <h2 className="text-xl font-semibold mb-4">
           {user ? "Edit User" : "Create User"}
         </h2>
@@ -997,7 +997,7 @@ function UserModal({
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               required
             />
           </div>
@@ -1010,7 +1010,7 @@ function UserModal({
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 required={!user}
               />
             </div>
@@ -1024,7 +1024,7 @@ function UserModal({
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
           )}
@@ -1035,7 +1035,7 @@ function UserModal({
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="admin">Admin</option>
               <option value="staff">Staff</option>
@@ -1051,14 +1051,14 @@ function UserModal({
               type="text"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
           <div className="flex justify-end space-x-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              className="px-4 py-2 border border-gray-300 dark:border-border rounded-lg hover:bg-gray-50 dark:hover:bg-muted"
             >
               Cancel
             </button>
@@ -1148,7 +1148,7 @@ function HouseholdModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-card rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-semibold mb-4">
           {household ? "Edit Household" : "Create Household"}
         </h2>
@@ -1161,7 +1161,7 @@ function HouseholdModal({
               type="text"
               value={street}
               onChange={(e) => setStreet(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               placeholder="e.g., Mahogany Street"
             />
           </div>
@@ -1174,7 +1174,7 @@ function HouseholdModal({
                 type="text"
                 value={block}
                 onChange={(e) => setBlock(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
             <div>
@@ -1185,7 +1185,7 @@ function HouseholdModal({
                 type="text"
                 value={lot}
                 onChange={(e) => setLot(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
           </div>
@@ -1208,7 +1208,7 @@ function HouseholdModal({
                 step="any"
                 value={latitude}
                 onChange={(e) => setLatitude(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
             <div>
@@ -1220,7 +1220,7 @@ function HouseholdModal({
                 step="any"
                 value={longitude}
                 onChange={(e) => setLongitude(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
           </div>
@@ -1234,7 +1234,7 @@ function HouseholdModal({
                 step="any"
                 value={mapMarkerX}
                 onChange={(e) => setMapMarkerX(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
             <div>
@@ -1246,7 +1246,7 @@ function HouseholdModal({
                 step="any"
                 value={mapMarkerY}
                 onChange={(e) => setMapMarkerY(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
           </div>
@@ -1258,7 +1258,7 @@ function HouseholdModal({
               type="email"
               value={ownerEmail}
               onChange={(e) => setOwnerEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
 
@@ -1328,7 +1328,7 @@ function HouseholdModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              className="px-4 py-2 border border-gray-300 dark:border-border rounded-lg hover:bg-gray-50 dark:hover:bg-muted"
             >
               Cancel
             </button>

@@ -211,13 +211,13 @@ export function PayNowModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-card rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">Pay Now</h2>
           <button
             onClick={handleClose}
-            className="p-1 hover:bg-gray-100 rounded"
+            className="p-1 hover:bg-gray-100 dark:hover:bg-muted rounded"
             type="button"
           >
             <X className="w-5 h-5" />
@@ -245,7 +245,7 @@ export function PayNowModal({
           <form onSubmit={handleSubmit} className="p-4 space-y-4">
             {/* Payment Type */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-2">
                 Payment Type
               </label>
               <div className="space-y-2">
@@ -255,7 +255,7 @@ export function PayNowModal({
                     className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
                       paymentType === type.value
                         ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300"
+                        : "border-gray-200 dark:border-border hover:border-gray-300"
                     }`}
                   >
                     <input
@@ -281,7 +281,7 @@ export function PayNowModal({
 
             {/* Amount */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
                 Amount (PHP)
               </label>
               <input
@@ -289,7 +289,7 @@ export function PayNowModal({
                 step="0.01"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="0.00"
                 required
               />
@@ -297,7 +297,7 @@ export function PayNowModal({
 
             {/* Payment Method */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-2">
                 Payment Method
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -307,7 +307,7 @@ export function PayNowModal({
                     className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors text-center ${
                       method === pm.value
                         ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300"
+                        : "border-gray-200 dark:border-border hover:border-gray-300"
                     }`}
                   >
                     <input
@@ -374,14 +374,14 @@ export function PayNowModal({
             {/* Reference Number */}
             {method !== "cash" && method !== "in-person" && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
                   Reference Number
                 </label>
                 <input
                   type="text"
                   value={referenceNumber}
                   onChange={(e) => setReferenceNumber(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="e.g., Last 4 digits of transaction"
                 />
               </div>
@@ -389,10 +389,10 @@ export function PayNowModal({
 
             {/* Proof Upload */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
                 Upload Payment Proof *
               </label>
-              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-gray-400 transition-colors">
+              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-border border-dashed rounded-lg hover:border-gray-400 transition-colors">
                 <div className="space-y-1 text-center">
                   {preview ? (
                     <div className="relative">
@@ -459,7 +459,7 @@ export function PayNowModal({
 
             {/* Review Step */}
             {step === "review" && (
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+              <div className="bg-gray-50 dark:bg-muted p-4 rounded-lg space-y-2">
                 <h4 className="font-medium">Review Payment Details</h4>
                 <div className="text-sm space-y-1">
                   <p>
@@ -491,7 +491,7 @@ export function PayNowModal({
                 onClick={
                   step === "review" ? () => setStep("form") : handleClose
                 }
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-border text-gray-700 dark:text-card-foreground rounded-lg hover:bg-gray-50 dark:hover:bg-muted"
                 disabled={loading}
               >
                 {step === "review" ? "Back" : "Cancel"}

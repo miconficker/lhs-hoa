@@ -152,7 +152,9 @@ export function PaymentsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-card-foreground">{labels.payments}</h1>
+        <h1 className="text-2xl font-bold text-card-foreground">
+          {labels.payments}
+        </h1>
         <button
           onClick={() => setShowNewPayment(true)}
           className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"

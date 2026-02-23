@@ -113,7 +113,9 @@ export function NotificationsPage() {
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-card-foreground">Notifications</h1>
+            <h1 className="text-2xl font-bold text-card-foreground">
+              Notifications
+            </h1>
             <p className="text-sm text-muted-foreground mt-1">
               {unreadCount > 0
                 ? `${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}`
@@ -136,7 +138,9 @@ export function NotificationsPage() {
       <div className="mb-6 flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm text-card-foreground font-medium">Filters:</span>
+          <span className="text-sm text-card-foreground font-medium">
+            Filters:
+          </span>
         </div>
 
         {/* Type filter */}

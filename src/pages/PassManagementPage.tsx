@@ -411,7 +411,9 @@ export function PassManagementPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-card-foreground">Pass Management</h1>
+          <h1 className="text-2xl font-bold text-card-foreground">
+            Pass Management
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Manage employee passes, vehicle registrations, and pass fees
           </p>
@@ -447,7 +449,9 @@ export function PassManagementPage() {
                 <Users className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Active Employees</p>
+                <p className="text-sm text-muted-foreground">
+                  Active Employees
+                </p>
                 <p className="text-2xl font-bold text-card-foreground">
                   {stats.active_employees}
                 </p>
@@ -475,7 +479,9 @@ export function PassManagementPage() {
                 <Calendar className="w-6 h-6 text-yellow-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Pending Approvals</p>
+                <p className="text-sm text-muted-foreground">
+                  Pending Approvals
+                </p>
                 <p className="text-2xl font-bold text-card-foreground">
                   {stats.pending_approvals}
                 </p>
@@ -558,25 +564,25 @@ export function PassManagementPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
                       Employee
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
                       Type
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
                       ID Number
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
                       Address
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
                       Status
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
                       Dates
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
                       Actions
                     </th>
                   </tr>
@@ -584,10 +590,7 @@ export function PassManagementPage() {
                 <tbody>
                   {employees.length > 0 ? (
                     employees.map((employee) => (
-                      <tr
-                        key={employee.id}
-                        className="border-b hover:bg-muted"
-                      >
+                      <tr key={employee.id} className="border-b hover:bg-muted">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
                             {employee.photo_url ? (
@@ -606,10 +609,10 @@ export function PassManagementPage() {
                             </span>
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-gray-700">
+                        <td className="py-3 px-4 text-gray-700 dark:text-card-foreground">
                           {employeeTypeLabels[employee.employee_type]}
                         </td>
-                        <td className="py-3 px-4 text-gray-700">
+                        <td className="py-3 px-4 text-gray-700 dark:text-card-foreground">
                           {employee.id_number}
                         </td>
                         <td className="py-3 px-4 text-gray-700 text-sm">
@@ -779,25 +782,25 @@ export function PassManagementPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
                       Vehicle
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
                       Pass Type
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
                       Address
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
                       Status
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
                       Payment
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
                       Codes
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
                       Actions
                     </th>
                   </tr>
@@ -805,10 +808,7 @@ export function PassManagementPage() {
                 <tbody>
                   {vehicles.length > 0 ? (
                     vehicles.map((vehicle) => (
-                      <tr
-                        key={vehicle.id}
-                        className="border-b hover:bg-muted"
-                      >
+                      <tr key={vehicle.id} className="border-b hover:bg-muted">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -824,7 +824,7 @@ export function PassManagementPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-gray-700">
+                        <td className="py-3 px-4 text-gray-700 dark:text-card-foreground">
                           {passTypeLabels[vehicle.pass_type]}
                         </td>
                         <td className="py-3 px-4 text-gray-700 text-sm">
@@ -1030,8 +1030,12 @@ export function PassManagementPage() {
                     <CreditCard className="w-6 h-6 text-green-600" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-card-foreground">RFID Pass</h3>
-                    <p className="text-sm text-muted-foreground">Electronic RFID tag</p>
+                    <h3 className="font-semibold text-card-foreground">
+                      RFID Pass
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Electronic RFID tag
+                    </p>
                   </div>
                 </div>
                 <div className="text-3xl font-bold text-card-foreground">
@@ -1045,7 +1049,9 @@ export function PassManagementPage() {
                     <CreditCard className="w-6 h-6 text-purple-600 -ml-4" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-card-foreground">Both Passes</h3>
+                    <h3 className="font-semibold text-card-foreground">
+                      Both Passes
+                    </h3>
                     <p className="text-sm text-muted-foreground">
                       Sticker + RFID combined
                     </p>
@@ -1182,7 +1188,7 @@ export function PassManagementPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="p-4 bg-gray-50 dark:bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground">Amount Due:</p>
               <p className="text-2xl font-bold text-card-foreground">
                 ₱

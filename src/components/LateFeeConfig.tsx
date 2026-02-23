@@ -146,12 +146,12 @@ export function LateFeeConfig({ onSettingsChange }: LateFeeConfigProps) {
 
       {/* Late Fee Configuration Form */}
       <form onSubmit={handleSave} className="space-y-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
+        <div className="bg-white dark:bg-card border border-gray-200 dark:border-border rounded-lg p-4 space-y-4">
           <h4 className="font-medium">Late Fee Rules</h4>
 
           {/* Rate Percent */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
               Late Fee Rate (% per month)
             </label>
             <div className="flex items-center gap-2">
@@ -164,10 +164,10 @@ export function LateFeeConfig({ onSettingsChange }: LateFeeConfigProps) {
                 onChange={(e) =>
                   setRatePercent(parseFloat(e.target.value) || 0)
                 }
-                className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-32 px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               />
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-gray-600 dark:text-card-foreground">
                 % of amount per month late
               </span>
             </div>
@@ -179,7 +179,7 @@ export function LateFeeConfig({ onSettingsChange }: LateFeeConfigProps) {
 
           {/* Grace Period */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
               Grace Period (days)
             </label>
             <div className="flex items-center gap-2">
@@ -191,10 +191,10 @@ export function LateFeeConfig({ onSettingsChange }: LateFeeConfigProps) {
                 onChange={(e) =>
                   setGracePeriodDays(parseInt(e.target.value) || 0)
                 }
-                className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-32 px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               />
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-gray-600 dark:text-card-foreground">
                 days before late fees apply
               </span>
             </div>
@@ -205,7 +205,7 @@ export function LateFeeConfig({ onSettingsChange }: LateFeeConfigProps) {
 
           {/* Max Months */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
               Maximum Late Fee Months
             </label>
             <div className="flex items-center gap-2">
@@ -215,10 +215,12 @@ export function LateFeeConfig({ onSettingsChange }: LateFeeConfigProps) {
                 max="120"
                 value={maxMonths}
                 onChange={(e) => setMaxMonths(parseInt(e.target.value) || 0)}
-                className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-32 px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               />
-              <span className="text-sm text-gray-600">months maximum</span>
+              <span className="text-sm text-gray-600 dark:text-card-foreground">
+                months maximum
+              </span>
             </div>
             <p className="text-xs text-gray-500 mt-1">
               Late fees won't accumulate beyond this many months
@@ -226,7 +228,7 @@ export function LateFeeConfig({ onSettingsChange }: LateFeeConfigProps) {
           </div>
 
           {/* Example Calculation */}
-          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+          <div className="bg-gray-50 dark:bg-muted p-3 rounded-lg border border-gray-200 dark:border-border">
             <div className="flex items-start gap-2">
               <Info className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-gray-600">
@@ -258,7 +260,7 @@ export function LateFeeConfig({ onSettingsChange }: LateFeeConfigProps) {
           <button
             type="button"
             onClick={loadSettings}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+            className="px-4 py-2 border border-gray-300 dark:border-border text-gray-700 dark:text-card-foreground rounded-lg hover:bg-gray-50 dark:hover:bg-muted flex items-center gap-2"
             disabled={loading}
           >
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />

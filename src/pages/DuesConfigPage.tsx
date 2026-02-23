@@ -336,8 +336,8 @@ export function DuesConfigPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-muted">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Year
@@ -356,7 +356,7 @@ export function DuesConfigPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-card divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-gray-200 dark:divide-gray-700">
               {rates.length === 0 ? (
                 <tr>
                   <td

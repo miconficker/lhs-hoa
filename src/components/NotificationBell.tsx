@@ -102,7 +102,7 @@ export function NotificationBell() {
       {/* Bell button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-muted rounded-lg transition-colors"
         aria-label="Notifications"
       >
         <Bell className="w-5 h-5" />
@@ -115,9 +115,9 @@ export function NotificationBell() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+        <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-card rounded-lg shadow-lg border border-gray-200 dark:border-border z-50">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-border">
             <h3 className="text-sm font-semibold text-gray-900">
               Notifications
             </h3>
@@ -138,12 +138,12 @@ export function NotificationBell() {
                 <p className="text-sm">No notifications yet</p>
               </div>
             ) : (
-              <ul className="divide-y divide-gray-100">
+              <ul className="divide-y divide-gray-100 dark:divide-gray-700">
                 {notifications.map((notification) => (
                   <li
                     key={notification.id}
                     className={cn(
-                      "px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors",
+                      "px-4 py-3 hover:bg-gray-50 dark:hover:bg-muted cursor-pointer transition-colors",
                       !notification.read && "bg-blue-50",
                     )}
                     onClick={() =>
@@ -181,7 +181,7 @@ export function NotificationBell() {
           </div>
 
           {/* Footer */}
-          <div className="px-4 py-2 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+          <div className="px-4 py-2 border-t border-gray-200 dark:border-border bg-gray-50 dark:bg-muted rounded-b-lg">
             <Link
               to="/notifications"
               onClick={() => setIsOpen(false)}
