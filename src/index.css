@@ -6,11 +6,11 @@
 
 /* Dark mode map filter */
 @layer components {
-  /* Target map overlay images */
-  .dark .leaflet-overlay-layer img,
-  .dark .leaflet-image-layer,
-  .dark img.leaflet-image-layer {
-    filter: brightness(0.65) contrast(1.3) saturate(0.75) !important;
+  /* Apply filter to all images inside Leaflet map containers using CSS variable */
+  .leaflet-container img,
+  .leaflet-image-layer,
+  .leaflet-overlay-layer img {
+    filter: var(--map-filter);
   }
 }
 
@@ -36,6 +36,7 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 142 76% 36%;
     --radius: 0.5rem;
+    --map-filter: none;
   }
 
   .dark {
@@ -58,6 +59,7 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 142 76% 36%;
+    --map-filter: brightness(0.65) contrast(1.3) saturate(0.75);
   }
 
   body {
