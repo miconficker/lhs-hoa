@@ -669,7 +669,7 @@ export function MapPage() {
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {/* Stats */}
             <div className="space-y-3">
-              <div className="bg-gradient-to-br from-green-50 to-green-100/50 rounded-xl p-4 border border-green-200">
+              <div className="bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-900/30 dark:to-green-950/30 rounded-xl p-4 border border-green-200 dark:border-green-800">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-green-500 rounded-lg">
                     <Home className="w-5 h-5 text-white" />
@@ -694,7 +694,7 @@ export function MapPage() {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 rounded-xl p-4 border border-orange-200">
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-900/30 dark:to-orange-950/30 rounded-xl p-4 border border-orange-200 dark:border-orange-800">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-orange-500 rounded-lg">
                     <Building className="w-5 h-5 text-white" />
@@ -719,7 +719,7 @@ export function MapPage() {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-border">
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 border border-border">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-gray-500 rounded-lg">
                     <Landmark className="w-5 h-5 text-white" />
@@ -753,9 +753,9 @@ export function MapPage() {
                 // Count HOA-owned lots (no owner)
                 return !ownership?.owner_user_id;
               }).length > 0 && (
-                <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-xl p-4 border border-purple-200">
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-900/30 dark:to-purple-950/30 rounded-xl p-4 border border-purple-200 dark:border-purple-800">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-50/500 rounded-lg">
+                    <div className="p-2 bg-purple-50/500 dark:bg-purple-700 rounded-lg">
                       <Landmark className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -804,7 +804,7 @@ export function MapPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded bg-purple-50/500 border-2 border-purple-600"></div>
+                  <div className="w-5 h-5 rounded bg-purple-50/500 dark:bg-purple-700 border-2 border-purple-600"></div>
                   <span className="text-sm text-card-foreground">
                     Community
                   </span>
