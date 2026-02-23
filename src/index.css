@@ -6,11 +6,10 @@
 
 /* Dark mode map filter */
 @layer components {
-  /* Apply filter to all images inside Leaflet map containers using CSS variable */
-  .leaflet-container img,
-  .leaflet-image-layer,
-  .leaflet-overlay-layer img {
-    filter: var(--map-filter);
+  /* Apply filter to the map container itself in dark mode */
+  html.dark .leaflet-container,
+  html.dark .dark-map {
+    filter: brightness(0.7) contrast(1.2) saturate(0.8);
   }
 }
 
