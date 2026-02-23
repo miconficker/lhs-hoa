@@ -145,8 +145,8 @@ export function DocumentsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Documents</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-card-foreground">Documents</h1>
+          <p className="text-muted-foreground mt-1">
             View and download HOA documents, forms, and policies
           </p>
         </div>
@@ -168,7 +168,7 @@ export function DocumentsPage() {
           className={`px-4 py-2 rounded-lg font-medium transition-colors ${
             selectedCategory === "all"
               ? "bg-primary-600 text-white"
-              : "bg-white text-gray-700 hover:bg-gray-50"
+              : "bg-card text-card-foreground hover:bg-muted"
           }`}
         >
           All Documents
@@ -181,7 +181,7 @@ export function DocumentsPage() {
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 selectedCategory === cat
                   ? "bg-primary-600 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-50"
+                  : "bg-card text-card-foreground hover:bg-muted"
               }`}
             >
               <span className="mr-1">{categoryIcons[cat]}</span>
@@ -193,28 +193,28 @@ export function DocumentsPage() {
 
       {/* Upload Form */}
       {showUploadForm && isAdmin && (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-card rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">Upload Document</h2>
           <form onSubmit={handleUpload} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Title
               </label>
               <input
                 type="text"
                 name="title"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 placeholder="Document title"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Category
               </label>
               <select
                 name="category"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="">No Category</option>
                 <option value="rules">Rules & Regulations</option>
@@ -224,22 +224,22 @@ export function DocumentsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 File
               </label>
               <input
                 type="file"
                 name="file"
                 accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 required
               />
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 Accepted formats: PDF, DOC, DOCX, XLS, XLSX, TXT
               </p>
             </div>
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg">
+              <div className="bg-destructive/10 border border-destructive/20 text-destructive p-3 rounded-lg">
                 {error}
               </div>
             )}
@@ -248,7 +248,7 @@ export function DocumentsPage() {
                 type="button"
                 onClick={() => setShowUploadForm(false)}
                 disabled={uploading}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                className="px-4 py-2 border border-border rounded-lg hover:bg-muted disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -276,7 +276,7 @@ export function DocumentsPage() {
 
       {/* Error Display */}
       {error && !showUploadForm && (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+        <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-lg">
           {error}
         </div>
       )}
@@ -287,7 +287,7 @@ export function DocumentsPage() {
           {documents.documents.map((document) => (
             <div
               key={document.id}
-              className="bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+              className="bg-card rounded-lg shadow hover:shadow-md transition-shadow"
             >
               <div className="p-6">
                 <div className="flex items-start justify-between">
@@ -301,10 +301,10 @@ export function DocumentsPage() {
                         </span>
                       )}
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+                    <h3 className="text-lg font-semibold text-card-foreground mb-2 line-clamp-2">
                       {document.title}
                     </h3>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       Uploaded{" "}
                       {format(new Date(document.created_at), "MMM d, yyyy")}
                     </p>
@@ -323,7 +323,7 @@ export function DocumentsPage() {
                   {canPreview(document.title) && (
                     <button
                       onClick={() => handlePreview(document.id, document.title)}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium"
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-muted text-card-foreground rounded-lg hover:bg-gray-200 text-sm font-medium"
                     >
                       <Eye className="w-4 h-4" />
                       Preview
@@ -332,7 +332,7 @@ export function DocumentsPage() {
                   {isAdmin && (
                     <button
                       onClick={() => handleDelete(document.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                      className="p-2 text-red-600 hover:bg-destructive/10 rounded-lg"
                       title="Delete document"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -344,9 +344,9 @@ export function DocumentsPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
+        <div className="bg-card rounded-lg shadow p-12 text-center">
           <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">No documents found.</p>
+          <p className="text-muted-foreground">No documents found.</p>
           {selectedCategory !== "all" && (
             <button
               onClick={() => setSelectedCategory("all")}
@@ -361,14 +361,14 @@ export function DocumentsPage() {
       {/* Preview Modal */}
       {previewDocument && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+          <div className="bg-card rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
+              <h3 className="text-lg font-semibold text-card-foreground line-clamp-1">
                 {previewDocument.title}
               </h3>
               <button
                 onClick={() => setPreviewDocument(null)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-muted-foreground"
               >
                 <svg
                   className="w-6 h-6"
@@ -395,7 +395,7 @@ export function DocumentsPage() {
             <div className="p-4 border-t border-gray-200">
               <button
                 onClick={() => setPreviewDocument(null)}
-                className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"
+                className="w-full px-4 py-2 bg-muted text-card-foreground rounded-lg hover:bg-gray-200 font-medium"
               >
                 Close Preview
               </button>

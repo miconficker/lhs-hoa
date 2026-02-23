@@ -53,7 +53,7 @@ import type {
 const employeeStatusColors: Record<EmployeeStatus, string> = {
   pending: "bg-yellow-100 text-yellow-700",
   active: "bg-green-100 text-green-700",
-  revoked: "bg-red-100 text-red-700",
+  revoked: "bg-red-100 text-destructive",
   expired: "bg-gray-100 text-gray-700",
 };
 
@@ -61,11 +61,11 @@ const vehicleStatusColors: Record<VehicleStatus, string> = {
   pending_payment: "bg-yellow-100 text-yellow-700",
   pending_approval: "bg-blue-100 text-blue-700",
   active: "bg-green-100 text-green-700",
-  cancelled: "bg-red-100 text-red-700",
+  cancelled: "bg-red-100 text-destructive",
 };
 
 const paymentStatusColors: Record<VehiclePaymentStatus, string> = {
-  unpaid: "bg-red-100 text-red-700",
+  unpaid: "bg-red-100 text-destructive",
   paid: "bg-green-100 text-green-700",
 };
 
@@ -411,8 +411,8 @@ export function PassManagementPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Pass Management</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-card-foreground">Pass Management</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Manage employee passes, vehicle registrations, and pass fees
           </p>
         </div>
@@ -420,7 +420,7 @@ export function PassManagementPage() {
 
       {/* Success/Error Messages */}
       {successMessage && (
-        <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-lg flex items-center gap-2">
+        <div className="bg-green-50/50 border border-green-200 text-green-700 p-4 rounded-lg flex items-center gap-2">
           <Check className="w-5 h-5" />
           {successMessage}
           <button onClick={() => setSuccessMessage("")} className="ml-auto">
@@ -429,7 +429,7 @@ export function PassManagementPage() {
         </div>
       )}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg flex items-center gap-2">
+        <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-lg flex items-center gap-2">
           <XCircle className="w-5 h-5" />
           {error}
           <button onClick={() => setError("")} className="ml-auto">
@@ -441,56 +441,56 @@ export function PassManagementPage() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-card rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-blue-100 rounded-lg">
                 <Users className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Active Employees</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-muted-foreground">Active Employees</p>
+                <p className="text-2xl font-bold text-card-foreground">
                   {stats.active_employees}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-card rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-green-100 rounded-lg">
                 <Car className="w-6 h-6 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Active Vehicles</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-muted-foreground">Active Vehicles</p>
+                <p className="text-2xl font-bold text-card-foreground">
                   {stats.active_vehicles}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-card rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-yellow-100 rounded-lg">
                 <Calendar className="w-6 h-6 text-yellow-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Pending Approvals</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-muted-foreground">Pending Approvals</p>
+                <p className="text-2xl font-bold text-card-foreground">
                   {stats.pending_approvals}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-card rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-purple-100 rounded-lg">
                 <Wallet className="w-6 h-6 text-purple-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Monthly Revenue</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-muted-foreground">Monthly Revenue</p>
+                <p className="text-2xl font-bold text-card-foreground">
                   ₱{stats.monthly_revenue?.toFixed(2) || "0.00"}
                 </p>
               </div>
@@ -509,11 +509,11 @@ export function PassManagementPage() {
 
         {/* Employees Tab */}
         <TabsContent value="employees" className="space-y-4">
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-card rounded-lg shadow p-6">
             {/* Filters */}
             <div className="flex flex-wrap items-center gap-4 mb-6">
               <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-                <Search className="w-4 h-4 text-gray-500" />
+                <Search className="w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by name, ID, or address..."
                   value={employeeFilters.searchQuery || ""}
@@ -586,7 +586,7 @@ export function PassManagementPage() {
                     employees.map((employee) => (
                       <tr
                         key={employee.id}
-                        className="border-b hover:bg-gray-50"
+                        className="border-b hover:bg-muted"
                       >
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
@@ -601,7 +601,7 @@ export function PassManagementPage() {
                                 <Users className="w-5 h-5 text-gray-400" />
                               </div>
                             )}
-                            <span className="font-medium text-gray-900">
+                            <span className="font-medium text-card-foreground">
                               {employee.full_name}
                             </span>
                           </div>
@@ -669,7 +669,7 @@ export function PassManagementPage() {
                                 }
                                 size="sm"
                                 variant="outline"
-                                className="text-red-600 hover:text-red-700"
+                                className="text-red-600 hover:text-destructive"
                               >
                                 <XCircle className="w-4 h-4" />
                               </Button>
@@ -678,7 +678,7 @@ export function PassManagementPage() {
                               onClick={() => handleDeleteEmployee(employee.id)}
                               size="sm"
                               variant="outline"
-                              className="text-red-600 hover:text-red-700"
+                              className="text-red-600 hover:text-destructive"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -690,7 +690,7 @@ export function PassManagementPage() {
                     <tr>
                       <td
                         colSpan={7}
-                        className="text-center py-8 text-gray-500"
+                        className="text-center py-8 text-muted-foreground"
                       >
                         No employee passes found
                       </td>
@@ -704,11 +704,11 @@ export function PassManagementPage() {
 
         {/* Vehicles Tab */}
         <TabsContent value="vehicles" className="space-y-4">
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-card rounded-lg shadow p-6">
             {/* Filters */}
             <div className="flex flex-wrap items-center gap-4 mb-6">
               <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-                <Search className="w-4 h-4 text-gray-500" />
+                <Search className="w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by plate, make, model, or address..."
                   value={vehicleFilters.searchQuery || ""}
@@ -807,7 +807,7 @@ export function PassManagementPage() {
                     vehicles.map((vehicle) => (
                       <tr
                         key={vehicle.id}
-                        className="border-b hover:bg-gray-50"
+                        className="border-b hover:bg-muted"
                       >
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
@@ -815,10 +815,10 @@ export function PassManagementPage() {
                               <Car className="w-5 h-5 text-blue-600" />
                             </div>
                             <div>
-                              <div className="font-medium text-gray-900">
+                              <div className="font-medium text-card-foreground">
                                 {vehicle.plate_number}
                               </div>
-                              <div className="text-sm text-gray-600">
+                              <div className="text-sm text-muted-foreground">
                                 {vehicle.make} {vehicle.model} ({vehicle.color})
                               </div>
                             </div>
@@ -953,7 +953,7 @@ export function PassManagementPage() {
                                 }
                                 size="sm"
                                 variant="outline"
-                                className="text-red-600 hover:text-red-700"
+                                className="text-red-600 hover:text-destructive"
                                 title="Cancel"
                               >
                                 <XCircle className="w-4 h-4" />
@@ -963,7 +963,7 @@ export function PassManagementPage() {
                               onClick={() => handleDeleteVehicle(vehicle.id)}
                               size="sm"
                               variant="outline"
-                              className="text-red-600 hover:text-red-700"
+                              className="text-red-600 hover:text-destructive"
                               title="Delete"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -976,7 +976,7 @@ export function PassManagementPage() {
                     <tr>
                       <td
                         colSpan={7}
-                        className="text-center py-8 text-gray-500"
+                        className="text-center py-8 text-muted-foreground"
                       >
                         No vehicle registrations found
                       </td>
@@ -990,9 +990,9 @@ export function PassManagementPage() {
 
         {/* Fees Tab */}
         <TabsContent value="fees" className="space-y-4">
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-card rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-card-foreground">
                 Current Pass Fees
               </h2>
               <Button
@@ -1012,15 +1012,15 @@ export function PassManagementPage() {
                     <Badge className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">
+                    <h3 className="font-semibold text-card-foreground">
                       Sticker Pass
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       Physical sticker for vehicle
                     </p>
                   </div>
                 </div>
-                <div className="text-3xl font-bold text-gray-900">
+                <div className="text-3xl font-bold text-card-foreground">
                   ₱{getFeeForType("sticker").toFixed(2)}
                 </div>
               </div>
@@ -1030,11 +1030,11 @@ export function PassManagementPage() {
                     <CreditCard className="w-6 h-6 text-green-600" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">RFID Pass</h3>
-                    <p className="text-sm text-gray-600">Electronic RFID tag</p>
+                    <h3 className="font-semibold text-card-foreground">RFID Pass</h3>
+                    <p className="text-sm text-muted-foreground">Electronic RFID tag</p>
                   </div>
                 </div>
-                <div className="text-3xl font-bold text-gray-900">
+                <div className="text-3xl font-bold text-card-foreground">
                   ₱{getFeeForType("rfid").toFixed(2)}
                 </div>
               </div>
@@ -1045,13 +1045,13 @@ export function PassManagementPage() {
                     <CreditCard className="w-6 h-6 text-purple-600 -ml-4" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">Both Passes</h3>
-                    <p className="text-sm text-gray-600">
+                    <h3 className="font-semibold text-card-foreground">Both Passes</h3>
+                    <p className="text-sm text-muted-foreground">
                       Sticker + RFID combined
                     </p>
                   </div>
                 </div>
-                <div className="text-3xl font-bold text-gray-900">
+                <div className="text-3xl font-bold text-card-foreground">
                   ₱
                   {(getFeeForType("sticker") + getFeeForType("rfid")).toFixed(
                     2,
@@ -1183,15 +1183,15 @@ export function PassManagementPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600">Amount Due:</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-muted-foreground">Amount Due:</p>
+              <p className="text-2xl font-bold text-card-foreground">
                 ₱
                 {editVehicle.vehicle?.amount_due
                   ? editVehicle.vehicle.amount_due.toFixed(2)
                   : "0.00"}
               </p>
             </div>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               This will mark the vehicle as paid and activate the pass if
               pending approval.
             </p>

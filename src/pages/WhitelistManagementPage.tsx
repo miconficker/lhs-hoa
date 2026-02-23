@@ -85,8 +85,8 @@ export function WhitelistManagementPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Email Whitelist</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-card-foreground">Email Whitelist</h1>
+          <p className="text-muted-foreground mt-1">
             Manage pre-approved emails for Google OAuth sign-in
           </p>
         </div>
@@ -99,19 +99,19 @@ export function WhitelistManagementPage() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+        <div className="p-4 bg-destructive/10 border border-destructive/20 text-destructive rounded-lg">
           {error}
         </div>
       )}
 
       {showAddForm && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
+        <div className="bg-card border border-border rounded-lg p-6">
+          <h3 className="text-lg font-medium text-card-foreground mb-4">
             Add Email to Whitelist
           </h3>
           <form onSubmit={handleAdd} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Email Address
               </label>
               <input
@@ -124,7 +124,7 @@ export function WhitelistManagementPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Role
               </label>
               <select
@@ -149,7 +149,7 @@ export function WhitelistManagementPage() {
               <button
                 type="button"
                 onClick={() => setShowAddForm(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-muted"
               >
                 Cancel
               </button>
@@ -158,27 +158,27 @@ export function WhitelistManagementPage() {
         </div>
       )}
 
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <div className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-50 border-b border-border">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Email
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Role
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Invited
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Accepted
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
                   Actions
                 </th>
               </tr>
@@ -188,7 +188,7 @@ export function WhitelistManagementPage() {
                 <tr>
                   <td
                     colSpan={6}
-                    className="px-6 py-4 text-center text-gray-500"
+                    className="px-6 py-4 text-center text-muted-foreground"
                   >
                     Loading...
                   </td>
@@ -197,16 +197,16 @@ export function WhitelistManagementPage() {
                 <tr>
                   <td
                     colSpan={6}
-                    className="px-6 py-4 text-center text-gray-500"
+                    className="px-6 py-4 text-center text-muted-foreground"
                   >
                     No emails in whitelist. Add one to get started.
                   </td>
                 </tr>
               ) : (
                 entries.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-gray-50">
+                  <tr key={entry.id} className="hover:bg-muted">
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-card-foreground">
                         {entry.email}
                       </div>
                     </td>
@@ -231,13 +231,13 @@ export function WhitelistManagementPage() {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-muted-foreground">
                         {formatDate(entry.invited_at)}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       {entry.accepted_at ? (
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-muted-foreground">
                           {formatDate(entry.accepted_at)}
                         </div>
                       ) : (

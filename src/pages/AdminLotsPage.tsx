@@ -287,7 +287,7 @@ export function AdminLotsPage() {
 
   if (user?.role !== "admin") {
     return (
-      <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 p-4 rounded-lg">
+      <div className="bg-yellow-50/50 dark:bg-yellow-400/10 border border-yellow-200 dark:border-yellow-400/20 text-yellow-700 dark:text-yellow-400 p-4 rounded-lg">
         Access denied. Admin privileges required.
       </div>
     );
@@ -305,17 +305,17 @@ export function AdminLotsPage() {
     <div className="space-y-6">
       <div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-foreground">
             Lot Ownership Management
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Click lots to assign owners and update status. Map updates
             automatically.
           </p>
         </div>
         {selectedLots.size > 0 && (
           <div className="flex items-center gap-3 mt-4">
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-muted-foreground">
               {selectedLots.size} lot(s) selected
             </span>
             <select
@@ -351,7 +351,7 @@ export function AdminLotsPage() {
             )}
             <button
               onClick={() => setSelectedLots(new Set())}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 text-sm"
+              className="px-4 py-2 text-muted-foreground hover:text-foreground text-sm"
             >
               Clear selection
             </button>
@@ -458,32 +458,34 @@ export function AdminLotsPage() {
 
         {/* Side Panel Overlay */}
         <div
-          className={`absolute top-0 right-0 h-full bg-white shadow-2xl z-[9500] transition-transform duration-300 ease-in-out ${
+          className={`absolute top-0 right-0 h-full bg-card shadow-2xl z-[9500] transition-transform duration-300 ease-in-out ${
             selectedLot ? "translate-x-0" : "translate-x-full"
           } w-96`}
         >
           <div className="h-full flex flex-col">
-            <div className="p-6 border-b flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Edit Lot</h3>
+            <div className="p-6 border-b border-border flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-card-foreground">
+                Edit Lot
+              </h3>
               <button
                 onClick={() => setSelectedLot(null)}
-                className="p-1 hover:bg-gray-100 rounded"
+                className="p-1 hover:bg-muted rounded"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5 text-muted-foreground" />
               </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6">
               {selectedLot ? (
                 <div className="space-y-4">
-                  <p className="text-sm font-medium text-gray-700">
+                  <p className="text-sm font-medium text-card-foreground">
                     {selectedLot.block_number && selectedLot.lot_number
                       ? `${selectedLot.street || ""}${selectedLot.street ? ", " : ""}Block ${selectedLot.block_number}, Lot ${selectedLot.lot_number}`
                       : selectedLot.address || "Unnamed Lot"}
                   </p>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-card-foreground mb-1">
                       Owner
                     </label>
                     <select
@@ -513,7 +515,7 @@ export function AdminLotsPage() {
                     {highlightOwnerId && (
                       <button
                         onClick={() => setHighlightOwnerId(null)}
-                        className="mt-2 ml-2 text-xs text-gray-600 hover:text-gray-800"
+                        className="mt-2 ml-2 text-xs text-muted-foreground hover:text-foreground"
                       >
                         Clear highlight
                       </button>
@@ -521,7 +523,7 @@ export function AdminLotsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-card-foreground mb-1">
                       Lot Status
                     </label>
                     <select
@@ -540,7 +542,7 @@ export function AdminLotsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-card-foreground mb-1">
                       Lot Type
                     </label>
                     <select
@@ -561,7 +563,7 @@ export function AdminLotsPage() {
                         💧 Open Space (HOA-Owned)
                       </option>
                     </select>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {selectedLotType === "community" ||
                       selectedLotType === "utility" ||
                       selectedLotType === "open_space"
@@ -571,7 +573,7 @@ export function AdminLotsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-card-foreground mb-1">
                       Lot Size (m²)
                     </label>
                     <input
@@ -586,7 +588,7 @@ export function AdminLotsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-card-foreground mb-1">
                       Label (optional)
                     </label>
                     <input
@@ -596,13 +598,13 @@ export function AdminLotsPage() {
                       placeholder="e.g., Clubhouse, Water Tower, Tennis Court"
                       className="w-full px-3 py-2 border rounded-lg"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       Short name for community/utility lots
                     </p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-card-foreground mb-1">
                       Description (optional)
                     </label>
                     <textarea
@@ -612,7 +614,7 @@ export function AdminLotsPage() {
                       className="w-full px-3 py-2 border rounded-lg"
                       rows={3}
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       Detailed description for amenities or common areas
                     </p>
                   </div>
@@ -637,15 +639,15 @@ export function AdminLotsPage() {
                     </button>
                     <button
                       onClick={() => setSelectedLot(null)}
-                      className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                      className="px-4 py-2 border border-border rounded-lg hover:bg-muted"
                     >
                       Cancel
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="text-center text-gray-500">
-                  <Map className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                <div className="text-center text-muted-foreground">
+                  <Map className="w-12 h-12 mx-auto mb-3 text-muted-foreground/50" />
                   <p>Click a lot on the map to edit</p>
                   <p className="text-sm mt-2">Ctrl+click for multi-select</p>
                 </div>
@@ -657,20 +659,20 @@ export function AdminLotsPage() {
 
       {/* Merge Modal */}
       {showMergeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card rounded-lg p-6 max-w-md">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Link2 className="w-5 h-5 text-purple-600" />
               Merge Lots
             </h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               Merge {selectedLots.size} lots into one household. The first
               selected lot will be the primary lot.
             </p>
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setShowMergeModal(false)}
-                className="px-4 py-2 text-gray-700 border rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 text-card-foreground border border-border rounded-lg hover:bg-muted"
               >
                 Cancel
               </button>

@@ -66,11 +66,11 @@ export function CommonAreasPage() {
       case "community":
         return <Trees className="w-5 h-5 text-green-600" />;
       case "utility":
-        return <Building2 className="w-5 h-5 text-gray-600" />;
+        return <Building2 className="w-5 h-5 text-muted-foreground" />;
       case "open_space":
         return <Droplets className="w-5 h-5 text-blue-600" />;
       default:
-        return <Trees className="w-5 h-5 text-gray-400" />;
+        return <Trees className="w-5 h-5 text-muted-foreground" />;
     }
   };
 
@@ -91,47 +91,47 @@ export function CommonAreasPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Common Areas</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-card-foreground">Common Areas</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Manage HOA-owned community areas, utilities, and open spaces
           </p>
         </div>
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-muted-foreground">
           {lots.length} common area(s)
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-card rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Location
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Type
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Label
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Description
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-border">
               {lots.map((lot) => (
                 <tr key={lot.lot_id}>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       {getLotIcon(lot.lot_type)}
                       <div>
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-card-foreground">
                           {lot.address}
                         </div>
                         {lot.block && lot.lot && (
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-muted-foreground">
                             Block {lot.block}, Lot {lot.lot}
                           </div>
                         )}
@@ -148,14 +148,14 @@ export function CommonAreasPage() {
                         lot.lot_type.slice(1)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
+                  <td className="px-6 py-4 text-sm text-muted-foreground">
                     {lot.lot_label || (
-                      <span className="text-gray-400 italic">Not labeled</span>
+                      <span className="text-muted-foreground italic">Not labeled</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
+                  <td className="px-6 py-4 text-sm text-muted-foreground">
                     {lot.lot_description || (
-                      <span className="text-gray-400 italic">
+                      <span className="text-muted-foreground italic">
                         No description
                       </span>
                     )}
@@ -166,11 +166,11 @@ export function CommonAreasPage() {
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center">
-                      <Trees className="w-12 h-12 text-gray-400 mb-3" />
-                      <p className="text-sm text-gray-500">
+                      <Trees className="w-12 h-12 text-muted-foreground mb-3" />
+                      <p className="text-sm text-muted-foreground">
                         No common areas found
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Community, utility, and open space lots will appear here
                       </p>
                     </div>

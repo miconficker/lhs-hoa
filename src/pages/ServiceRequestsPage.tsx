@@ -19,7 +19,7 @@ const statusColors: Record<ServiceRequestStatus, string> = {
 };
 
 const priorityColors: Record<ServiceRequestPriority, string> = {
-  low: "bg-gray-100 text-gray-700",
+  low: "bg-gray-100 text-card-foreground",
   normal: "bg-blue-100 text-blue-700",
   high: "bg-orange-100 text-orange-700",
   urgent: "bg-red-100 text-red-700",
@@ -87,7 +87,7 @@ export function ServiceRequestsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-card-foreground">
           {labels.serviceRequests}
         </h1>
         <button className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
@@ -97,10 +97,10 @@ export function ServiceRequestsPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="bg-card rounded-lg shadow p-4">
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+          className="flex items-center gap-2 text-card-foreground hover:text-card-foreground"
         >
           <Filter className="w-5 h-5" />
           {labels.filter}
@@ -109,7 +109,7 @@ export function ServiceRequestsPage() {
         {showFilters && (
           <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 {labels.status}
               </label>
               <select
@@ -120,7 +120,7 @@ export function ServiceRequestsPage() {
                     status: e.target.value || undefined,
                   })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="">{labels.all}</option>
                 <option value="pending">{labels.pending}</option>
@@ -130,7 +130,7 @@ export function ServiceRequestsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 {labels.priority}
               </label>
               <select
@@ -141,7 +141,7 @@ export function ServiceRequestsPage() {
                     priority: e.target.value || undefined,
                   })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="">{labels.all}</option>
                 <option value="low">{labels.low}</option>
@@ -151,7 +151,7 @@ export function ServiceRequestsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 {labels.category}
               </label>
               <select
@@ -162,7 +162,7 @@ export function ServiceRequestsPage() {
                     category: e.target.value || undefined,
                   })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="">{labels.all}</option>
                 <option value="plumbing">{labels.plumbing}</option>
@@ -177,11 +177,11 @@ export function ServiceRequestsPage() {
       </div>
 
       {/* Requests List */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-card rounded-lg shadow overflow-hidden">
         {requests?.requests && requests.requests.length > 0 ? (
           <div className="divide-y divide-gray-200">
             {requests.requests.map((request) => (
-              <div key={request.id} className="p-6 hover:bg-gray-50">
+              <div key={request.id} className="p-6 hover:bg-muted">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
@@ -195,14 +195,14 @@ export function ServiceRequestsPage() {
                       >
                         {request.priority}
                       </span>
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700">
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-card-foreground">
                         {categoryLabels[request.category]}
                       </span>
                     </div>
-                    <p className="text-gray-900 font-medium">
+                    <p className="text-card-foreground font-medium">
                       {request.description}
                     </p>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-muted-foreground mt-1">
                       Request ID: {request.id.slice(0, 8)}... •{" "}
                       {format(
                         new Date(request.created_at),
@@ -218,7 +218,7 @@ export function ServiceRequestsPage() {
                   </div>
                   {isAdmin && (
                     <div className="ml-4 flex gap-2">
-                      <button className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
+                      <button className="px-3 py-1 text-sm border border-border rounded-lg hover:bg-muted">
                         {labels.view}
                       </button>
                       <button className="px-3 py-1 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700">
@@ -231,7 +231,7 @@ export function ServiceRequestsPage() {
             ))}
           </div>
         ) : (
-          <div className="p-12 text-center text-gray-500">
+          <div className="p-12 text-center text-muted-foreground">
             {messages.noRequestsFound}
           </div>
         )}

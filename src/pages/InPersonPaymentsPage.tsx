@@ -140,10 +140,10 @@ export function InPersonPaymentsPage() {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-2">
+          <h2 className="text-2xl font-bold text-destructive mb-2">
             Access Denied
           </h2>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground">
             You don't have permission to access this page.
           </p>
         </div>
@@ -154,13 +154,13 @@ export function InPersonPaymentsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-card-foreground">
           Record In-Person Payments
         </h1>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg flex items-start gap-3">
+        <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-lg flex items-start gap-3">
           <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
           <div className="flex-1">
             <p className="font-medium">Error</p>
@@ -168,7 +168,7 @@ export function InPersonPaymentsPage() {
           </div>
           <button
             onClick={() => setError("")}
-            className="text-red-500 hover:text-red-700"
+            className="text-red-500 hover:text-destructive"
           >
             <X className="w-5 h-5" />
           </button>
@@ -176,7 +176,7 @@ export function InPersonPaymentsPage() {
       )}
 
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-lg flex items-start gap-3">
+        <div className="bg-green-50/50 border border-green-200 text-green-700 p-4 rounded-lg flex items-start gap-3">
           <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
           <div className="flex-1">
             <p className="font-medium">Success</p>
@@ -193,19 +193,19 @@ export function InPersonPaymentsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Payment Form */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-card rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">Record Payment</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* User Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Homeowner *
               </label>
               <select
                 name="user_id"
                 value={formData.user_id}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 required
               >
                 <option value="">Select homeowner</option>
@@ -220,7 +220,7 @@ export function InPersonPaymentsPage() {
 
             {/* Amount */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Amount (PHP) *
               </label>
               <div className="relative">
@@ -233,7 +233,7 @@ export function InPersonPaymentsPage() {
                   onBlur={handleCalculateFees}
                   min="0.01"
                   step="0.01"
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full pl-10 pr-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   placeholder="0.00"
                   required
                 />
@@ -242,7 +242,7 @@ export function InPersonPaymentsPage() {
 
             {/* Period */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Period (Year) *
               </label>
               <select
@@ -250,7 +250,7 @@ export function InPersonPaymentsPage() {
                 value={formData.period}
                 onChange={handleInputChange}
                 onBlur={handleCalculateFees}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 required
               >
                 <option value="">Select period</option>
@@ -262,7 +262,7 @@ export function InPersonPaymentsPage() {
 
             {/* Payment Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Payment Date *
               </label>
               <div className="relative">
@@ -272,7 +272,7 @@ export function InPersonPaymentsPage() {
                   name="payment_date"
                   value={formData.payment_date}
                   onChange={handleInputChange}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full pl-10 pr-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   required
                 />
               </div>
@@ -280,7 +280,7 @@ export function InPersonPaymentsPage() {
 
             {/* Reference Number */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Reference Number / Check Number
               </label>
               <div className="relative">
@@ -290,7 +290,7 @@ export function InPersonPaymentsPage() {
                   name="reference_number"
                   value={formData.reference_number}
                   onChange={handleInputChange}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full pl-10 pr-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   placeholder="Optional"
                 />
               </div>
@@ -298,7 +298,7 @@ export function InPersonPaymentsPage() {
 
             {/* Witness */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Witness
               </label>
               <div className="relative">
@@ -308,7 +308,7 @@ export function InPersonPaymentsPage() {
                   name="witness"
                   value={formData.witness}
                   onChange={handleInputChange}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full pl-10 pr-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   placeholder="Optional"
                 />
               </div>
@@ -328,12 +328,12 @@ export function InPersonPaymentsPage() {
 
             {/* Total Display */}
             {formData.amount && (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="bg-muted border border-border rounded-lg p-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700">
+                  <span className="text-sm font-medium text-card-foreground">
                     Total to Record:
                   </span>
-                  <span className="text-lg font-bold text-gray-900">
+                  <span className="text-lg font-bold text-card-foreground">
                     PHP{" "}
                     {(parseFloat(formData.amount || "0") + lateFees).toFixed(2)}
                   </span>
@@ -358,7 +358,7 @@ export function InPersonPaymentsPage() {
                   setError("");
                   setShowConfirm(false);
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-2 border border-border text-card-foreground rounded-lg hover:bg-muted"
               >
                 Clear
               </button>
@@ -388,7 +388,7 @@ export function InPersonPaymentsPage() {
         </div>
 
         {/* Recent Payments */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-card rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">
             Recent In-Person Payments
           </h2>
@@ -397,24 +397,24 @@ export function InPersonPaymentsPage() {
               {recentPayments.map((payment) => (
                 <div
                   key={payment.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50"
+                  className="border border-border rounded-lg p-4 hover:bg-muted"
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="font-semibold text-gray-900">
+                      <p className="font-semibold text-card-foreground">
                         PHP {payment.amount.toFixed(2)}
                       </p>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-muted-foreground">
                         Period: {payment.period}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         {format(
                           new Date(payment.created_at),
                           "MMM d, yyyy h:mm a",
                         )}
                       </p>
                       {payment.reference_number && (
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-muted-foreground">
                           Ref: {payment.reference_number}
                         </p>
                       )}
@@ -430,7 +430,7 @@ export function InPersonPaymentsPage() {
                           ? "bg-green-100 text-green-700"
                           : payment.status === "pending"
                             ? "bg-yellow-100 text-yellow-700"
-                            : "bg-red-100 text-red-700"
+                            : "bg-red-100 text-destructive"
                       }`}
                     >
                       {payment.status}
@@ -447,7 +447,7 @@ export function InPersonPaymentsPage() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               No recent in-person payments found.
             </div>
           )}

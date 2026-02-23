@@ -107,7 +107,7 @@ export function MyLotsPage() {
 
   if (!data) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+      <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-lg">
         Failed to load your lots. Please try again.
       </div>
     );
@@ -119,50 +119,50 @@ export function MyLotsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">My Lots</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-card-foreground">My Lots</h1>
+        <p className="text-sm text-muted-foreground mt-1">
           View your lots, track dues, and check voting status
         </p>
       </div>
 
       {/* Summary Card */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Summary</h2>
+      <div className="bg-card rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold text-card-foreground mb-4">Summary</h2>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
           <div className="space-y-1">
-            <p className="text-sm text-gray-500">Total Properties</p>
-            <p className="text-3xl font-bold text-gray-900">
+            <p className="text-sm text-muted-foreground">Total Properties</p>
+            <p className="text-3xl font-bold text-card-foreground">
               {summary.total_properties ?? summary.total_lots}
             </p>
           </div>
 
           <div className="space-y-1">
-            <p className="text-sm text-gray-500">Total Lots</p>
-            <p className="text-3xl font-bold text-gray-900">
+            <p className="text-sm text-muted-foreground">Total Lots</p>
+            <p className="text-3xl font-bold text-card-foreground">
               {summary.total_lots}
             </p>
           </div>
 
           <div className="space-y-1">
-            <p className="text-sm text-gray-500">Total Area</p>
-            <p className="text-3xl font-bold text-gray-900">
+            <p className="text-sm text-muted-foreground">Total Area</p>
+            <p className="text-3xl font-bold text-card-foreground">
               {summary.total_sqm.toLocaleString()} m²
             </p>
           </div>
 
           <div className="space-y-1">
-            <p className="text-sm text-gray-500">Annual Dues</p>
-            <p className="text-3xl font-bold text-gray-900">
+            <p className="text-sm text-muted-foreground">Annual Dues</p>
+            <p className="text-3xl font-bold text-card-foreground">
               ₱{summary.annual_dues_total.toLocaleString()}
             </p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-muted-foreground">
               ₱{summary.rate_per_sqm}/sqm/month
             </p>
           </div>
 
           <div className="space-y-1">
-            <p className="text-sm text-gray-500">Voting Status</p>
+            <p className="text-sm text-muted-foreground">Voting Status</p>
             <div className="flex items-center gap-2">
               {summary.voting_status === "eligible" ? (
                 <>
@@ -174,7 +174,7 @@ export function MyLotsPage() {
               ) : (
                 <>
                   <AlertCircle className="w-5 h-5 text-red-600" />
-                  <span className="text-sm font-medium text-red-700">
+                  <span className="text-sm font-medium text-destructive">
                     Suspended
                   </span>
                 </>
@@ -185,10 +185,10 @@ export function MyLotsPage() {
 
         {/* Unpaid Periods Warning */}
         {summary.unpaid_periods.length > 0 && (
-          <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="mt-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               <AlertCircle className="w-5 h-5 text-red-600" />
-              <span className="font-semibold text-red-700">
+              <span className="font-semibold text-destructive">
                 Unpaid Dues - Voting Suspended
               </span>
             </div>
@@ -207,56 +207,56 @@ export function MyLotsPage() {
       </div>
 
       {/* Lots List */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-card rounded-lg shadow overflow-hidden">
         <div className="p-6 border-b">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-card-foreground">
             Your Lots ({lots.length})
           </h2>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Street
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Block
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Lot
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Address
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Type
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Size (m²)
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Annual Dues
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-border">
               {lots.map((lot) => (
                 <tr key={lot.lot_id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-card-foreground">
                     {lot.street || "—"}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-card-foreground">
                     {lot.block || "—"}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-card-foreground">
                     {lot.lot || "—"}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
@@ -288,7 +288,7 @@ export function MyLotsPage() {
                           ? "bg-green-100 text-green-700"
                           : lot.lot_status === "under_construction"
                             ? "bg-orange-100 text-orange-700"
-                            : "bg-gray-100 text-gray-700"
+                            : "bg-gray-100 text-card-foreground"
                       }`}
                     >
                       {lot.lot_status === "built"
@@ -301,7 +301,7 @@ export function MyLotsPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {lot.lot_size_sqm?.toLocaleString() || "—"}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-card-foreground">
                     ₱{lot.annual_dues.toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -357,7 +357,7 @@ export function MyLotsPage() {
                 placeholder="Enter address"
               />
             </div>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-muted-foreground">
               <p>Street: {editingLot?.street || "—"}</p>
               <p>Block: {editingLot?.block || "—"}</p>
               <p>Lot: {editingLot?.lot || "—"}</p>

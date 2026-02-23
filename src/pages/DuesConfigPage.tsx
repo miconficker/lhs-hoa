@@ -165,7 +165,7 @@ export function DuesConfigPage() {
 
   if (!user || user.role !== "admin") {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+      <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-lg">
         Admin access required.
       </div>
     );
@@ -184,10 +184,10 @@ export function DuesConfigPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-card-foreground">
             Dues Configuration
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Manage monthly HOA dues rates per square meter
           </p>
         </div>
@@ -207,8 +207,8 @@ export function DuesConfigPage() {
         <div
           className={`p-4 rounded-lg border ${
             message.type === "success"
-              ? "bg-green-50 border-green-200 text-green-700"
-              : "bg-red-50 border-red-200 text-red-700"
+              ? "bg-green-50/50 border-green-200 text-green-700"
+              : "bg-destructive/10 border-destructive/20 text-destructive"
           }`}
         >
           <div className="flex items-center gap-2">
@@ -244,13 +244,13 @@ export function DuesConfigPage() {
 
       {/* Add/Edit Form */}
       {showForm && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-card rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-card-foreground mb-4">
             {editingRate ? "Edit Dues Rate" : "Add New Dues Rate"}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Year
               </label>
               <input
@@ -262,12 +262,12 @@ export function DuesConfigPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, year: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Monthly Rate per Square Meter (₱)
               </label>
               <input
@@ -279,13 +279,13 @@ export function DuesConfigPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, rate_per_sqm: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="e.g., 5.00"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Effective Date
               </label>
               <input
@@ -295,9 +295,9 @@ export function DuesConfigPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, effective_date: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 This rate will apply to all dues calculations from this date
                 forward.
               </p>
@@ -318,7 +318,7 @@ export function DuesConfigPage() {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="px-6 py-2 border border-border text-card-foreground rounded-lg hover:bg-muted"
               >
                 Cancel
               </button>
@@ -328,9 +328,9 @@ export function DuesConfigPage() {
       )}
 
       {/* Rates History Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-card rounded-lg shadow overflow-hidden">
         <div className="p-6 border-b">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-card-foreground">
             Rates History ({rates.length})
           </h2>
         </div>
@@ -339,29 +339,29 @@ export function DuesConfigPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Year
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Monthly Rate (₱/sqm)
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Effective Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Status
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-card divide-y divide-gray-200">
               {rates.length === 0 ? (
                 <tr>
                   <td
                     colSpan={5}
-                    className="px-6 py-12 text-center text-sm text-gray-500"
+                    className="px-6 py-12 text-center text-sm text-muted-foreground"
                   >
                     No dues rates configured yet. Click "Add New Rate" to get
                     started.
@@ -376,13 +376,13 @@ export function DuesConfigPage() {
 
                   return (
                     <tr key={rate.id} className={isActive ? "bg-blue-50" : ""}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-card-foreground">
                         {rate.year}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-card-foreground">
                         ₱{rate.rate_per_sqm.toLocaleString()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                         {new Date(rate.effective_date).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -395,7 +395,7 @@ export function DuesConfigPage() {
                             Future
                           </span>
                         ) : (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700">
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-card-foreground">
                             Historical
                           </span>
                         )}

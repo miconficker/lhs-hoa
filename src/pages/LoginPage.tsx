@@ -92,7 +92,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-muted px-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <svg
@@ -102,15 +102,15 @@ export function LoginPage() {
           >
             <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
           </svg>
-          <h1 className="mt-4 text-3xl font-bold text-gray-900">
+          <h1 className="mt-4 text-3xl font-bold text-card-foreground">
             Laguna Hills HOA
           </h1>
-          <p className="mt-2 text-gray-600">{labels.signInTitle}</p>
+          <p className="mt-2 text-muted-foreground">{labels.signInTitle}</p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-8">
+        <div className="bg-card rounded-lg shadow-md p-8">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded">
               {error}
             </div>
           )}
@@ -119,7 +119,7 @@ export function LoginPage() {
           {googleUrl && (
             <button
               onClick={() => (window.location.href = googleUrl)}
-              className="w-full mb-4 flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="w-full mb-4 flex items-center justify-center gap-3 px-4 py-3 border border-border rounded-lg hover:bg-muted transition-colors"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
@@ -139,7 +139,7 @@ export function LoginPage() {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              <span className="text-gray-700 font-medium">
+              <span className="text-card-foreground font-medium">
                 {labels.signInWithGoogle}
               </span>
             </button>
@@ -147,10 +147,10 @@ export function LoginPage() {
 
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
+              <div className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">
+              <span className="px-2 bg-card text-gray-500">
                 {labels.orContinueWithEmail}
               </span>
             </div>
@@ -161,7 +161,7 @@ export function LoginPage() {
               <div>
                 <label
                   htmlFor="email"
-                  className="block text-sm font-medium text-gray-700"
+                  className="block text-sm font-medium text-card-foreground"
                 >
                   {labels.email}
                 </label>
@@ -171,7 +171,7 @@ export function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  className="mt-1 block w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                   placeholder="you@example.com"
                 />
               </div>
@@ -179,7 +179,7 @@ export function LoginPage() {
               <div>
                 <label
                   htmlFor="password"
-                  className="block text-sm font-medium text-gray-700"
+                  className="block text-sm font-medium text-card-foreground"
                 >
                   {labels.password}
                 </label>
@@ -190,7 +190,7 @@ export function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  className="mt-1 block w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                   placeholder="••••••••"
                 />
               </div>

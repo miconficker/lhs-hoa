@@ -48,7 +48,7 @@ export function EventsPage() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+      <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-lg">
         {error}
       </div>
     );
@@ -57,17 +57,17 @@ export function EventsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Events</h1>
+        <h1 className="text-2xl font-bold text-card-foreground">Events</h1>
         <div className="flex gap-2">
           <button
             onClick={() => setShowUpcoming(!showUpcoming)}
-            className={`px-4 py-2 rounded-lg ${showUpcoming ? "bg-primary-600 text-white" : "bg-gray-200 text-gray-700"}`}
+            className={`px-4 py-2 rounded-lg ${showUpcoming ? "bg-primary-600 text-white" : "bg-muted text-card-foreground"}`}
           >
             Upcoming
           </button>
           <button
             onClick={() => setShowUpcoming(!showUpcoming)}
-            className={`px-4 py-2 rounded-lg ${!showUpcoming ? "bg-primary-600 text-white" : "bg-gray-200 text-gray-700"}`}
+            className={`px-4 py-2 rounded-lg ${!showUpcoming ? "bg-primary-600 text-white" : "bg-muted text-card-foreground"}`}
           >
             Past
           </button>
@@ -85,46 +85,46 @@ export function EventsPage() {
 
       {/* Create Form */}
       {showCreateForm && isAdmin && (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-card rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">Create Event</h2>
           <form className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Title
               </label>
               <input
                 type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 placeholder="Event title"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Description
               </label>
               <textarea
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 placeholder="Event description"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-card-foreground mb-1">
                   Date & Time
                 </label>
                 <input
                   type="datetime-local"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-card-foreground mb-1">
                   Location
                 </label>
                 <input
                   type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                   placeholder="Event location"
                 />
               </div>
@@ -133,7 +133,7 @@ export function EventsPage() {
               <button
                 type="button"
                 onClick={() => setShowCreateForm(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 border border-border rounded-lg hover:bg-muted"
               >
                 Cancel
               </button>
@@ -154,7 +154,7 @@ export function EventsPage() {
           (showUpcoming ? upcomingEvents : pastEvents).map((event) => (
             <div
               key={event.id}
-              className="bg-white rounded-lg shadow overflow-hidden"
+              className="bg-card rounded-lg shadow overflow-hidden"
             >
               <div className="bg-primary-50 p-4">
                 <div className="flex items-center gap-2 text-primary-700">
@@ -168,16 +168,16 @@ export function EventsPage() {
                 </div>
               </div>
               <div className="p-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-lg font-semibold text-card-foreground mb-2">
                   {event.title}
                 </h3>
                 {event.description && (
-                  <p className="text-gray-600 text-sm mb-3">
+                  <p className="text-muted-foreground text-sm mb-3">
                     {event.description}
                   </p>
                 )}
                 {event.location && (
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <MapPin className="w-4 h-4" />
                     {event.location}
                   </div>
@@ -186,7 +186,7 @@ export function EventsPage() {
             </div>
           ))
         ) : (
-          <div className="col-span-full bg-white rounded-lg shadow p-12 text-center text-gray-500">
+          <div className="col-span-full bg-card rounded-lg shadow p-12 text-center text-muted-foreground">
             No {showUpcoming ? "upcoming" : "past"} events found.
           </div>
         )}

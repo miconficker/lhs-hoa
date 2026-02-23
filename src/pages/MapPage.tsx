@@ -88,7 +88,7 @@ function HouseholdMarker({ household }: HouseholdMarkerProps) {
     <Marker position={position} icon={icon}>
       <Popup>
         <div className="p-2 min-w-[200px]">
-          <h3 className="font-semibold text-gray-900 mb-1">
+          <h3 className="font-semibold text-card-foreground mb-1">
             {household.street || household.block || household.lot
               ? `${household.street ? household.street + ", " : ""}Block ${household.block}, Lot ${household.lot}`
               : household.address}
@@ -100,7 +100,7 @@ function HouseholdMarker({ household }: HouseholdMarkerProps) {
                   ? "bg-green-100 text-green-700"
                   : household.status === "rented"
                     ? "bg-blue-100 text-blue-700"
-                    : "bg-gray-100 text-gray-700"
+                    : "bg-gray-100 text-card-foreground"
               }`}
             >
               {household.status.charAt(0).toUpperCase() +
@@ -109,13 +109,13 @@ function HouseholdMarker({ household }: HouseholdMarkerProps) {
           </div>
           {household.residents && household.residents.length > 0 ? (
             <div>
-              <p className="text-xs font-medium text-gray-500 mb-1">
+              <p className="text-xs font-medium text-muted-foreground mb-1">
                 Residents:
               </p>
-              <p className="text-sm text-gray-700">{household.residents}</p>
+              <p className="text-sm text-card-foreground">{household.residents}</p>
             </div>
           ) : (
-            <p className="text-sm text-gray-500 italic">No residents</p>
+            <p className="text-sm text-muted-foreground italic">No residents</p>
           )}
         </div>
       </Popup>
@@ -249,7 +249,7 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
 
       const ownerInfo = isAdmin
         ? `
-        <p class="text-sm text-gray-600">
+        <p class="text-sm text-muted-foreground">
           Owner: ${!ownerName && !ownerId ? "HOA-Owned" : ownerName || ownerId || "Unassigned"}
         </p>
       `
@@ -272,7 +272,7 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
 
       const popupContent = `
         <div class="p-2 min-w-[200px]">
-          <h3 class="font-semibold text-gray-900 mb-1">
+          <h3 class="font-semibold text-card-foreground mb-1">
             ${
               lotLabel ||
               (props.block_number && props.lot_number
@@ -281,7 +281,7 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
             }
           </h3>
           ${ownerInfo}
-          ${lotType ? `<p class="text-xs text-gray-500">Type: ${lotType}</p>` : ""}
+          ${lotType ? `<p class="text-xs text-muted-foreground">Type: ${lotType}</p>` : ""}
           ${mergeBadge}
           <div class="flex items-center gap-2 mb-2">
             <span class="px-2 py-1 text-xs font-medium rounded-full ${
@@ -289,7 +289,7 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
                 ? "bg-green-100 text-green-700"
                 : lotStatus === "under_construction"
                   ? "bg-orange-100 text-orange-700"
-                  : "bg-gray-100 text-gray-700"
+                  : "bg-gray-100 text-card-foreground"
             }">
               ${
                 lotStatus === "built"
@@ -302,12 +302,12 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
           </div>
           ${
             props.lot_size_sqm
-              ? `<p class="text-xs text-gray-500">Size: ${Math.round(props.lot_size_sqm)} m²</p>`
+              ? `<p class="text-xs text-muted-foreground">Size: ${Math.round(props.lot_size_sqm)} m²</p>`
               : ""
           }
           ${
             lotDescription
-              ? `<p class="text-xs text-gray-600 mt-1">${lotDescription}</p>`
+              ? `<p class="text-xs text-muted-foreground mt-1">${lotDescription}</p>`
               : ""
           }
           ${editLink}
@@ -361,10 +361,10 @@ function BlocksGeoJSON({ data }: BlocksGeoJSONProps) {
       const blockId = feature.id?.toString().replace("block-", "") || "?";
       const popupContent = `
         <div class="p-2 min-w-[200px]">
-          <h3 class="font-semibold text-gray-900 mb-1">
+          <h3 class="font-semibold text-card-foreground mb-1">
             Block ${blockId}
           </h3>
-          ${props.area_sqm ? `<p class="text-xs text-gray-500">Area: ${Math.round(props.area_sqm).toLocaleString()} px²</p>` : ""}
+          ${props.area_sqm ? `<p class="text-xs text-muted-foreground">Area: ${Math.round(props.area_sqm).toLocaleString()} px²</p>` : ""}
         </div>
       `;
       layer.bindPopup(popupContent);
@@ -512,7 +512,7 @@ export function MapPage() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+      <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-lg">
         {error}
       </div>
     );
@@ -551,33 +551,33 @@ export function MapPage() {
       {/* Floating Toggle Button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="absolute top-4 right-4 z-[9999] bg-white rounded-full shadow-xl p-3 hover:bg-gray-50 transition-all duration-300 border-2 border-gray-200"
+        className="absolute top-4 right-4 z-[9999] bg-card rounded-full shadow-xl p-3 hover:bg-muted transition-all duration-300 border-2 border-border"
         title={sidebarOpen ? "Hide panel" : "Show panel"}
         aria-label="Toggle sidebar"
       >
         {sidebarOpen ? (
-          <ChevronRight className="w-6 h-6 text-gray-700" />
+          <ChevronRight className="w-6 h-6 text-card-foreground" />
         ) : (
-          <ChevronLeft className="w-6 h-6 text-gray-700" />
+          <ChevronLeft className="w-6 h-6 text-card-foreground" />
         )}
       </button>
 
       {/* Collapsible Sidebar */}
       <div
-        className={`absolute top-0 right-0 h-full bg-white shadow-2xl z-[9500] transition-transform duration-300 ease-in-out ${
+        className={`absolute top-0 right-0 h-full bg-card shadow-2xl z-[9500] transition-transform duration-300 ease-in-out ${
           sidebarOpen ? "translate-x-0" : "translate-x-full"
         }`}
         style={{ width: "100%", maxWidth: "320px" }}
       >
         <div className="h-full flex flex-col">
           {/* Header */}
-          <div className="p-4 border-b border-gray-200 flex-shrink-0">
+          <div className="p-4 border-b border-border flex-shrink-0">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h1 className="text-lg font-bold text-gray-900">
+                <h1 className="text-lg font-bold text-card-foreground">
                   Subdivision Map
                 </h1>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   {filteredHouseholds.length} households
                 </p>
               </div>
@@ -586,14 +586,14 @@ export function MapPage() {
                 className="p-2 hover:bg-gray-100 rounded-full"
                 aria-label="Close sidebar"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5 text-muted-foreground" />
               </button>
             </div>
 
             {/* Map Controls */}
             <div className="space-y-4">
               <div>
-                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                   Filter by Status
                 </h4>
                 <div className="flex flex-col gap-2">
@@ -617,7 +617,7 @@ export function MapPage() {
                         onChange={() => setFilter(status)}
                         className="w-4 h-4 text-primary-600"
                       />
-                      <span className="text-gray-700">
+                      <span className="text-card-foreground">
                         {status === "all"
                           ? "All"
                           : status === "built"
@@ -632,12 +632,12 @@ export function MapPage() {
               </div>
 
               <div>
-                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                   Layers
                 </h4>
                 <div className="flex flex-col gap-2">
-                  <label className="flex items-center justify-between cursor-pointer text-sm p-2 hover:bg-gray-50 rounded">
-                    <span className="text-gray-700">Block Boundaries</span>
+                  <label className="flex items-center justify-between cursor-pointer text-sm p-2 hover:bg-muted rounded">
+                    <span className="text-card-foreground">Block Boundaries</span>
                     <input
                       type="checkbox"
                       checked={showBlocks}
@@ -645,8 +645,8 @@ export function MapPage() {
                       className="w-4 h-4 text-primary-600"
                     />
                   </label>
-                  <label className="flex items-center justify-between cursor-pointer text-sm p-2 hover:bg-gray-50 rounded">
-                    <span className="text-gray-700">Lot Boundaries</span>
+                  <label className="flex items-center justify-between cursor-pointer text-sm p-2 hover:bg-muted rounded">
+                    <span className="text-card-foreground">Lot Boundaries</span>
                     <input
                       type="checkbox"
                       checked={showLots}
@@ -669,7 +669,7 @@ export function MapPage() {
                     <Home className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-gray-900">
+                    <p className="text-2xl font-bold text-card-foreground">
                       {lotsData?.features.filter((f: any) => {
                         const lotId = f.properties?.path_id;
                         const ownership = lotsOwnership?.get(lotId || "");
@@ -681,7 +681,7 @@ export function MapPage() {
                         );
                       }).length || 0}
                     </p>
-                    <p className="text-sm text-gray-600">Built (Private)</p>
+                    <p className="text-sm text-muted-foreground">Built (Private)</p>
                   </div>
                 </div>
               </div>
@@ -692,7 +692,7 @@ export function MapPage() {
                     <Building className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-gray-900">
+                    <p className="text-2xl font-bold text-card-foreground">
                       {lotsData?.features.filter((f: any) => {
                         const lotId = f.properties?.path_id;
                         const ownership = lotsOwnership?.get(lotId || "");
@@ -704,20 +704,20 @@ export function MapPage() {
                         );
                       }).length || 0}
                     </p>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       Under Construction (Private)
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+              <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-border">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-gray-500 rounded-lg">
                     <Landmark className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-gray-900">
+                    <p className="text-2xl font-bold text-card-foreground">
                       {lotsData?.features.filter((f: any) => {
                         const lotId = f.properties?.path_id;
                         const ownership = lotsOwnership?.get(lotId || "");
@@ -731,7 +731,7 @@ export function MapPage() {
                         );
                       }).length || 0}
                     </p>
-                    <p className="text-sm text-gray-600">Vacant (Private)</p>
+                    <p className="text-sm text-muted-foreground">Vacant (Private)</p>
                   </div>
                 </div>
               </div>
@@ -745,11 +745,11 @@ export function MapPage() {
               }).length > 0 && (
                 <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-xl p-4 border border-purple-200">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-500 rounded-lg">
+                    <div className="p-2 bg-purple-50/500 rounded-lg">
                       <Landmark className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-gray-900">
+                      <p className="text-2xl font-bold text-card-foreground">
                         {(lotsData?.features ?? []).filter((f: any) => {
                           const lotId = f.properties?.path_id;
                           const ownership = lotsOwnership?.get(lotId || "");
@@ -757,7 +757,7 @@ export function MapPage() {
                           return !ownership?.owner_user_id;
                         }).length || 0}
                       </p>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-muted-foreground">
                         HOA-Owned Common Areas
                       </p>
                     </div>
@@ -767,41 +767,41 @@ export function MapPage() {
             </div>
 
             {/* Legend */}
-            <div className="border-t border-gray-200 pt-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            <div className="border-t border-border pt-4">
+              <h3 className="text-sm font-semibold text-card-foreground mb-3">
                 Legend
               </h3>
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 rounded bg-green-500 border-2 border-green-600"></div>
-                  <span className="text-sm text-gray-700">Built</span>
+                  <span className="text-sm text-card-foreground">Built</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 rounded bg-orange-500 border-2 border-orange-600"></div>
-                  <span className="text-sm text-gray-700">
+                  <span className="text-sm text-card-foreground">
                     Under Construction
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 rounded bg-gray-400 border-2 border-gray-500"></div>
-                  <span className="text-sm text-gray-700">Vacant Lot</span>
+                  <span className="text-sm text-card-foreground">Vacant Lot</span>
                 </div>
-                <div className="border-t border-gray-200 pt-2 mt-2">
-                  <p className="text-xs text-gray-500 mb-2 font-medium">
+                <div className="border-t border-border pt-2 mt-2">
+                  <p className="text-xs text-muted-foreground mb-2 font-medium">
                     HOA-Owned Areas
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded bg-purple-500 border-2 border-purple-600"></div>
-                  <span className="text-sm text-gray-700">Community</span>
+                  <div className="w-5 h-5 rounded bg-purple-50/500 border-2 border-purple-600"></div>
+                  <span className="text-sm text-card-foreground">Community</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 rounded bg-orange-600 border-2 border-orange-700"></div>
-                  <span className="text-sm text-gray-700">Utility</span>
+                  <span className="text-sm text-card-foreground">Utility</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 rounded bg-teal-500 border-2 border-teal-600"></div>
-                  <span className="text-sm text-gray-700">Open Space</span>
+                  <span className="text-sm text-card-foreground">Open Space</span>
                 </div>
               </div>
             </div>

@@ -7,8 +7,8 @@ import type { AnnouncementCategory } from "@/types";
 
 const categoryColors: Record<AnnouncementCategory, string> = {
   event: "bg-blue-100 text-blue-700",
-  urgent: "bg-red-100 text-red-700",
-  info: "bg-gray-100 text-gray-700",
+  urgent: "bg-red-100 text-destructive",
+  info: "bg-gray-100 text-card-foreground",
   policy: "bg-purple-100 text-purple-700",
 };
 
@@ -58,7 +58,7 @@ export function AnnouncementsPage() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+      <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-lg">
         {error}
       </div>
     );
@@ -67,7 +67,7 @@ export function AnnouncementsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Announcements</h1>
+        <h1 className="text-2xl font-bold text-card-foreground">Announcements</h1>
         {isAdmin && (
           <button
             onClick={() => setShowCreateForm(!showCreateForm)}
@@ -81,35 +81,35 @@ export function AnnouncementsPage() {
 
       {/* Create Form */}
       {showCreateForm && isAdmin && (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-card rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">Create Announcement</h2>
           <form className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Title
               </label>
               <input
                 type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 placeholder="Announcement title"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Content
               </label>
               <textarea
                 rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 placeholder="Announcement content"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-card-foreground mb-1">
                   Category
                 </label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500">
+                <select className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500">
                   <option value="info">Info</option>
                   <option value="urgent">Urgent</option>
                   <option value="event">Event</option>
@@ -117,12 +117,12 @@ export function AnnouncementsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-card-foreground mb-1">
                   Expires At
                 </label>
                 <input
                   type="datetime-local"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
             </div>
@@ -130,9 +130,9 @@ export function AnnouncementsPage() {
               <input
                 type="checkbox"
                 id="pinned"
-                className="rounded border-gray-300"
+                className="rounded border-border"
               />
-              <label htmlFor="pinned" className="text-sm text-gray-700">
+              <label htmlFor="pinned" className="text-sm text-card-foreground">
                 Pin to top
               </label>
             </div>
@@ -140,7 +140,7 @@ export function AnnouncementsPage() {
               <button
                 type="button"
                 onClick={() => setShowCreateForm(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 border border-border rounded-lg hover:bg-muted"
               >
                 Cancel
               </button>
@@ -162,7 +162,7 @@ export function AnnouncementsPage() {
           announcements.announcements.map((announcement) => (
             <div
               key={announcement.id}
-              className="bg-white rounded-lg shadow p-6"
+              className="bg-card rounded-lg shadow p-6"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -180,10 +180,10 @@ export function AnnouncementsPage() {
                       </span>
                     )}
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <h3 className="text-lg font-semibold text-card-foreground">
                     {announcement.title}
                   </h3>
-                  <p className="text-gray-600 mt-2">{announcement.content}</p>
+                  <p className="text-muted-foreground mt-2">{announcement.content}</p>
                   <p className="text-sm text-gray-400 mt-4">
                     {format(
                       new Date(announcement.created_at),
@@ -195,7 +195,7 @@ export function AnnouncementsPage() {
                 </div>
                 {isAdmin && (
                   <div className="ml-4 flex gap-2">
-                    <button className="p-2 text-gray-400 hover:text-gray-600">
+                    <button className="p-2 text-gray-400 hover:text-muted-foreground">
                       <Pencil className="w-5 h-5" />
                     </button>
                     <button className="p-2 text-gray-400 hover:text-red-600">
@@ -207,7 +207,7 @@ export function AnnouncementsPage() {
             </div>
           ))
         ) : (
-          <div className="bg-white rounded-lg shadow p-12 text-center text-gray-500">
+          <div className="bg-card rounded-lg shadow p-12 text-center text-gray-500">
             No announcements found.
           </div>
         )}

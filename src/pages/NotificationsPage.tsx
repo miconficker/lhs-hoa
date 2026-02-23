@@ -113,8 +113,8 @@ export function NotificationsPage() {
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-            <p className="text-sm text-gray-600 mt-1">
+            <h1 className="text-2xl font-bold text-card-foreground">Notifications</h1>
+            <p className="text-sm text-muted-foreground mt-1">
               {unreadCount > 0
                 ? `${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}`
                 : "All caught up!"}
@@ -135,8 +135,8 @@ export function NotificationsPage() {
       {/* Filters */}
       <div className="mb-6 flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-gray-500" />
-          <span className="text-sm text-gray-700 font-medium">Filters:</span>
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm text-card-foreground font-medium">Filters:</span>
         </div>
 
         {/* Type filter */}
@@ -177,10 +177,10 @@ export function NotificationsPage() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
         </div>
       ) : notifications.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+        <div className="text-center py-12 bg-card rounded-lg border border-border">
           <Bell className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-600">No notifications found</p>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-muted-foreground">No notifications found</p>
+          <p className="text-sm text-muted-foreground mt-1">
             {filterType !== "all" || filterRead !== "all"
               ? "Try adjusting your filters"
               : "You're all caught up!"}
@@ -192,10 +192,10 @@ export function NotificationsPage() {
             <div
               key={notification.id}
               className={cn(
-                "bg-white rounded-lg border transition-all hover:shadow-md",
+                "bg-card rounded-lg border transition-all hover:shadow-md",
                 !notification.read
-                  ? "border-blue-200 bg-blue-50"
-                  : "border-gray-200",
+                  ? "border-blue-200 bg-blue-50/50"
+                  : "border-border",
               )}
             >
               <div className="p-4">
@@ -214,20 +214,20 @@ export function NotificationsPage() {
                             className={cn(
                               "text-lg font-semibold",
                               !notification.read
-                                ? "text-gray-900"
-                                : "text-gray-700",
+                                ? "text-card-foreground"
+                                : "text-card-foreground",
                             )}
                           >
                             {notification.title}
                           </h3>
                           {!notification.read && (
-                            <span className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full"></span>
+                            <span className="flex-shrink-0 w-2 h-2 bg-blue-50/500 rounded-full"></span>
                           )}
                         </div>
-                        <p className="text-gray-700 mb-2">
+                        <p className="text-card-foreground mb-2">
                           {notification.content}
                         </p>
-                        <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                           <span className="px-2 py-1 bg-gray-100 rounded-md text-xs font-medium">
                             {getTypeLabel(notification.type)}
                           </span>
@@ -242,7 +242,7 @@ export function NotificationsPage() {
                         {!notification.read && (
                           <button
                             onClick={() => markAsRead(notification.id)}
-                            className="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                            className="p-2 text-muted-foreground hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
                             title="Mark as read"
                           >
                             <CheckCircle2 className="w-4 h-4" />
@@ -250,7 +250,7 @@ export function NotificationsPage() {
                         )}
                         <button
                           onClick={() => deleteNotification(notification.id)}
-                          className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Delete"
                         >
                           <Trash2 className="w-4 h-4" />

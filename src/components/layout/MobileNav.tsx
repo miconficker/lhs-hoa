@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Menu, X } from "lucide-react";
+import { Menu } from "lucide-react";
+import React from "react";
 import {
   Sheet,
   SheetContent,

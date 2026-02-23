@@ -128,12 +128,12 @@ export function PaymentsPage() {
   function getGcashQRPlaceholder() {
     // Placeholder QR code - in production, this would be a real GCash QR
     return (
-      <div className="flex flex-col items-center justify-center p-8 bg-white rounded-lg">
+      <div className="flex flex-col items-center justify-center p-8 bg-card rounded-lg">
         <div className="w-48 h-48 bg-gray-200 rounded-lg flex items-center justify-center mb-4">
           <QrCode className="w-32 h-32 text-gray-400" />
         </div>
-        <p className="text-gray-600 text-sm">Scan to pay with GCash</p>
-        <p className="text-gray-500 text-xs mt-2">
+        <p className="text-muted-foreground text-sm">Scan to pay with GCash</p>
+        <p className="text-muted-foreground text-xs mt-2">
           Amount: PHP {balance?.total_due.toFixed(2) || "0.00"}
         </p>
       </div>
@@ -152,7 +152,7 @@ export function PaymentsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">{labels.payments}</h1>
+        <h1 className="text-2xl font-bold text-card-foreground">{labels.payments}</h1>
         <button
           onClick={() => setShowNewPayment(true)}
           className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
@@ -181,7 +181,7 @@ export function PaymentsPage() {
 
       {/* Error Display */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+        <div className="bg-destructive/10 border border-red-200 text-red-700 p-4 rounded-lg">
           {error}
           <button
             onClick={() => setError("")}
@@ -193,24 +193,24 @@ export function PaymentsPage() {
       )}
 
       {/* Payment History */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">
+      <div className="bg-card rounded-lg shadow overflow-hidden">
+        <div className="px-6 py-4 border-b border-border">
+          <h3 className="text-lg font-semibold text-card-foreground">
             {labels.paymentHistory}
           </h3>
         </div>
         {payments && payments.length > 0 ? (
           <div className="divide-y divide-gray-200">
             {payments.map((payment) => (
-              <div key={payment.id} className="p-6 hover:bg-gray-50">
+              <div key={payment.id} className="p-6 hover:bg-muted">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-gray-600">
+                    <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-muted-foreground">
                       {methodIcons[payment.method]}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-semibold text-gray-900">
+                        <span className="text-lg font-semibold text-card-foreground">
                           PHP {payment.amount.toFixed(2)}
                         </span>
                         <span
@@ -219,7 +219,7 @@ export function PaymentsPage() {
                           {statusLabels[payment.status]}
                         </span>
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-muted-foreground">
                         {methodLabels[payment.method]} • Period:{" "}
                         {payment.period}
                       </div>
@@ -230,7 +230,7 @@ export function PaymentsPage() {
                         )}
                       </div>
                       {payment.reference_number && (
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-muted-foreground">
                           Ref: {payment.reference_number}
                         </div>
                       )}
@@ -260,7 +260,7 @@ export function PaymentsPage() {
             ))}
           </div>
         ) : (
-          <div className="p-12 text-center text-gray-500">
+          <div className="p-12 text-center text-muted-foreground">
             {messages.noPaymentHistory}
           </div>
         )}
@@ -269,21 +269,21 @@ export function PaymentsPage() {
       {/* New Payment Modal */}
       {showNewPayment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">
+          <div className="bg-card rounded-lg shadow-xl max-w-md w-full">
+            <div className="flex items-center justify-between p-6 border-b border-border">
+              <h3 className="text-lg font-semibold text-card-foreground">
                 {labels.createPayment}
               </h3>
               <button
                 onClick={() => setShowNewPayment(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-muted-foreground"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
             <form onSubmit={handleCreatePayment} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-card-foreground mb-1">
                   {labels.amountPHP} *
                 </label>
                 <input
@@ -293,17 +293,17 @@ export function PaymentsPage() {
                   step="0.01"
                   defaultValue={balance?.total_due || 0}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-card-foreground mb-1">
                   {labels.paymentMethod} *
                 </label>
                 <select
                   name="method"
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 >
                   <option value="">{labels.selectMethod}</option>
                   <option value="gcash">{labels.gcash}</option>
@@ -313,7 +313,7 @@ export function PaymentsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-card-foreground mb-1">
                   {labels.period} (YYYY-MM) *
                 </label>
                 <input
@@ -321,25 +321,25 @@ export function PaymentsPage() {
                   name="period"
                   required
                   defaultValue={new Date().toISOString().slice(0, 7)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-card-foreground mb-1">
                   {labels.referenceNumber}
                 </label>
                 <input
                   type="text"
                   name="referenceNumber"
                   placeholder="Optional"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => setShowNewPayment(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  className="flex-1 px-4 py-2 border border-border text-card-foreground rounded-lg hover:bg-muted"
                 >
                   {labels.cancel}
                 </button>
@@ -358,9 +358,9 @@ export function PaymentsPage() {
       {/* GCash QR Modal */}
       {showQRModal && selectedMethod === "gcash" && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">
+          <div className="bg-card rounded-lg shadow-xl max-w-sm w-full">
+            <div className="flex items-center justify-between p-6 border-b border-border">
+              <h3 className="text-lg font-semibold text-card-foreground">
                 {labels.gcashPayment}
               </h3>
               <button
@@ -368,14 +368,14 @@ export function PaymentsPage() {
                   setShowQRModal(false);
                   setSelectedMethod(null);
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-muted-foreground"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
             <div className="p-6">
               {getGcashQRPlaceholder()}
-              <div className="mt-6 space-y-3 text-sm text-gray-600">
+              <div className="mt-6 space-y-3 text-sm text-muted-foreground">
                 {labels.gcashInstructions.map(
                   (instruction: string, index: number) => (
                     <p key={index}>{`${index + 1}. ${instruction}`}</p>

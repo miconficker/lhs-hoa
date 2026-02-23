@@ -176,13 +176,13 @@ export function ReservationsPage() {
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
           <div
             key={day}
-            className="text-center text-sm font-medium text-gray-600 py-2"
+            className="text-center text-sm font-medium text-muted-foreground py-2"
           >
             {day}
           </div>
         ))}
         {paddingDays.map((_, idx) => (
-          <div key={`padding-${idx}`} className="h-24 bg-gray-50" />
+          <div key={`padding-${idx}`} className="h-24 bg-muted" />
         ))}
         {days.map((day) => {
           const avail = getAvailabilityForDate(day);
@@ -191,7 +191,7 @@ export function ReservationsPage() {
           return (
             <div
               key={day.toISOString()}
-              className={`h-24 border border-gray-200 p-2 cursor-pointer transition-colors ${
+              className={`h-24 border border-border p-2 cursor-pointer transition-colors ${
                 isPast ? "bg-gray-100 opacity-50" : "hover:bg-blue-50"
               }`}
               onClick={() =>
@@ -202,7 +202,7 @@ export function ReservationsPage() {
                 })
               }
             >
-              <div className="text-sm font-medium text-gray-900 mb-1">
+              <div className="text-sm font-medium text-card-foreground mb-1">
                 {format(day, "d")}
               </div>
               {!isPast && avail && (
@@ -237,7 +237,7 @@ export function ReservationsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-card-foreground">
           Amenity Reservations
         </h1>
         <button
@@ -272,14 +272,14 @@ export function ReservationsPage() {
 
       {/* Booking Form */}
       {showBookingForm && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-card rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-card-foreground mb-4">
             Book an Amenity
           </h2>
           <form onSubmit={handleSubmitBooking} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-card-foreground mb-1">
                   Amenity
                 </label>
                 <select
@@ -290,7 +290,7 @@ export function ReservationsPage() {
                       amenity_type: e.target.value as AmenityType,
                     })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                   required
                 >
                   <option value="clubhouse">🏠 Clubhouse</option>
@@ -299,7 +299,7 @@ export function ReservationsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-card-foreground mb-1">
                   Date
                 </label>
                 <input
@@ -309,12 +309,12 @@ export function ReservationsPage() {
                     setBookingForm({ ...bookingForm, date: e.target.value })
                   }
                   min={format(new Date(), "yyyy-MM-dd")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-card-foreground mb-1">
                   Time Slot
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -333,8 +333,8 @@ export function ReservationsPage() {
                           bookingForm.slot === slot
                             ? "bg-primary-600 text-white border-primary-600"
                             : available
-                              ? "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                              : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                              ? "bg-card text-card-foreground border-border hover:bg-muted"
+                              : "bg-gray-100 text-gray-400 border-border cursor-not-allowed"
                         }`}
                       >
                         {slotLabels[slot]}
@@ -344,7 +344,7 @@ export function ReservationsPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-card-foreground mb-1">
                   Purpose (Optional)
                 </label>
                 <input
@@ -354,7 +354,7 @@ export function ReservationsPage() {
                     setBookingForm({ ...bookingForm, purpose: e.target.value })
                   }
                   placeholder="e.g., Birthday party, Family gathering"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
             </div>
@@ -371,9 +371,9 @@ export function ReservationsPage() {
       )}
 
       {/* Calendar View */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-card rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-card-foreground">
             Availability Calendar - {amenityLabels[bookingForm.amenity_type]}
           </h2>
           <div className="flex items-center gap-4">
@@ -385,7 +385,7 @@ export function ReservationsPage() {
                   amenity_type: e.target.value as AmenityType,
                 })
               }
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+              className="px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="clubhouse">🏠 Clubhouse</option>
               <option value="pool">🏊 Swimming Pool</option>
@@ -397,7 +397,7 @@ export function ReservationsPage() {
             >
               Previous
             </button>
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium text-card-foreground">
               {format(viewMonth, "MMMM yyyy")}
             </span>
             <button
@@ -409,7 +409,7 @@ export function ReservationsPage() {
           </div>
         </div>
         {renderCalendar()}
-        <div className="mt-4 flex items-center gap-4 text-sm text-gray-600">
+        <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-green-100 rounded"></div>
             <span>Available</span>
@@ -422,8 +422,8 @@ export function ReservationsPage() {
       </div>
 
       {/* My Reservations */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className="bg-card rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold text-card-foreground mb-4">
           My Reservations
         </h2>
         {myReservations?.reservations &&
@@ -432,7 +432,7 @@ export function ReservationsPage() {
             {myReservations.reservations.map((reservation) => (
               <div
                 key={reservation.id}
-                className="flex items-start justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                className="flex items-start justify-between p-4 border border-border rounded-lg hover:bg-muted"
               >
                 <div className="flex items-start gap-4">
                   <div className="text-4xl">
@@ -440,7 +440,7 @@ export function ReservationsPage() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium text-gray-900">
+                      <h3 className="font-medium text-card-foreground">
                         {amenityLabels[reservation.amenity_type]}
                       </h3>
                       <span
@@ -449,7 +449,7 @@ export function ReservationsPage() {
                         {reservation.status}
                       </span>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
                         {format(new Date(reservation.date), "MMM d, yyyy")}
@@ -460,7 +460,7 @@ export function ReservationsPage() {
                       </span>
                     </div>
                     {reservation.purpose && (
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-muted-foreground mt-1">
                         Purpose: {reservation.purpose}
                       </p>
                     )}
@@ -473,7 +473,7 @@ export function ReservationsPage() {
                 {reservation.status !== "cancelled" && (
                   <button
                     onClick={() => handleCancelReservation(reservation.id)}
-                    className="px-3 py-1 text-sm border border-red-300 text-red-600 rounded-lg hover:bg-red-50"
+                    className="px-3 py-1 text-sm border border-red-300 text-destructive rounded-lg hover:bg-red-50"
                   >
                     Cancel
                   </button>
@@ -482,7 +482,7 @@ export function ReservationsPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-muted-foreground">
             No reservations found. Create your first reservation to get started.
           </div>
         )}

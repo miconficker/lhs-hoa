@@ -28,7 +28,7 @@ import { PayNowModal } from "@/components/PayNowModal";
 const employeeStatusColors: Record<EmployeeStatus, string> = {
   pending: "bg-yellow-100 text-yellow-700",
   active: "bg-green-100 text-green-700",
-  revoked: "bg-red-100 text-red-700",
+  revoked: "bg-red-100 text-destructive",
   expired: "bg-gray-100 text-gray-700",
 };
 
@@ -36,11 +36,11 @@ const vehicleStatusColors: Record<VehicleStatus, string> = {
   pending_payment: "bg-yellow-100 text-yellow-700",
   pending_approval: "bg-blue-100 text-blue-700",
   active: "bg-green-100 text-green-700",
-  cancelled: "bg-red-100 text-red-700",
+  cancelled: "bg-red-100 text-destructive",
 };
 
 const paymentStatusColors: Record<VehiclePaymentStatus, string> = {
-  unpaid: "bg-red-100 text-red-700",
+  unpaid: "bg-red-100 text-destructive",
   paid: "bg-green-100 text-green-700",
 };
 
@@ -272,18 +272,18 @@ export function PassesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Resident Passes</h1>
+        <h1 className="text-2xl font-bold text-card-foreground">Resident Passes</h1>
       </div>
 
       {/* Success/Error Messages */}
       {successMessage && (
-        <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-lg flex items-center gap-2">
+        <div className="bg-green-50/50 border border-green-200 text-green-700 p-4 rounded-lg flex items-center gap-2">
           <Check className="w-5 h-5" />
           {successMessage}
         </div>
       )}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg flex items-center gap-2">
+        <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-lg flex items-center gap-2">
           <XCircle className="w-5 h-5" />
           {error}
           <button onClick={() => setError("")} className="ml-auto">
@@ -294,56 +294,56 @@ export function PassesPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-card rounded-lg shadow p-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-blue-100 rounded-lg">
               <Users className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Active Employees</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-muted-foreground">Active Employees</p>
+              <p className="text-2xl font-bold text-card-foreground">
                 {stats.activeEmployees}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-card rounded-lg shadow p-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-green-100 rounded-lg">
               <Car className="w-6 h-6 text-green-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Active Vehicles</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-muted-foreground">Active Vehicles</p>
+              <p className="text-2xl font-bold text-card-foreground">
                 {stats.activeVehicles}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-card rounded-lg shadow p-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-yellow-100 rounded-lg">
               <Calendar className="w-6 h-6 text-yellow-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Pending Approvals</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-muted-foreground">Pending Approvals</p>
+              <p className="text-2xl font-bold text-card-foreground">
                 {stats.pendingVehicles}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-card rounded-lg shadow p-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-purple-100 rounded-lg">
               <Wallet className="w-6 h-6 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-600">Total Due</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm text-muted-foreground">Total Due</p>
+              <p className="text-2xl font-bold text-card-foreground">
                 ₱{stats.totalDue.toFixed(2)}
               </p>
             </div>
@@ -352,26 +352,26 @@ export function PassesPage() {
       </div>
 
       {/* Current Fees */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+      <div className="bg-card rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold text-card-foreground mb-4">
           Current Pass Fees
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-3">
               <Badge className="w-5 h-5 text-blue-600" />
-              <span className="font-medium text-gray-900">Sticker Pass</span>
+              <span className="font-medium text-card-foreground">Sticker Pass</span>
             </div>
-            <span className="text-lg font-bold text-gray-900">
+            <span className="text-lg font-bold text-card-foreground">
               ₱{getFeeForType("sticker").toFixed(2)}
             </span>
           </div>
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-3">
               <CreditCard className="w-5 h-5 text-green-600" />
-              <span className="font-medium text-gray-900">RFID Pass</span>
+              <span className="font-medium text-card-foreground">RFID Pass</span>
             </div>
-            <span className="text-lg font-bold text-gray-900">
+            <span className="text-lg font-bold text-card-foreground">
               ₱{getFeeForType("rfid").toFixed(2)}
             </span>
           </div>
@@ -379,9 +379,9 @@ export function PassesPage() {
       </div>
 
       {/* Employee Passes Section */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-card rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-card-foreground">
             Employee Passes
           </h2>
           <button
@@ -400,7 +400,7 @@ export function PassesPage() {
         {/* Employee Form */}
         {showEmployeeForm && (
           <div className="mb-6 p-6 bg-gray-50 rounded-lg">
-            <h3 className="text-md font-semibold text-gray-900 mb-4">
+            <h3 className="text-md font-semibold text-card-foreground mb-4">
               Register New Employee Pass
             </h3>
             <form onSubmit={handleSubmitEmployee} className="space-y-4">
@@ -494,7 +494,7 @@ export function PassesPage() {
             {employees.map((employee) => (
               <div
                 key={employee.id}
-                className="flex items-start justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                className="flex items-start justify-between p-4 border border-border rounded-lg hover:bg-muted"
               >
                 <div className="flex items-start gap-4">
                   {employee.photo_url ? (
@@ -510,7 +510,7 @@ export function PassesPage() {
                   )}
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium text-gray-900">
+                      <h3 className="font-medium text-card-foreground">
                         {employee.full_name}
                       </h3>
                       <span
@@ -519,10 +519,10 @@ export function PassesPage() {
                         {employee.status}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       {employeeTypeLabels[employee.employee_type]}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       ID: {employee.id_number}
                     </p>
                     {employee.issued_date && (
@@ -554,7 +554,7 @@ export function PassesPage() {
                     employee.status !== "expired" && (
                       <button
                         onClick={() => handleDeleteEmployee(employee.id)}
-                        className="px-3 py-1 text-sm border border-red-300 text-red-600 rounded-lg hover:bg-red-50"
+                        className="px-3 py-1 text-sm border border-red-300 text-red-600 rounded-lg hover:bg-destructive/10"
                       >
                         Revoke
                       </button>
@@ -564,7 +564,7 @@ export function PassesPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-muted-foreground">
             No employee passes registered. Add your first employee pass to get
             started.
           </div>
@@ -572,9 +572,9 @@ export function PassesPage() {
       </div>
 
       {/* Vehicle Passes Section */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-card rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-card-foreground">
             Vehicle Passes
           </h2>
           <button
@@ -593,7 +593,7 @@ export function PassesPage() {
         {/* Vehicle Form */}
         {showVehicleForm && (
           <div className="mb-6 p-6 bg-gray-50 rounded-lg">
-            <h3 className="text-md font-semibold text-gray-900 mb-4">
+            <h3 className="text-md font-semibold text-card-foreground mb-4">
               Register New Vehicle Pass
             </h3>
             <form onSubmit={handleSubmitVehicle} className="space-y-4">
@@ -674,7 +674,7 @@ export function PassesPage() {
                           className={`px-3 py-2 border rounded-lg text-center transition-colors ${
                             vehicleForm.pass_type === type
                               ? "bg-primary-600 text-white border-primary-600"
-                              : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                              : "bg-card text-gray-700 border-gray-300 hover:bg-muted"
                           }`}
                         >
                           <div className="text-sm font-medium">
@@ -705,7 +705,7 @@ export function PassesPage() {
             {vehicles.map((vehicle) => (
               <div
                 key={vehicle.id}
-                className="flex items-start justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                className="flex items-start justify-between p-4 border border-border rounded-lg hover:bg-muted"
               >
                 <div className="flex items-start gap-4">
                   <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -713,7 +713,7 @@ export function PassesPage() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium text-gray-900">
+                      <h3 className="font-medium text-card-foreground">
                         {vehicle.plate_number}
                       </h3>
                       <span
@@ -727,10 +727,10 @@ export function PassesPage() {
                         {vehicle.payment_status}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       {vehicle.make} {vehicle.model} ({vehicle.color})
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       {passTypeLabels[vehicle.pass_type]}
                     </p>
                     {vehicle.rfid_code && (
@@ -772,7 +772,7 @@ export function PassesPage() {
                   {vehicle.status !== "cancelled" && (
                     <button
                       onClick={() => handleDeleteVehicle(vehicle.id)}
-                      className="px-3 py-1 text-sm border border-red-300 text-red-600 rounded-lg hover:bg-red-50"
+                      className="px-3 py-1 text-sm border border-red-300 text-red-600 rounded-lg hover:bg-destructive/10"
                     >
                       Cancel
                     </button>
@@ -782,7 +782,7 @@ export function PassesPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-muted-foreground">
             No vehicle passes registered. Add your first vehicle pass to get
             started.
           </div>

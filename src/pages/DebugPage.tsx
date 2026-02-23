@@ -4,7 +4,7 @@ export function DebugPage() {
   const { user, token, initialized } = useAuth();
 
   return (
-    <div className="p-6 space-y-4 bg-white rounded-lg shadow">
+    <div className="p-6 space-y-4 bg-card rounded-lg shadow">
       <h1 className="text-2xl font-bold">Debug Auth State</h1>
 
       <div className="space-y-2">

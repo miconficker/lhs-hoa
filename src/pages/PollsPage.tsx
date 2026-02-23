@@ -284,7 +284,7 @@ export function PollsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Community Polls</h1>
+        <h1 className="text-2xl font-bold text-card-foreground">Community Polls</h1>
         {isAdmin && (
           <button
             onClick={() => setShowCreateForm(!showCreateForm)}
@@ -298,23 +298,23 @@ export function PollsPage() {
 
       {/* Create Form */}
       {showCreateForm && isAdmin && (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-card rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">Create New Poll</h2>
           <form onSubmit={handleCreatePoll} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Question
               </label>
               <input
                 type="text"
                 name="question"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 placeholder="What would you like to ask the community?"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Options (minimum 2)
               </label>
               <div className="space-y-2">
@@ -323,28 +323,28 @@ export function PollsPage() {
                     key={i}
                     type="text"
                     name={`option${i}`}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                     placeholder={`Option ${i}`}
                   />
                 ))}
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-card-foreground mb-1">
                 Ends At
               </label>
               <input
                 type="datetime-local"
                 name="ends_at"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setShowCreateForm(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 border border-border rounded-lg hover:bg-muted"
               >
                 Cancel
               </button>
@@ -367,7 +367,7 @@ export function PollsPage() {
             const timeRemaining = getTimeRemaining(poll.ends_at);
 
             return (
-              <div key={poll.id} className="bg-white rounded-lg shadow p-6">
+              <div key={poll.id} className="bg-card rounded-lg shadow p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
@@ -380,14 +380,14 @@ export function PollsPage() {
                       <span
                         className={`px-2 py-1 text-xs font-medium rounded-full ${
                           timeRemaining === "Expired"
-                            ? "bg-gray-100 text-gray-600"
+                            ? "bg-gray-100 text-muted-foreground"
                             : "bg-blue-100 text-blue-700"
                         }`}
                       >
                         {timeRemaining}
                       </span>
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-card-foreground">
                       {poll.question}
                     </h3>
                     <p className="text-sm text-gray-400 mt-1">
@@ -428,7 +428,7 @@ export function PollsPage() {
                         className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
                           selectedOptions[poll.id] === option
                             ? "border-primary-500 bg-primary-50"
-                            : "border-gray-200 hover:border-gray-300"
+                            : "border-border hover:border-border"
                         }`}
                       >
                         <input
@@ -442,9 +442,9 @@ export function PollsPage() {
                               [poll.id]: e.target.value,
                             })
                           }
-                          className="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                          className="w-4 h-4 text-primary-600 border-border focus:ring-primary-500"
                         />
-                        <span className="ml-3 text-gray-700">{option}</span>
+                        <span className="ml-3 text-card-foreground">{option}</span>
                       </label>
                     ))}
                     <button
@@ -472,11 +472,11 @@ export function PollsPage() {
                           return (
                             <div key={vote.option} className="space-y-1">
                               <div className="flex items-center justify-between text-sm">
-                                <span className="font-medium text-gray-700">
+                                <span className="font-medium text-card-foreground">
                                   {vote.option}
                                 </span>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-gray-500">
+                                  <span className="text-muted-foreground">
                                     {vote.count} votes
                                   </span>
                                   <span className="font-semibold text-primary-600">
@@ -497,7 +497,7 @@ export function PollsPage() {
                     ) : (
                       <div className="text-center py-4">
                         <BarChart className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                        <p className="text-gray-500 text-sm">
+                        <p className="text-muted-foreground text-sm">
                           No votes yet. Be the first to vote!
                         </p>
                       </div>
@@ -508,7 +508,7 @@ export function PollsPage() {
             );
           })
         ) : (
-          <div className="bg-white rounded-lg shadow p-12 text-center text-gray-500">
+          <div className="bg-card rounded-lg shadow p-12 text-center text-muted-foreground">
             <BarChart className="w-12 h-12 mx-auto mb-4 text-gray-400" />
             No active polls found.
           </div>
@@ -518,13 +518,13 @@ export function PollsPage() {
       {/* In-Person Vote Recording Modal */}
       {showInPersonVoteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="bg-card rounded-lg shadow-xl max-w-md w-full">
+            <div className="flex items-center justify-between p-6 border-b border-border">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-card-foreground">
                   Record In-Person Vote
                 </h3>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   {showInPersonVoteModal.pollQuestion}
                 </p>
               </div>
@@ -534,7 +534,7 @@ export function PollsPage() {
                   setError("");
                   setVoteSuccess("");
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-muted-foreground"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -555,7 +555,7 @@ export function PollsPage() {
             <form onSubmit={handleRecordInPersonVote} className="p-6 space-y-4">
               {/* Homeowner Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-card-foreground mb-1">
                   Homeowner *
                 </label>
                 <select
@@ -566,7 +566,7 @@ export function PollsPage() {
                       household_id: e.target.value,
                     })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   required
                 >
                   <option value="">Select homeowner</option>
@@ -582,7 +582,7 @@ export function PollsPage() {
                     ))}
                 </select>
                 {inPersonVoteForm.household_id && (
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     This vote will represent{" "}
                     {homeowners.find(
                       (h) => h.id === inPersonVoteForm.household_id,
@@ -594,7 +594,7 @@ export function PollsPage() {
 
               {/* Option Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-card-foreground mb-1">
                   Selected Option *
                 </label>
                 <select
@@ -605,7 +605,7 @@ export function PollsPage() {
                       selected_option: e.target.value,
                     })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   required
                 >
                   <option value="">Select option</option>
@@ -619,7 +619,7 @@ export function PollsPage() {
 
               {/* Vote Date/Time */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-card-foreground mb-1">
                   Voted At *
                 </label>
                 <input
@@ -631,14 +631,14 @@ export function PollsPage() {
                       voted_at: e.target.value,
                     })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   required
                 />
               </div>
 
               {/* Witness */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-card-foreground mb-1">
                   Witness
                 </label>
                 <input
@@ -650,7 +650,7 @@ export function PollsPage() {
                       witness: e.target.value,
                     })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   placeholder="Optional"
                 />
               </div>
@@ -664,7 +664,7 @@ export function PollsPage() {
                     setError("");
                     setVoteSuccess("");
                   }}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  className="flex-1 px-4 py-2 border border-border text-card-foreground rounded-lg hover:bg-muted"
                 >
                   Cancel
                 </button>

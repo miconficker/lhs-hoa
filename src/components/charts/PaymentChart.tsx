@@ -6,7 +6,6 @@ import {
   YAxis,
   Tooltip,
   Legend,
-  Cell,
 } from "recharts";
 
 interface PaymentData {
@@ -77,7 +76,10 @@ export function PaymentChart({
               border: "1px solid #e5e7eb",
               borderRadius: "8px",
             }}
-            formatter={(value: number) => [formatCurrency(value), ""]}
+            formatter={(value: number | undefined) => [
+              formatCurrency(value ?? 0),
+              "",
+            ]}
             labelStyle={{ color: "#374151" }}
           />
           <Legend />
