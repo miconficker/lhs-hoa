@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
+import { labels } from "@/lib/content/labels";
+import { messages } from "@/lib/content/messages";
+import { notify } from "@/lib/toast";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -23,8 +26,8 @@ export function LoginPage() {
 
     if (oauthError) {
       const fullError = details
-        ? `${message || "Authentication failed"}: ${details}`
-        : message || "Authentication failed";
+        ? `${message || messages.authenticationFailed}: ${details}`
+        : message || messages.authenticationFailed;
       setError(fullError);
       // Clean URL
       window.history.replaceState({}, "", "/login");
@@ -57,12 +60,13 @@ export function LoginPage() {
       if (response.ok) {
         const data = await response.json();
         setAuth({ user: data.user, token });
+        notify.loginSuccess();
         navigate("/dashboard");
       } else {
-        setError("Failed to fetch user information");
+        setError(messages.failedToFetchUser);
       }
     } catch (err) {
-      setError("Authentication error");
+      setError(messages.authenticationError);
     }
     // Clean URL
     window.history.replaceState({}, "", "/login");
@@ -76,8 +80,9 @@ export function LoginPage() {
     const result = await api.auth.login({ email, password });
 
     if (result.error || !result.data) {
-      setError(result.error || "Login failed");
+      setError(result.error || messages.loginError);
       setLoading(false);
+      notify.loginError();
       return;
     }
 
@@ -100,7 +105,7 @@ export function LoginPage() {
           <h1 className="mt-4 text-3xl font-bold text-gray-900">
             Laguna Hills HOA
           </h1>
-          <p className="mt-2 text-gray-600">Sign in to your account</p>
+          <p className="mt-2 text-gray-600">{labels.signInTitle}</p>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-8">
@@ -135,7 +140,7 @@ export function LoginPage() {
                 />
               </svg>
               <span className="text-gray-700 font-medium">
-                Sign in with Google
+                {labels.signInWithGoogle}
               </span>
             </button>
           )}
@@ -146,7 +151,7 @@ export function LoginPage() {
             </div>
             <div className="relative flex justify-center text-sm">
               <span className="px-2 bg-white text-gray-500">
-                Or continue with email
+                {labels.orContinueWithEmail}
               </span>
             </div>
           </div>
@@ -158,7 +163,7 @@ export function LoginPage() {
                   htmlFor="email"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Email
+                  {labels.email}
                 </label>
                 <input
                   id="email"
@@ -176,7 +181,7 @@ export function LoginPage() {
                   htmlFor="password"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Password
+                  {labels.password}
                 </label>
                 <input
                   id="password"
@@ -195,13 +200,13 @@ export function LoginPage() {
                 disabled={loading}
                 className="w-full py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                {loading ? "Signing in..." : "Sign in"}
+                {loading ? labels.signingIn : labels.signIn}
               </button>
             </div>
           </form>
 
           <p className="mt-6 text-xs text-gray-500 text-center">
-            Don't have an account? Contact your HOA admin to get approved.
+            {labels.noAccountMessage}
           </p>
         </div>
       </div>

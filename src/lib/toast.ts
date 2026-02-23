@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { messages } from "./content";
+import { messages } from "./content/messages";
 
 export const notify = {
   success: (message: string) => toast.success(message),

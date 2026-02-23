@@ -3,6 +3,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { api, ServiceRequestsResponse } from "@/lib/api";
 import { format } from "date-fns";
 import { Plus, Filter } from "lucide-react";
+import { labels } from "@/lib/content/labels";
+import { messages } from "@/lib/content/messages";
 import type {
   ServiceRequestStatus,
   ServiceRequestPriority,
@@ -24,11 +26,11 @@ const priorityColors: Record<ServiceRequestPriority, string> = {
 };
 
 const categoryLabels: Record<ServiceRequestCategory, string> = {
-  plumbing: "Plumbing",
-  electrical: "Electrical",
-  "common-area": "Common Area",
-  security: "Security",
-  other: "Other",
+  plumbing: labels.plumbing,
+  electrical: labels.electrical,
+  "common-area": labels.commonArea,
+  security: labels.security,
+  other: labels.other,
 };
 
 export function ServiceRequestsPage() {
@@ -85,10 +87,12 @@ export function ServiceRequestsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Service Requests</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          {labels.serviceRequests}
+        </h1>
         <button className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
           <Plus className="w-5 h-5" />
-          New Request
+          {labels.newRequest}
         </button>
       </div>
 
@@ -99,14 +103,14 @@ export function ServiceRequestsPage() {
           className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
         >
           <Filter className="w-5 h-5" />
-          Filters
+          {labels.filter}
         </button>
 
         {showFilters && (
           <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
+                {labels.status}
               </label>
               <select
                 value={filters.status || ""}
@@ -118,16 +122,16 @@ export function ServiceRequestsPage() {
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
               >
-                <option value="">All</option>
-                <option value="pending">Pending</option>
-                <option value="in-progress">In Progress</option>
-                <option value="completed">Completed</option>
-                <option value="rejected">Rejected</option>
+                <option value="">{labels.all}</option>
+                <option value="pending">{labels.pending}</option>
+                <option value="in-progress">{labels.inProgress}</option>
+                <option value="completed">{labels.completed}</option>
+                <option value="rejected">{labels.rejected}</option>
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Priority
+                {labels.priority}
               </label>
               <select
                 value={filters.priority || ""}
@@ -139,16 +143,16 @@ export function ServiceRequestsPage() {
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
               >
-                <option value="">All</option>
-                <option value="low">Low</option>
-                <option value="normal">Normal</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
+                <option value="">{labels.all}</option>
+                <option value="low">{labels.low}</option>
+                <option value="normal">{labels.normal}</option>
+                <option value="high">{labels.high}</option>
+                <option value="urgent">{labels.urgent}</option>
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category
+                {labels.category}
               </label>
               <select
                 value={filters.category || ""}
@@ -160,12 +164,12 @@ export function ServiceRequestsPage() {
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
               >
-                <option value="">All</option>
-                <option value="plumbing">Plumbing</option>
-                <option value="electrical">Electrical</option>
-                <option value="common-area">Common Area</option>
-                <option value="security">Security</option>
-                <option value="other">Other</option>
+                <option value="">{labels.all}</option>
+                <option value="plumbing">{labels.plumbing}</option>
+                <option value="electrical">{labels.electrical}</option>
+                <option value="common-area">{labels.commonArea}</option>
+                <option value="security">{labels.security}</option>
+                <option value="other">{labels.other}</option>
               </select>
             </div>
           </div>
@@ -215,10 +219,10 @@ export function ServiceRequestsPage() {
                   {isAdmin && (
                     <div className="ml-4 flex gap-2">
                       <button className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
-                        View
+                        {labels.view}
                       </button>
                       <button className="px-3 py-1 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-                        Update
+                        {labels.update}
                       </button>
                     </div>
                   )}
@@ -228,7 +232,7 @@ export function ServiceRequestsPage() {
           </div>
         ) : (
           <div className="p-12 text-center text-gray-500">
-            No service requests found. Create one to get started.
+            {messages.noRequestsFound}
           </div>
         )}
       </div>

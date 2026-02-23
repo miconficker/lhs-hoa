@@ -4,6 +4,9 @@ export const messages = {
   loginSuccess: "Welcome back!",
   loginError: "We couldn't sign you in. Check your email and password.",
   logoutSuccess: "You've been signed out.",
+  authenticationFailed: "Authentication failed",
+  authenticationError: "Authentication error",
+  failedToFetchUser: "Failed to fetch user information",
 
   // Service requests
   requestSubmitted: "We've received your request. We'll look at it soon.",
@@ -16,6 +19,8 @@ export const messages = {
   paymentApproved: "Payment confirmed!",
   paymentRejected:
     "We couldn't accept this payment. Please check the details and try again.",
+  paymentCreated: "Payment created!",
+  fillAllRequiredFields: "Please fill in all required fields",
 
   // Reservations
   reservationCreated: "Your space is booked!",
@@ -42,6 +47,9 @@ export const messages = {
   noRequests: "No problems reported yet.",
   noPayments: "No payments yet.",
   noAnnouncements: "No news yet.",
+  noRequestsFound: "No service requests found. Create one to get started.",
+  noPaymentHistory:
+    "No payment history found. Make your first payment to get started.",
 } as const;
 
 export type MessageKey = keyof typeof messages;
