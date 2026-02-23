@@ -34,102 +34,107 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }
-        >
+      <a href="#main-content" className="skip-to-main">
+        Skip to main content
+      </a>
+      <main id="main-content">
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
           <Route
-            index
+            path="/"
             element={
-              <div className="text-gray-600">
-                Welcome! Select an option from the sidebar.
-              </div>
-            }
-          />
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="map" element={<MapPage />} />
-          <Route path="service-requests" element={<ServiceRequestsPage />} />
-          <Route path="reservations" element={<ReservationsPage />} />
-          <Route path="my-lots" element={<MyLotsPage />} />
-          <Route path="passes" element={<PassesPage />} />
-          <Route path="payments" element={<PaymentsPage />} />
-          <Route path="documents" element={<DocumentsPage />} />
-          <Route path="announcements" element={<AnnouncementsPage />} />
-          <Route path="events" element={<EventsPage />} />
-          <Route path="polls" element={<PollsPage />} />
-          <Route path="debug" element={<DebugPage />} />
-          <Route
-            path="admin"
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <AdminPanelPage />
+              <ProtectedRoute>
+                <MainLayout />
               </ProtectedRoute>
             }
-          />
-          <Route
-            path="admin/lots"
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <AdminLotsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="admin/dues"
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <DuesConfigPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="admin/payments/in-person"
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <InPersonPaymentsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="notifications"
-            element={
-              <ProtectedRoute allowedRoles={["admin", "resident", "staff"]}>
-                <NotificationsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="admin/common-areas"
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <CommonAreasPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="admin/pass-management"
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <PassManagementPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="admin/whitelist"
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <WhitelistManagementPage />
-              </ProtectedRoute>
-            }
-          />
-        </Route>
-      </Routes>
+          >
+            <Route
+              index
+              element={
+                <div className="text-gray-600">
+                  Welcome! Select an option from the sidebar.
+                </div>
+              }
+            />
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="map" element={<MapPage />} />
+            <Route path="service-requests" element={<ServiceRequestsPage />} />
+            <Route path="reservations" element={<ReservationsPage />} />
+            <Route path="my-lots" element={<MyLotsPage />} />
+            <Route path="passes" element={<PassesPage />} />
+            <Route path="payments" element={<PaymentsPage />} />
+            <Route path="documents" element={<DocumentsPage />} />
+            <Route path="announcements" element={<AnnouncementsPage />} />
+            <Route path="events" element={<EventsPage />} />
+            <Route path="polls" element={<PollsPage />} />
+            <Route path="debug" element={<DebugPage />} />
+            <Route
+              path="admin"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminPanelPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/lots"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminLotsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/dues"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <DuesConfigPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/payments/in-person"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <InPersonPaymentsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="notifications"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "resident", "staff"]}>
+                  <NotificationsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/common-areas"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <CommonAreasPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/pass-management"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <PassManagementPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/whitelist"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <WhitelistManagementPage />
+                </ProtectedRoute>
+              }
+            />
+          </Route>
+        </Routes>
+      </main>
     </BrowserRouter>
   );
 }
