@@ -112,7 +112,9 @@ function HouseholdMarker({ household }: HouseholdMarkerProps) {
               <p className="text-xs font-medium text-muted-foreground mb-1">
                 Residents:
               </p>
-              <p className="text-sm text-card-foreground">{household.residents}</p>
+              <p className="text-sm text-card-foreground">
+                {household.residents}
+              </p>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground italic">No residents</p>
@@ -526,11 +528,13 @@ export function MapPage() {
           crs={L.CRS.Simple}
           bounds={mapBounds}
           style={{ height: "100%", width: "100%" }}
+          className="dark-map"
         >
           <ImageOverlay
             url="/LAGUNA-HILLS-MAP-v2.svg"
             bounds={mapBounds}
             opacity={1}
+            className="dark:brightness-75 dark:contrast-125 dark:saturate-75"
           />
 
           {showBlocks && <BlocksGeoJSON data={blocksData} />}
@@ -637,7 +641,9 @@ export function MapPage() {
                 </h4>
                 <div className="flex flex-col gap-2">
                   <label className="flex items-center justify-between cursor-pointer text-sm p-2 hover:bg-muted rounded">
-                    <span className="text-card-foreground">Block Boundaries</span>
+                    <span className="text-card-foreground">
+                      Block Boundaries
+                    </span>
                     <input
                       type="checkbox"
                       checked={showBlocks}
@@ -681,7 +687,9 @@ export function MapPage() {
                         );
                       }).length || 0}
                     </p>
-                    <p className="text-sm text-muted-foreground">Built (Private)</p>
+                    <p className="text-sm text-muted-foreground">
+                      Built (Private)
+                    </p>
                   </div>
                 </div>
               </div>
@@ -731,7 +739,9 @@ export function MapPage() {
                         );
                       }).length || 0}
                     </p>
-                    <p className="text-sm text-muted-foreground">Vacant (Private)</p>
+                    <p className="text-sm text-muted-foreground">
+                      Vacant (Private)
+                    </p>
                   </div>
                 </div>
               </div>
@@ -784,7 +794,9 @@ export function MapPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 rounded bg-gray-400 border-2 border-gray-500"></div>
-                  <span className="text-sm text-card-foreground">Vacant Lot</span>
+                  <span className="text-sm text-card-foreground">
+                    Vacant Lot
+                  </span>
                 </div>
                 <div className="border-t border-border pt-2 mt-2">
                   <p className="text-xs text-muted-foreground mb-2 font-medium">
@@ -793,7 +805,9 @@ export function MapPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 rounded bg-purple-50/500 border-2 border-purple-600"></div>
-                  <span className="text-sm text-card-foreground">Community</span>
+                  <span className="text-sm text-card-foreground">
+                    Community
+                  </span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 rounded bg-orange-600 border-2 border-orange-700"></div>
@@ -801,7 +815,9 @@ export function MapPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 rounded bg-teal-500 border-2 border-teal-600"></div>
-                  <span className="text-sm text-card-foreground">Open Space</span>
+                  <span className="text-sm text-card-foreground">
+                    Open Space
+                  </span>
                 </div>
               </div>
             </div>

@@ -4,6 +4,13 @@
 
 @import "./styles/accessibility.css";
 
+/* Dark mode map filter */
+@layer components {
+  .dark .leaflet-image-layer {
+    filter: brightness(0.7) contrast(1.25) saturate(0.8);
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
