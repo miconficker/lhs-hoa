@@ -13,6 +13,7 @@ import { documentsRouter } from './routes/documents';
 import { adminRouter } from './routes/admin';
 import { notificationsRouter } from './routes/notifications';
 import { passManagementRouter } from './routes/pass-management';
+import { messagesRouter } from './routes/messages';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { logger } from './lib/logger';
 
@@ -131,6 +132,7 @@ app.route('/api/documents', documentsRouter);
 app.route('/api/notifications', notificationsRouter);
 app.route('/api/admin', adminRouter);
 app.route('/api/pass-requests', passManagementRouter);
+app.route('/api/messages', messagesRouter);
 
 // 404 handler - must be last
 app.notFound(notFoundHandler);

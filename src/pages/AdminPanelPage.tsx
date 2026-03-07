@@ -6,6 +6,11 @@ import { PaymentVerificationQueue } from "@/components/PaymentVerificationQueue"
 import { LateFeeConfig } from "@/components/LateFeeConfig";
 import { PaymentExport } from "@/components/PaymentExport";
 import { logger } from "@/lib/logger";
+import { TableWithSelection } from "@/components/admin/TableWithSelection";
+import { BulkActionToolbar } from "@/components/admin/BulkActionToolbar";
+import { AssignOwnerDialog } from "@/components/admin/AssignOwnerDialog";
+import { BulkConfirmationDialog } from "@/components/admin/BulkConfirmationDialog";
+import { toast } from "sonner";
 
 type Tab = "users" | "households" | "lots" | "import" | "payments" | "settings";
 
@@ -20,6 +25,13 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [filterBlock, setFilterBlock] = useState<string>("");
   const [editingLot, setEditingLot] = useState<LotOwnership | null>(null);
+
+  // Bulk operations state
+  const [selectedLotIds, setSelectedLotIds] = useState<string[]>([]);
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [selectedOwnerId, setSelectedOwnerId] = useState("");
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const filteredLots = lots.filter((lot) => {
     if (filterOwner && lot.owner_user_id !== filterOwner) return false;
@@ -44,6 +56,36 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
     } catch (error) {
       logger.error("Error saving lot", error, { component: "AdminPanelPage" });
       alert("Failed to save");
+    }
+  }
+
+  async function handleAssignOwner() {
+    if (selectedLotIds.length === 0) {
+      toast.error("Please select at least one lot");
+      return;
+    }
+
+    if (!selectedOwnerId) {
+      toast.error("Please select an owner");
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      await api.admin.batchAssignOwner(selectedLotIds, selectedOwnerId);
+      toast.success(
+        `Successfully assigned owner to ${selectedLotIds.length} lot${selectedLotIds.length > 1 ? "s" : ""}`,
+      );
+      onRefresh();
+      setSelectedLotIds([]);
+    } catch (error) {
+      logger.error("Error assigning owner", error, {
+        component: "AdminPanelPage",
+      });
+      toast.error("Failed to assign owner. Please try again.");
+    } finally {
+      setIsProcessing(false);
+      setIsConfirmDialogOpen(false);
     }
   }
 
@@ -96,75 +138,127 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
         </span>
       </div>
 
-      <div className="bg-white dark:bg-card rounded-lg shadow overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-muted">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Block
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Lot
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Owner
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Size (m²)
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-card divide-y divide-gray-200 dark:divide-gray-700">
-            {filteredLots.map((lot) => (
-              <tr key={lot.lot_id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {lot.block_number || "—"}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {lot.lot_number || "—"}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span
-                    className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      lot.lot_status === "built"
-                        ? "bg-green-100 text-green-700"
-                        : lot.lot_status === "under_construction"
-                          ? "bg-orange-100 text-orange-700"
-                          : "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    {lot.lot_status === "built"
-                      ? "Built"
-                      : lot.lot_status === "under_construction"
-                        ? "Under Construction"
-                        : "Vacant Lot"}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {lot.owner_name || "Unknown"}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                  {lot.lot_size_sqm || "—"}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <button
-                    onClick={() => setEditingLot(lot)}
-                    className="text-blue-600 hover:text-blue-800"
-                  >
-                    Edit
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {selectedLotIds.length > 0 && (
+        <BulkActionToolbar
+          selectedCount={selectedLotIds.length}
+          onClear={() => setSelectedLotIds([])}
+          actions={[
+            {
+              label: "Assign Owner",
+              onClick: () => setIsAssignDialogOpen(true),
+            },
+          ]}
+        />
+      )}
+
+      <TableWithSelection
+        data={filteredLots}
+        idField="lot_id"
+        onSelectionChange={setSelectedLotIds}
+      >
+        {({
+          selectedIds,
+          handleCheckboxChange,
+          handleSelectAll,
+          isAllSelected,
+        }) => (
+          <div className="bg-white dark:bg-card rounded-lg shadow overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-muted">
+                <tr>
+                  <th className="px-6 py-3 text-left w-12">
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      ref={(input) => {
+                        if (input) {
+                          input.indeterminate =
+                            !isAllSelected && selectedIds.size > 0;
+                        }
+                      }}
+                      onChange={(e) => handleSelectAll(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      aria-label="Select all visible lots"
+                    />
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Block
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Lot
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Owner
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Size (m²)
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-card divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredLots.map((lot) => (
+                  <tr key={lot.lot_id}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(lot.lot_id)}
+                        onChange={(e) =>
+                          handleCheckboxChange(lot.lot_id, e.target.checked)
+                        }
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        aria-label={`Select ${lot.lot_id}`}
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {lot.block_number || "—"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {lot.lot_number || "—"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 py-1 text-xs font-medium rounded-full ${
+                          lot.lot_status === "built"
+                            ? "bg-green-100 text-green-700"
+                            : lot.lot_status === "under_construction"
+                              ? "bg-orange-100 text-orange-700"
+                              : "bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        {lot.lot_status === "built"
+                          ? "Built"
+                          : lot.lot_status === "under_construction"
+                            ? "Under Construction"
+                            : "Vacant Lot"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {lot.owner_name || "Unknown"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {lot.lot_size_sqm || "—"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <button
+                        onClick={() => setEditingLot(lot)}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </TableWithSelection>
 
       {editingLot && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -252,6 +346,40 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isAssignDialogOpen && (
+        <AssignOwnerDialog
+          homeowners={homeowners}
+          lotCount={selectedLotIds.length}
+          onConfirm={(ownerId) => {
+            setSelectedOwnerId(ownerId);
+            setIsAssignDialogOpen(false);
+            setIsConfirmDialogOpen(true);
+          }}
+          onCancel={() => setIsAssignDialogOpen(false)}
+        />
+      )}
+
+      {isConfirmDialogOpen && (
+        <BulkConfirmationDialog
+          operationType="Assign Owner"
+          itemCount={selectedLotIds.length}
+          details={
+            homeowners.find((h) => h.id === selectedOwnerId)?.email || "Unknown"
+          }
+          onConfirm={handleAssignOwner}
+          onCancel={() => setIsConfirmDialogOpen(false)}
+        />
+      )}
+
+      {isProcessing && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-card rounded-lg p-6 flex items-center gap-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <span className="text-sm">Assigning owner...</span>
           </div>
         </div>
       )}

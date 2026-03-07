@@ -8,6 +8,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@sentry/cloudflare": "^8.45.0",
     "bcryptjs": "^2.4.3",
     "hono": "^4.6.7",
     "jose": "^6.1.3",

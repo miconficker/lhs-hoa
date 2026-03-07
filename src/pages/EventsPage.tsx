@@ -156,8 +156,8 @@ export function EventsPage() {
               key={event.id}
               className="bg-card rounded-lg shadow overflow-hidden"
             >
-              <div className="bg-primary-50 p-4">
-                <div className="flex items-center gap-2 text-primary-700">
+              <div className="bg-primary-50 dark:bg-primary-900/20 p-4">
+                <div className="flex items-center gap-2 text-primary-700 dark:text-primary-300">
                   <Calendar className="w-5 h-5" />
                   <span className="font-semibold">
                     {format(new Date(event.event_date), "MMM d, yyyy")}

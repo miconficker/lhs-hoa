@@ -11,12 +11,16 @@ A comprehensive web-based platform for managing Laguna Hills Homeowners Associat
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
+- [System Architecture](#system-architecture)
 - [Getting Started](#getting-started)
 - [Development Guide](#development-guide)
 - [API Documentation](#api-documentation)
 - [Database Schema](#database-schema)
 - [Configuration](#configuration)
+- [Security Best Practices](#security-best-practices)
 - [Deployment](#deployment)
+- [Testing](#testing)
+- [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -157,6 +161,61 @@ lhs-hoa/
 ├── tailwind.config.js           # Tailwind CSS config
 └── dev.sh                       # Development launcher
 ```
+
+## System Architecture
+
+For comprehensive architecture documentation, see **[ARCHITECTURE.md](ARCHITECTURE.md)** (v1.1.0).
+
+### Architecture Highlights
+
+**Overall Health Score: 8.5/10** 🟢
+
+The system uses a modern serverless architecture with clear separation of concerns:
+
+- **Frontend**: React SPA with client-side routing
+- **Backend**: Cloudflare Workers with Hono framework
+- **Database**: D1 (SQLite) for relational data
+- **Storage**: R2 for file uploads (documents, images)
+- **Authentication**: JWT with Google OAuth SSO support
+
+### Key Architecture Patterns
+
+1. **Repository Pattern** - API client abstracts backend communication
+2. **Service Layer Pattern** - Route handlers encapsulate business logic
+3. **Middleware Pattern** - Hono middleware for auth, CORS, logging
+4. **Observer Pattern** - Zustand stores for reactive state management
+5. **Factory Pattern** - API client functions create requests
+
+### Security Posture
+
+**Security Score: 8/10** 🟢
+
+**Strengths:**
+- ✅ JWT authentication with 7-day expiration
+- ✅ Role-based access control (RBAC)
+- ✅ Parameterized SQL queries (SQL injection protected)
+- ✅ Zod validation on all API endpoints
+- ✅ CORS allowlist for cross-origin protection
+
+**Known Gaps** (being addressed):
+- 🔴 Missing rate limiting (planned: Week 1)
+- 🔴 Missing security headers (planned: Week 1)
+- 🔴 OAuth state validation needed (planned: Week 1)
+- 🟠 Password policy strengthening (planned: Week 2)
+
+See [SECURITY_AUDIT_REPORT.md](SECURITY_AUDIT_REPORT.md) for detailed security assessment and remediation roadmap.
+
+### Testing Status
+
+**Current Coverage: 0%** 🔴 - Critical gap identified
+
+An 8-week phased testing roadmap is in progress to achieve 50%+ coverage:
+- Phase 1: Critical path testing (Week 1-2)
+- Phase 2: Component testing (Week 3-4)
+- Phase 3: Integration testing (Week 5-6)
+- Phase 4: E2E testing (Week 7-8)
+
+See [ARCHITECTURE.md](ARCHITECTURE.md#testing-architecture) for details.
 
 ## Getting Started
 
@@ -659,6 +718,50 @@ Custom CSS variables in `src/index.css`:
 }
 ```
 
+## Security Best Practices
+
+### Development Security
+
+1. **Never commit secrets**
+   - `.dev.vars` should never be committed
+   - Use environment variables for sensitive data
+   - Add `.dev.vars` to `.gitignore`
+
+2. **Use strong passwords in production**
+   - Generate JWT secrets with `openssl rand -base64 32`
+   - Use Cloudflare Workers secrets for production: `npx wrangler secret put JWT_SECRET`
+
+3. **Validate all inputs**
+   - Use Zod schemas for API validation
+   - Never trust client-side data
+   - Sanitize user-generated content
+
+4. **Follow the principle of least privilege**
+   - Only request necessary permissions
+   - Use role-based access control
+   - Validate ownership before granting access
+
+### API Security Guidelines
+
+When working with the API:
+
+- **Do NOT include `/api` prefix** in endpoint paths - it's automatically prepended
+- Always use parameterized queries (`.bind()`) for SQL
+- Validate file uploads (type, size, content)
+- Implement rate limiting on public endpoints
+- Use HTTPS in production
+
+### Known Security Considerations
+
+**Currently Being Addressed:**
+- Rate limiting implementation (prevents brute force/DoS)
+- Content Security Policy headers (prevents XSS)
+- OAuth state validation (prevents CSRF)
+- Token versioning for password changes
+- Comprehensive audit logging
+
+**For detailed security assessment**, see [SECURITY_AUDIT_REPORT.md](SECURITY_AUDIT_REPORT.md).
+
 ## Deployment
 
 ### Frontend (Vercel/Netlify)
@@ -704,7 +807,35 @@ npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0005_late_fee_confi
 
 ## Testing
 
-Currently, the project does not have automated tests. Manual testing is performed via:
+**Current Status: 0% Test Coverage** 🔴
+
+The project has Vitest 2.1.4 installed and configured, but tests have not yet been written. An 8-week phased testing roadmap is planned to achieve 50%+ coverage:
+
+### Testing Roadmap
+
+**Phase 1: Critical Path (Week 1-2)**
+- Unit tests for utilities (cn, logger, paymentExport)
+- Unit tests for auth functions (JWT, password hashing)
+- Unit tests for payment calculations
+
+**Phase 2: Component Testing (Week 3-4)**
+- ProtectedRoute component tests
+- LoginPage, DashboardPage tests
+- Payment form tests
+
+**Phase 3: Integration Tests (Week 5-6)**
+- Authentication flow tests
+- Payment processing tests
+- Service request CRUD tests
+
+**Phase 4: E2E Tests (Week 7-8)**
+- Login → Dashboard → Make Payment flow
+- Admin → Create User → Assign Lot flow
+- Cross-browser testing
+
+### Manual Testing
+
+Currently, manual testing is performed via:
 
 ```bash
 npm run dev:all
@@ -716,6 +847,8 @@ Test coverage includes:
 - Reservation booking
 - Payment processing
 - Admin operations
+
+**For detailed testing strategy**, see [ARCHITECTURE.md](ARCHITECTURE.md#testing-strategy).
 
 ## Troubleshooting
 
@@ -739,6 +872,43 @@ Visit `/debug` to view:
 **Map not loading**
 - Check GeoJSON endpoint returns data
 - Verify Leaflet CSS is imported
+
+**CORS errors**
+- Verify CORS_ORIGIN in wrangler.jsonc matches your frontend URL
+- Check that API middleware CORS settings are correct
+
+**TypeScript errors about `import.meta.env`**
+- Ensure `src/vite-env.d.ts` exists with `interface ImportMetaEnv`
+- Check that `vite.config.ts` has proper type definitions
+
+**Build fails with "Cannot find module"**
+- Run `npm install` to ensure all dependencies are installed
+- Check that `package.json` has all required dependencies
+- Try `rm -rf node_modules package-lock.json && npm install`
+
+**Authentication not persisting**
+- Check browser console for error messages
+- Verify JWT_SECRET is set in wrangler.jsonc
+- Clear localStorage and log in again
+
+**Payment verification queue not showing**
+- Ensure you have admin role
+- Check that payments with status "pending" exist in database
+- Verify API endpoint `/admin/payments/verify` returns data
+
+### Getting Help
+
+If you encounter issues not covered here:
+
+1. Check the [ARCHITECTURE.md](ARCHITECTURE.md) for system design details
+2. Review [SECURITY_AUDIT_REPORT.md](SECURITY_AUDIT_REPORT.md) for security considerations
+3. Check [AUDIT_REPORT.md](AUDIT_REPORT.md) for known issues and technical debt
+4. Search existing [GitHub Issues](https://github.com/miconficker/lhs-hoa/issues)
+5. Create a new issue with:
+   - Error messages (full stack trace)
+   - Steps to reproduce
+   - Environment details (Node version, OS, browser)
+   - Expected vs actual behavior
 
 ## Contributing
 

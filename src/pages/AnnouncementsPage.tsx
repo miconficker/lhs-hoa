@@ -6,10 +6,11 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import type { AnnouncementCategory } from "@/types";
 
 const categoryColors: Record<AnnouncementCategory, string> = {
-  event: "bg-blue-100 text-blue-700",
-  urgent: "bg-red-100 text-destructive",
-  info: "bg-gray-100 text-card-foreground",
-  policy: "bg-purple-100 text-purple-700",
+  event: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
+  urgent: "bg-red-100 dark:bg-red-900/30 text-destructive",
+  info: "bg-gray-100 dark:bg-muted text-card-foreground",
+  policy:
+    "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300",
 };
 
 const categoryLabels: Record<AnnouncementCategory, string> = {
@@ -170,7 +171,7 @@ export function AnnouncementsPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     {announcement.is_pinned && (
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700">
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
                         Pinned
                       </span>
                     )}
@@ -188,7 +189,7 @@ export function AnnouncementsPage() {
                   <p className="text-muted-foreground mt-2">
                     {announcement.content}
                   </p>
-                  <p className="text-sm text-gray-400 mt-4">
+                  <p className="text-sm text-muted-foreground mt-4">
                     {format(
                       new Date(announcement.created_at),
                       "MMMM d, yyyy 'at' h:mm a",
@@ -199,10 +200,10 @@ export function AnnouncementsPage() {
                 </div>
                 {isAdmin && (
                   <div className="ml-4 flex gap-2">
-                    <button className="p-2 text-gray-400 hover:text-muted-foreground">
+                    <button className="p-2 text-muted-foreground hover:text-foreground">
                       <Pencil className="w-5 h-5" />
                     </button>
-                    <button className="p-2 text-gray-400 hover:text-red-600">
+                    <button className="p-2 text-muted-foreground hover:text-destructive">
                       <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
@@ -211,7 +212,7 @@ export function AnnouncementsPage() {
             </div>
           ))
         ) : (
-          <div className="bg-card rounded-lg shadow p-12 text-center text-gray-500">
+          <div className="bg-card rounded-lg shadow p-12 text-center text-muted-foreground">
             No announcements found.
           </div>
         )}

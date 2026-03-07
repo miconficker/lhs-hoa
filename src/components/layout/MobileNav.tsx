@@ -27,6 +27,7 @@ import {
   Badge,
   UserCheck,
   Home as HomeIcon,
+  Megaphone,
 } from "lucide-react";
 
 const navItems = [
@@ -79,8 +80,14 @@ const navItems = [
     roles: ["admin", "resident", "staff"],
   },
   {
-    to: "/announcements",
+    to: "/messages",
     icon: MessageSquare,
+    label: "Messages",
+    roles: ["admin", "resident", "staff"],
+  },
+  {
+    to: "/announcements",
+    icon: Megaphone,
     label: "Announcements",
     roles: ["admin", "resident", "staff", "guest"],
   },

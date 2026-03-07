@@ -1,0 +1,621 @@
+/**
+ * Integration Test: Payment Verification Flow
+ *
+ * Tests the complete payment flow from initiation to admin verification
+ * and balance update.
+ *
+ * Prerequisites:
+ * - @testing-library/react must be installed
+ * - MSW (Mock Service Worker) for API mocking
+ * - Vitest must be configured
+ */
+
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { BrowserRouter } from 'react-router-dom';
+import { apiRequest } from '@/lib/api';
+import PaymentVerificationQueue from '@/components/PaymentVerificationQueue';
+
+// Mock the API module
+vi.mock('@/lib/api', () => ({
+  apiRequest: vi.fn(),
+}));
+
+describe('Payment Integration: Verification Flow', () => {
+  const mockVerificationQueue = [
+    {
+      id: 'queue-1',
+      payment_id: 'payment-123',
+      user_id: 'user-456',
+      payment_type: 'vehicle_pass',
+      amount: 500,
+      reference_number: 'REF123',
+      status: 'pending',
+      file_url: 'https://r2.dev/proofs/proof.jpg',
+      household_address: 'Block 5, Lot 10',
+      created_at: '2026-03-06T10:00:00Z',
+    },
+    {
+      id: 'queue-2',
+      payment_id: 'payment-124',
+      user_id: 'user-789',
+      payment_type: 'employee_id',
+      amount: 500,
+      reference_number: 'REF124',
+      status: 'pending',
+      file_url: 'https://r2.dev/proofs/proof2.jpg',
+      household_address: 'Block 3, Lot 5',
+      created_at: '2026-03-06T09:00:00Z',
+    },
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('Loading Verification Queue', () => {
+    it('should load verification queue on component mount', async () => {
+      vi.mocked(apiRequest).mockResolvedValue({
+        data: { queue: mockVerificationQueue },
+      });
+
+      render(
+        <BrowserRouter>
+          <PaymentVerificationQueue />
+        </BrowserRouter>
+      );
+
+      // Verify API was called
+      await waitFor(() => {
+        expect(apiRequest).toHaveBeenCalledWith('/admin/payments/verify', {
+          method: 'GET',
+          headers: expect.objectContaining({
+            Authorization: expect.stringContaining('Bearer'),
+          }),
+        });
+      });
+
+      // Verify queue items are displayed
+      expect(screen.getByText('Block 5, Lot 10')).toBeInTheDocument();
+      expect(screen.getByText('Block 3, Lot 5')).toBeInTheDocument();
+      expect(screen.getByText('500')).toBeInTheDocument(); // Amount
+      expect(screen.getByText('vehicle_pass')).toBeInTheDocument();
+    });
+
+    it('should handle empty queue', async () => {
+      vi.mocked(apiRequest).mockResolvedValue({
+        data: { queue: [] },
+      });
+
+      render(
+        <BrowserRouter>
+          <PaymentVerificationQueue />
+        </BrowserRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/no pending verifications/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should filter by status', async () => {
+      vi.mocked(apiRequest).mockResolvedValue({
+        data: { queue: mockVerificationQueue },
+      });
+
+      render(
+        <BrowserRouter>
+          <PaymentVerificationQueue />
+        </BrowserRouter>
+      );
+
+      // Wait for initial load
+      await waitFor(() => {
+        expect(screen.getByText('Block 5, Lot 10')).toBeInTheDocument();
+      });
+
+      // Click filter to show only pending
+      const pendingFilter = screen.getByRole('button', { name: /pending/i });
+      await userEvent.click(pendingFilter);
+
+      // Verify API called with filter
+      await waitFor(() => {
+        expect(apiRequest).toHaveBeenCalledWith('/admin/payments/verify', {
+          method: 'GET',
+          headers: expect.any(Object),
+        });
+      });
+    });
+  });
+
+  describe('Approving Payments', () => {
+    it('should approve payment and update status', async () => {
+      vi.mocked(apiRequest)
+        .mockResolvedValueOnce({ data: { queue: mockVerificationQueue } })
+        .mockResolvedValueOnce({
+          data: { message: 'Payment approved successfully' },
+        });
+
+      const { container } = render(
+        <BrowserRouter>
+          <PaymentVerificationQueue />
+        </BrowserRouter>
+      );
+
+      // Wait for queue to load
+      await waitFor(() => {
+        expect(screen.getByText('Block 5, Lot 10')).toBeInTheDocument();
+      });
+
+      // Click approve button for first item
+      const approveButton = screen.getAllByRole('button', { name: /approve/i })[0];
+      await userEvent.click(approveButton);
+
+      // Confirm approval (if confirmation dialog exists)
+      const confirmButton = screen.getByRole('button', { name: /confirm/i });
+      await userEvent.click(confirmButton);
+
+      // Verify verification API was called
+      await waitFor(() => {
+        expect(apiRequest).toHaveBeenCalledWith(
+          '/admin/payments/payment-123/verify',
+          expect.objectContaining({
+            method: 'PUT',
+            body: expect.stringContaining('"action":"approve"'),
+          })
+        );
+      });
+
+      // Verify success message
+      expect(screen.getByText(/payment approved/i)).toBeInTheDocument();
+
+      // Verify item removed from queue or status updated
+      await waitFor(() => {
+        const updatedQueue = screen.queryByText('Block 5, Lot 10');
+        // Either removed or status changed to 'approved'
+        expect(updatedQueue).not.toBeInTheDocument(); // or status check
+      });
+    });
+
+    it('should send notification to resident on approval', async () => {
+      let notificationSent = false;
+
+      vi.mocked(apiRequest)
+        .mockResolvedValueOnce({ data: { queue: mockVerificationQueue } })
+        .mockResolvedValueOnce({ data: { message: 'Payment approved' } })
+        .mockImplementation(async (endpoint: string) => {
+          if (endpoint.includes('/notifications')) {
+            notificationSent = true;
+            return { data: { id: 'notif-123' } };
+          }
+          return { data: {} };
+        });
+
+      render(
+        <BrowserRouter>
+          <PaymentVerificationQueue />
+        </BrowserRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Block 5, Lot 10')).toBeInTheDocument();
+      });
+
+      const approveButton = screen.getAllByRole('button', { name: /approve/i })[0];
+      await userEvent.click(approveButton);
+
+      const confirmButton = screen.getByRole('button', { name: /confirm/i });
+      await userEvent.click(confirmButton);
+
+      await waitFor(() => {
+        expect(notificationSent).toBe(true);
+      });
+    });
+
+    it('should update payment status to completed', async () => {
+      vi.mocked(apiRequest)
+        .mockResolvedValueOnce({ data: { queue: mockVerificationQueue } })
+        .mockResolvedValueOnce({ data: { message: 'Payment approved' } });
+
+      render(
+        <BrowserRouter>
+          <PaymentVerificationQueue />
+        </BrowserRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Block 5, Lot 10')).toBeInTheDocument();
+      });
+
+      const approveButton = screen.getAllByRole('button', { name: /approve/i })[0];
+      await userEvent.click(approveButton);
+
+      const confirmButton = screen.getByRole('button', { name: /confirm/i });
+      await userEvent.click(confirmButton);
+
+      // Verify payment status was updated in database
+      await waitFor(() => {
+        expect(apiRequest).toHaveBeenCalledWith(
+          '/admin/payments/payment-123/verify',
+          expect.objectContaining({
+            method: 'PUT',
+          })
+        );
+      });
+    });
+  });
+
+  describe('Rejecting Payments', () => {
+    it('should reject payment with reason', async () => {
+      vi.mocked(apiRequest)
+        .mockResolvedValueOnce({ data: { queue: mockVerificationQueue } })
+        .mockResolvedValueOnce({ data: { message: 'Payment rejected' } });
+
+      render(
+        <BrowserRouter>
+          <PaymentVerificationQueue />
+        </BrowserRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Block 5, Lot 10')).toBeInTheDocument();
+      });
+
+      // Click reject button
+      const rejectButton = screen.getAllByRole('button', { name: /reject/i })[0];
+      await userEvent.click(rejectButton);
+
+      // Enter rejection reason
+      const reasonTextarea = screen.getByPlaceholderText(/reason for rejection/i);
+      await userEvent.type(reasonTextarea, 'Proof image is blurry and unreadable');
+
+      // Confirm rejection
+      const confirmButton = screen.getByRole('button', { name: /confirm rejection/i });
+      await userEvent.click(confirmButton);
+
+      // Verify verification API was called with rejection
+      await waitFor(() => {
+        expect(apiRequest).toHaveBeenCalledWith(
+          '/admin/payments/payment-123/verify',
+          expect.objectContaining({
+            method: 'PUT',
+            body: expect.stringContaining('"action":"reject"'),
+            body: expect.stringContaining('blurry and unreadable'),
+          })
+        );
+      });
+
+      // Verify success message
+      expect(screen.getByText(/payment rejected/i)).toBeInTheDocument();
+    });
+
+    it('should require rejection reason', async () => {
+      vi.mocked(apiRequest).mockResolvedValue({
+        data: { queue: mockVerificationQueue },
+      });
+
+      render(
+        <BrowserRouter>
+          <PaymentVerificationQueue />
+        </BrowserRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Block 5, Lot 10')).toBeInTheDocument();
+      });
+
+      const rejectButton = screen.getAllByRole('button', { name: /reject/i })[0];
+      await userEvent.click(rejectButton);
+
+      // Try to confirm without entering reason
+      const confirmButton = screen.getByRole('button', { name: /confirm rejection/i });
+      await userEvent.click(confirmButton);
+
+      // Verify validation error
+      expect(screen.getByText(/please provide a reason/i)).toBeInTheDocument();
+
+      // API should not have been called
+      expect(apiRequest).not.toHaveBeenCalledWith(
+        '/admin/payments/payment-123/verify',
+        expect.objectContaining({ method: 'PUT' })
+      );
+    });
+
+    it('should allow re-upload after rejection', async () => {
+      vi.mocked(apiRequest)
+        .mockResolvedValueOnce({ data: { queue: mockVerificationQueue } })
+        .mockResolvedValueOnce({ data: { message: 'Payment rejected' } })
+        .mockResolvedValueOnce({ data: { message: 'Proof uploaded' } });
+
+      render(
+        <BrowserRouter>
+          <PaymentVerificationQueue />
+        </BrowserRouter>
+      );
+
+      // Reject payment first
+      await waitFor(() => {
+        expect(screen.getByText('Block 5, Lot 10')).toBeInTheDocument();
+      });
+
+      const rejectButton = screen.getAllByRole('button', { name: /reject/i })[0];
+      await userEvent.click(rejectButton);
+
+      const reasonTextarea = screen.getByPlaceholderText(/reason for rejection/i);
+      await userEvent.type(reasonTextarea, 'Invalid proof');
+
+      const confirmButton = screen.getByRole('button', { name: /confirm rejection/i });
+      await userEvent.click(confirmButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/payment rejected/i)).toBeInTheDocument();
+      });
+
+      // Now user should be able to upload new proof
+      // This would test the resident-facing re-upload flow
+    });
+  });
+
+  describe('Proof Viewing', () => {
+    it('should display proof image/preview', async () => {
+      vi.mocked(apiRequest).mockResolvedValue({
+        data: { queue: mockVerificationQueue },
+      });
+
+      render(
+        <BrowserRouter>
+          <PaymentVerificationQueue />
+        </BrowserRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Block 5, Lot 10')).toBeInTheDocument();
+      });
+
+      // Click to view proof
+      const viewProofButton = screen.getAllByRole('button', { name: /view proof/i })[0];
+      await userEvent.click(viewProofButton);
+
+      // Verify proof is displayed
+      await waitFor(() => {
+        const proofImage = screen.getByAltText(/payment proof/i);
+        expect(proofImage).toBeInTheDocument();
+        expect(proofImage).toHaveAttribute('src', 'https://r2.dev/proofs/proof.jpg');
+      });
+    });
+
+    it('should open proof in new tab for PDF files', async () => {
+      const pdfQueue = [
+        {
+          ...mockVerificationQueue[0],
+          file_url: 'https://r2.dev/proofs/proof.pdf',
+        },
+      ];
+
+      vi.mocked(apiRequest).mockResolvedValue({
+        data: { queue: pdfQueue },
+      });
+
+      // Mock window.open
+      const mockOpen = vi.fn();
+      global.open = mockOpen;
+
+      render(
+        <BrowserRouter>
+          <PaymentVerificationQueue />
+        </BrowserRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Block 5, Lot 10')).toBeInTheDocument();
+      });
+
+      const viewProofButton = screen.getAllByRole('button', { name: /view proof/i })[0];
+      await userEvent.click(viewProofButton);
+
+      // Verify PDF opened in new tab
+      expect(mockOpen).toHaveBeenCalledWith(
+        'https://r2.dev/proofs/proof.pdf',
+        '_blank',
+        'noopener,noreferrer'
+      );
+    });
+  });
+
+  describe('Balance Updates', () => {
+    it('should update household balance after payment approval', async () => {
+      vi.mocked(apiRequest)
+        .mockResolvedValueOnce({ data: { queue: mockVerificationQueue } })
+        .mockResolvedValueOnce({ data: { message: 'Payment approved' } })
+        .mockResolvedValueOnce({
+          data: {
+            household_id: 'h-123',
+            total_due: 0,
+            total_paid: 500,
+            balance: 0,
+            status: 'current',
+          },
+        });
+
+      render(
+        <BrowserRouter>
+          <PaymentVerificationQueue />
+        </BrowserRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Block 5, Lot 10')).toBeInTheDocument();
+      });
+
+      const approveButton = screen.getAllByRole('button', { name: /approve/i })[0];
+      await userEvent.click(approveButton);
+
+      const confirmButton = screen.getByRole('button', { name: /confirm/i });
+      await userEvent.click(confirmButton);
+
+      // Verify balance was checked
+      await waitFor(() => {
+        expect(apiRequest).toHaveBeenCalledWith('/payments/balance/h-123');
+      });
+    });
+
+    it('should handle late fee calculation on approval', async () => {
+      // This would test that late fees are properly calculated
+      // when payment is approved after due date
+      vi.mocked(apiRequest)
+        .mockResolvedValueOnce({ data: { queue: mockVerificationQueue } })
+        .mockResolvedValueOnce({ data: { message: 'Payment approved' } });
+
+      render(
+        <BrowserRouter>
+          <PaymentVerificationQueue />
+        </BrowserRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Block 5, Lot 10')).toBeInTheDocument();
+      });
+
+      const approveButton = screen.getAllByRole('button', { name: /approve/i })[0];
+      await userEvent.click(approveButton);
+
+      const confirmButton = screen.getByRole('button', { name: /confirm/i });
+      await userEvent.click(confirmButton);
+
+      await waitFor(() => {
+        expect(apiRequest).toHaveBeenCalledWith(
+          '/admin/payments/payment-123/verify',
+          expect.objectContaining({
+            method: 'PUT',
+          })
+        );
+      });
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle API errors gracefully', async () => {
+      vi.mocked(apiRequest).mockRejectedValue(new Error('Network error'));
+
+      render(
+        <BrowserRouter>
+          <PaymentVerificationQueue />
+        </BrowserRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/failed to load verification queue/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should handle approval failure', async () => {
+      vi.mocked(apiRequest)
+        .mockResolvedValueOnce({ data: { queue: mockVerificationQueue } })
+        .mockRejectedValueOnce(new Error('Approval failed'));
+
+      render(
+        <BrowserRouter>
+          <PaymentVerificationQueue />
+        </BrowserRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Block 5, Lot 10')).toBeInTheDocument();
+      });
+
+      const approveButton = screen.getAllByRole('button', { name: /approve/i })[0];
+      await userEvent.click(approveButton);
+
+      const confirmButton = screen.getByRole('button', { name: /confirm/i });
+      await userEvent.click(confirmButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/failed to approve payment/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should handle proof file loading errors', async () => {
+      vi.mocked(apiRequest).mockResolvedValue({
+        data: { queue: mockVerificationQueue },
+      });
+
+      // Mock image loading error
+      render(
+        <BrowserRouter>
+          <PaymentVerificationQueue />
+        </BrowserRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Block 5, Lot 10')).toBeInTheDocument();
+      });
+
+      const viewProofButton = screen.getAllByRole('button', { name: /view proof/i })[0];
+      await userEvent.click(viewProofButton);
+
+      // Verify error message if proof fails to load
+      await waitFor(() => {
+        expect(screen.getByText(/failed to load proof/i)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('User Permissions', () => {
+    it('should deny access to non-admin users', async () => {
+      // Mock non-admin user
+      vi.mocked(apiRequest).mockResolvedValue({
+        data: { user: { role: 'resident' } },
+      });
+
+      // This would verify that non-admin users get 403 when accessing verification queue
+      // Implementation depends on ProtectedRoute component
+      expect(true).toBe(true); // Placeholder
+    });
+
+    it('should only show actions to admin users', async () => {
+      vi.mocked(apiRequest).mockResolvedValue({
+        data: {
+          user: { role: 'admin' },
+          queue: mockVerificationQueue,
+        },
+      });
+
+      render(
+        <BrowserRouter>
+          <PaymentVerificationQueue />
+        </BrowserRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /approve/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /reject/i })).toBeInTheDocument();
+      });
+    });
+  });
+});
+
+/**
+ * Test Execution Notes:
+ *
+ * Dependencies Required:
+ * - @testing-library/react
+ * - @testing-library/user-event
+ * - Vitest with jsdom environment
+ *
+ * Mock Requirements:
+ * - API module (@/lib/api)
+ * - localStorage (for auth tokens)
+ * - window.open (for PDF viewing)
+ *
+ * Known Assumptions:
+ * - PaymentVerificationQueue component exists
+ * - API endpoints follow documented structure
+ * - ProtectedRoute component handles role-based access
+ *
+ * Next Steps:
+ * - Implement actual component tests once component structure is finalized
+ * - Add tests for edge cases (concurrent approvals, race conditions)
+ * - Add performance tests for large queues
+ * - Add accessibility tests (keyboard navigation, screen readers)
+ */

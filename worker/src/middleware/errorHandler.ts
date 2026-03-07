@@ -7,6 +7,7 @@
 
 import type { Context, Next } from 'hono';
 import { logger, type LogContext } from '../lib/logger';
+import { captureExceptionWithContext } from '../lib/sentry';
 
 export interface ErrorResponse {
   error: string;
@@ -139,7 +140,7 @@ export const errorHandler = async (c: Context, next: Next) => {
 
     // Handle standard JavaScript errors
     if (error instanceof Error) {
-      // Log unexpected errors (in production, this would go to monitoring)
+      // Log unexpected errors
       const logContext: LogContext = {
         requestId,
         endpoint: c.req.path,
@@ -147,6 +148,27 @@ export const errorHandler = async (c: Context, next: Next) => {
         statusCode: 500,
       };
       logger.error('Unhandled error in error handler', error, logContext);
+
+      // Capture in Sentry if available
+      try {
+        const userId = c.get('userId');
+        const userEmail = c.get('userEmail');
+
+        captureExceptionWithContext(error, {
+          user: userId ? { id: userId, email: userEmail } : undefined,
+          request: {
+            method: c.req.method,
+            path: c.req.path,
+          },
+          tags: {
+            statusCode: '500',
+            errorType: 'UnhandledError',
+          },
+        });
+      } catch (sentryError) {
+        // Don't let Sentry errors break the error handler
+        logger.warn('Failed to capture error in Sentry', { sentryError });
+      }
 
       const response: ErrorResponse = {
         error: 'An unexpected error occurred',
@@ -173,6 +195,26 @@ export const errorHandler = async (c: Context, next: Next) => {
       statusCode: 500,
     };
     logger.error('Unknown error in error handler', error, logContext);
+
+    // Capture in Sentry if available
+    try {
+      captureExceptionWithContext(new Error('Unknown error'), {
+        request: {
+          method: c.req.method,
+          path: c.req.path,
+        },
+        extra: {
+          unknownError: error,
+        },
+        tags: {
+          statusCode: '500',
+          errorType: 'UnknownError',
+        },
+      });
+    } catch (sentryError) {
+      // Don't let Sentry errors break the error handler
+      logger.warn('Failed to capture unknown error in Sentry', { sentryError });
+    }
 
     const response: ErrorResponse = {
       error: 'An unexpected error occurred',

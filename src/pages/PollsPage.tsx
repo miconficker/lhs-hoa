@@ -275,7 +275,7 @@ export function PollsPage() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+      <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-lg">
         {error}
       </div>
     );
@@ -374,7 +374,7 @@ export function PollsPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       {hasVoted && (
-                        <span className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
+                        <span className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
                           <CheckCircle className="w-3 h-3" />
                           Voted
                         </span>
@@ -382,8 +382,8 @@ export function PollsPage() {
                       <span
                         className={`px-2 py-1 text-xs font-medium rounded-full ${
                           timeRemaining === "Expired"
-                            ? "bg-gray-100 text-muted-foreground"
-                            : "bg-blue-100 text-blue-700"
+                            ? "bg-muted text-muted-foreground"
+                            : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
                         }`}
                       >
                         {timeRemaining}
@@ -392,7 +392,7 @@ export function PollsPage() {
                     <h3 className="text-lg font-semibold text-card-foreground">
                       {poll.question}
                     </h3>
-                    <p className="text-sm text-gray-400 mt-1">
+                    <p className="text-sm text-muted-foreground mt-1">
                       Created{" "}
                       {format(new Date(poll.created_at), "MMMM d, yyyy")}
                       {poll.total_votes !== undefined &&
@@ -403,7 +403,7 @@ export function PollsPage() {
                     {isAdmin && (
                       <button
                         onClick={() => openInPersonVoteModal(poll)}
-                        className="p-2 text-gray-400 hover:text-primary-600"
+                        className="p-2 text-muted-foreground hover:text-primary"
                         title="Record in-person vote"
                       >
                         <UserCheck className="w-5 h-5" />
@@ -412,7 +412,7 @@ export function PollsPage() {
                     {isAdmin && (
                       <button
                         onClick={() => handleDeletePoll(poll.id)}
-                        className="p-2 text-gray-400 hover:text-red-600"
+                        className="p-2 text-muted-foreground hover:text-destructive"
                         title="Delete poll"
                       >
                         <Trash2 className="w-5 h-5" />
@@ -429,7 +429,7 @@ export function PollsPage() {
                         key={option}
                         className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
                           selectedOptions[poll.id] === option
-                            ? "border-primary-500 bg-primary-50"
+                            ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20"
                             : "border-border hover:border-border"
                         }`}
                       >
@@ -457,7 +457,7 @@ export function PollsPage() {
                       className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
                         selectedOptions[poll.id]
                           ? "bg-primary-600 text-white hover:bg-primary-700"
-                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : "bg-muted text-muted-foreground cursor-not-allowed"
                       }`}
                     >
                       Submit Vote
@@ -488,7 +488,7 @@ export function PollsPage() {
                                   </span>
                                 </div>
                               </div>
-                              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
                                 <div
                                   className="bg-primary-600 h-full transition-all duration-300"
                                   style={{ width: `${percentage}%` }}
@@ -500,7 +500,7 @@ export function PollsPage() {
                       </>
                     ) : (
                       <div className="text-center py-4">
-                        <BarChart className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                        <BarChart className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
                         <p className="text-muted-foreground text-sm">
                           No votes yet. Be the first to vote!
                         </p>
@@ -513,7 +513,7 @@ export function PollsPage() {
           })
         ) : (
           <div className="bg-card rounded-lg shadow p-12 text-center text-muted-foreground">
-            <BarChart className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <BarChart className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
             No active polls found.
           </div>
         )}
@@ -521,7 +521,7 @@ export function PollsPage() {
 
       {/* In-Person Vote Recording Modal */}
       {showInPersonVoteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-card rounded-lg shadow-xl max-w-md w-full">
             <div className="flex items-center justify-between p-6 border-b border-border">
               <div>
@@ -538,20 +538,20 @@ export function PollsPage() {
                   setError("");
                   setVoteSuccess("");
                 }}
-                className="text-gray-400 hover:text-muted-foreground"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
 
             {error && (
-              <div className="mx-6 mt-4 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+              <div className="mx-6 mt-4 bg-destructive/10 border border-destructive/20 text-destructive p-3 rounded-lg text-sm">
                 {error}
               </div>
             )}
 
             {voteSuccess && (
-              <div className="mx-6 mt-4 bg-green-50 border border-green-200 text-green-700 p-3 rounded-lg text-sm">
+              <div className="mx-6 mt-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 p-3 rounded-lg text-sm">
                 {voteSuccess}
               </div>
             )}

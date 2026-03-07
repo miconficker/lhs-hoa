@@ -309,10 +309,10 @@ export function DocumentsPage() {
                       {format(new Date(document.created_at), "MMM d, yyyy")}
                     </p>
                   </div>
-                  <FileText className="w-12 h-12 text-gray-400 flex-shrink-0 ml-4" />
+                  <FileText className="w-12 h-12 text-muted-foreground flex-shrink-0 ml-4" />
                 </div>
 
-                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
                   <button
                     onClick={() => handleDownload(document.id)}
                     className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium"
@@ -323,7 +323,7 @@ export function DocumentsPage() {
                   {canPreview(document.title) && (
                     <button
                       onClick={() => handlePreview(document.id, document.title)}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-muted text-card-foreground rounded-lg hover:bg-gray-200 text-sm font-medium"
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-muted text-card-foreground rounded-lg hover:bg-accent text-sm font-medium"
                     >
                       <Eye className="w-4 h-4" />
                       Preview
@@ -345,12 +345,12 @@ export function DocumentsPage() {
         </div>
       ) : (
         <div className="bg-card rounded-lg shadow p-12 text-center">
-          <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">No documents found.</p>
           {selectedCategory !== "all" && (
             <button
               onClick={() => setSelectedCategory("all")}
-              className="mt-4 text-primary-600 hover:text-primary-700 font-medium"
+              className="mt-4 text-primary hover:text-primary/80 font-medium"
             >
               View all documents
             </button>
@@ -360,15 +360,15 @@ export function DocumentsPage() {
 
       {/* Preview Modal */}
       {previewDocument && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-card rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <div className="flex items-center justify-between p-4 border-b border-border">
               <h3 className="text-lg font-semibold text-card-foreground line-clamp-1">
                 {previewDocument.title}
               </h3>
               <button
                 onClick={() => setPreviewDocument(null)}
-                className="text-gray-400 hover:text-muted-foreground"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <svg
                   className="w-6 h-6"
@@ -392,10 +392,10 @@ export function DocumentsPage() {
                 title={previewDocument.title}
               />
             </div>
-            <div className="p-4 border-t border-gray-200">
+            <div className="p-4 border-t border-border">
               <button
                 onClick={() => setPreviewDocument(null)}
-                className="w-full px-4 py-2 bg-muted text-card-foreground rounded-lg hover:bg-gray-200 font-medium"
+                className="w-full px-4 py-2 bg-muted text-card-foreground rounded-lg hover:bg-accent font-medium"
               >
                 Close Preview
               </button>

@@ -10,7 +10,7 @@ export function Header() {
   const { user, clearAuth } = useAuth();
 
   return (
-    <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+    <header className="bg-background border-b border-border sticky top-0 z-50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center gap-4">
@@ -21,10 +21,10 @@ export function Header() {
                 alt="Laguna Hills HOA"
                 className="h-10 w-auto"
               />
-              <span className="text-xl font-bold text-gray-900 dark:text-white hidden sm:inline">
+              <span className="text-xl font-bold text-foreground hidden sm:inline">
                 Laguna Hills HOA
               </span>
-              <span className="text-xl font-bold text-gray-900 dark:text-white sm:hidden">
+              <span className="text-xl font-bold text-foreground sm:hidden">
                 LHS HOA
               </span>
             </Link>
@@ -39,12 +39,12 @@ export function Header() {
             {user ? (
               <>
                 <NotificationBell />
-                <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:inline">
+                <span className="text-sm text-muted-foreground hidden sm:inline">
                   {user.email} ({user.role})
                 </span>
                 <button
                   onClick={clearAuth}
-                  className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  className="px-3 py-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
                 >
                   Logout
                 </button>
@@ -52,7 +52,7 @@ export function Header() {
             ) : (
               <Link
                 to="/login"
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
               >
                 Login
               </Link>

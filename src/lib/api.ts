@@ -48,6 +48,17 @@ import type {
   PaymentVerificationQueue,
   InitiatePaymentResponse,
   PaymentSettings,
+  MessageThread,
+  ThreadParticipant,
+  Message,
+  MessageThreadDetail,
+  CreateThreadInput,
+  SendMessageInput,
+  UpdateThreadInput,
+  ThreadsResponse,
+  ThreadResponse,
+  CreateThreadResponse,
+  MessageResponse,
 } from "@/types";
 
 import { logger } from "@/lib/logger";
@@ -1389,5 +1400,50 @@ export const api = {
     },
     // Get current pass fees (uses admin endpoint)
     getFees: () => apiRequest<PassFeesResponse>("/admin/pass-management/fees"),
+  },
+  messages: {
+    // Get all threads for current user
+    getThreads: (limit = 20, offset = 0) =>
+      apiRequest<ThreadsResponse>(
+        `/messages/threads?limit=${limit}&offset=${offset}`,
+      ),
+    // Get single thread with messages
+    getThread: (id: string) =>
+      apiRequest<ThreadResponse>(`/messages/threads/${id}`),
+    // Create new thread with first message
+    createThread: (input: CreateThreadInput) =>
+      apiRequest<CreateThreadResponse>("/messages/threads", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    // Send message to existing thread
+    sendMessage: (threadId: string, input: SendMessageInput) =>
+      apiRequest<MessageResponse>(`/messages/threads/${threadId}/messages`, {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    // Update thread (subject)
+    updateThread: (id: string, input: UpdateThreadInput) =>
+      apiRequest<ThreadResponse>(`/messages/threads/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(input),
+      }),
+    // Add participant to thread
+    addParticipant: (threadId: string, userId: string) =>
+      apiRequest<{ success: boolean }>(
+        `/messages/threads/${threadId}/participants`,
+        {
+          method: "POST",
+          body: JSON.stringify({ user_id: userId }),
+        },
+      ),
+    // Remove participant from thread (or leave)
+    removeParticipant: (threadId: string, userId: string) =>
+      apiRequest<{ success: boolean }>(
+        `/messages/threads/${threadId}/participants/${userId}`,
+        {
+          method: "DELETE",
+        },
+      ),
   },
 };

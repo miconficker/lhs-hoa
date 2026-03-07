@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback, memo } from "react";
 import { useLocation } from "react-router-dom";
 import {
   MapContainer,
@@ -52,35 +52,54 @@ interface HouseholdMarkerProps {
   household: MapHousehold;
 }
 
-function HouseholdMarker({ household }: HouseholdMarkerProps) {
-  const color =
-    household.status === "owned"
-      ? "#22c55e"
-      : household.status === "rented"
-        ? "#3b82f6"
-        : "#9ca3af";
+// Memoized marker component to prevent unnecessary re-renders
+const HouseholdMarker = memo(function HouseholdMarker({
+  household,
+}: HouseholdMarkerProps) {
+  const color = useMemo(
+    () =>
+      household.status === "owned"
+        ? "#22c55e"
+        : household.status === "rented"
+          ? "#3b82f6"
+          : "#9ca3af",
+    [household.status],
+  );
 
-  const icon = L.divIcon({
-    className: "custom-marker",
-    html: `<div style="
-      background-color: ${color};
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      border: 3px solid white;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    "></div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-    popupAnchor: [0, -12],
-  });
+  const icon = useMemo(
+    () =>
+      L.divIcon({
+        className: "custom-marker",
+        html: `<div style="
+        background-color: ${color};
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      "></div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+        popupAnchor: [0, -12],
+      }),
+    [color],
+  );
 
-  const position =
-    household.map_marker_x !== undefined && household.map_marker_y !== undefined
-      ? new LatLng(household.map_marker_y, household.map_marker_x)
-      : household.latitude && household.longitude
-        ? new LatLng(household.latitude, household.longitude)
-        : null;
+  const position = useMemo(
+    () =>
+      household.map_marker_x !== undefined &&
+      household.map_marker_y !== undefined
+        ? new LatLng(household.map_marker_y, household.map_marker_x)
+        : household.latitude && household.longitude
+          ? new LatLng(household.latitude, household.longitude)
+          : null,
+    [
+      household.map_marker_x,
+      household.map_marker_y,
+      household.latitude,
+      household.longitude,
+    ],
+  );
 
   if (!position) return null;
 
@@ -123,7 +142,7 @@ function HouseholdMarker({ household }: HouseholdMarkerProps) {
       </Popup>
     </Marker>
   );
-}
+});
 
 interface LotsGeoJSONProps {
   data: GeoJSON.FeatureCollection | null;
@@ -143,52 +162,19 @@ interface LotsGeoJSONProps {
   >;
 }
 
-function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
+// Memoized GeoJSON component to prevent unnecessary re-renders
+const LotsGeoJSON = memo(function LotsGeoJSON({
+  data,
+  filter,
+  lotsOwnership,
+}: LotsGeoJSONProps) {
   const { user } = useAuth();
 
   if (!data) return null;
 
-  const style = (
-    feature?: GeoJSON.Feature<GeoJSON.Geometry, LotFeatureProperties>,
-  ) => {
-    const props = feature?.properties;
-    const lotId = props?.path_id;
-
-    // Get ownership data for this lot
-    const ownershipData = lotsOwnership?.get(lotId || "");
-    const lotType = ownershipData?.lot_type || props?.lot_type;
-    const ownerId = ownershipData?.owner_user_id || props?.owner_user_id;
-    const isMerged = ownershipData?.household_group_id;
-
-    // Check if this lot is owned by the current user
-    const isMyLot = user && ownerId === user.id;
-
-    let fillColor = "#e5e7eb"; // Default: light gray (vacant)
-
-    // Priority: my lots > HOA lots > status > default
-    if (isMyLot) {
-      fillColor = "#3b82f6"; // Blue - MY lots (overrides all)
-    } else if (lotType === "community") {
-      fillColor = "#a855f7"; // Purple - community areas
-    } else if (lotType === "utility") {
-      fillColor = "#ef4444"; // Red - utility areas
-    } else if (lotType === "open_space") {
-      fillColor = "#14b8a6"; // Teal - open space
-    } else {
-      // Status colors for ALL residential lots (owned or not)
-      const status = ownershipData?.lot_status || props?.status;
-      if (status === "built") fillColor = "#22c55e"; // Green
-      if (status === "under_construction") fillColor = "#f59e0b"; // Orange
-      // else: vacant (default light gray)
-    }
-
-    // For merged lots, use purple highlight
-    if (isMerged) {
-      fillColor = isMyLot ? fillColor : "#a78bfa"; // Light purple for merged (not primary)
-    }
-
-    // Map fill color to border color
-    const borderColors: Record<string, string> = {
+  // Memoized border colors map (constant)
+  const borderColors: Record<string, string> = useMemo(
+    () => ({
       "#9ca3af": "#6b7280", // gray
       "#22c55e": "#16a34a", // green
       "#3b82f6": "#2563eb", // blue
@@ -203,76 +189,123 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
       "#6366f1": "#4f46e5", // indigo
       "#eab308": "#ca8a04", // yellow
       "#a78bfa": "#8b5cf6", // light purple
-    };
+    }),
+    [],
+  );
 
-    return {
-      color: borderColors[fillColor] || "#6b7280",
-      weight: 2,
-      fillColor,
-      fillOpacity: 0.3,
-    };
-  };
+  // Memoized style function
+  const style = useCallback(
+    (feature?: GeoJSON.Feature<GeoJSON.Geometry, LotFeatureProperties>) => {
+      const props = feature?.properties;
+      const lotId = props?.path_id;
 
-  const filterFeatures = (
-    feature: GeoJSON.Feature<GeoJSON.Geometry, LotFeatureProperties>,
-  ) => {
-    if (filter === "all") return true;
-    return (feature.properties?.status || "vacant_lot") === filter;
-  };
+      // Get ownership data for this lot
+      const ownershipData = lotsOwnership?.get(lotId || "");
+      const lotType = ownershipData?.lot_type || props?.lot_type;
+      const ownerId = ownershipData?.owner_user_id || props?.owner_user_id;
+      const isMerged = ownershipData?.household_group_id;
 
-  const onEachFeature = (
-    feature: GeoJSON.Feature<GeoJSON.Geometry, LotFeatureProperties>,
-    layer: L.Layer,
-  ) => {
-    layer.on({
-      mouseover: (e) => {
-        const layer = e.target as L.Polygon;
-        layer.setStyle({ fillOpacity: 0.6 });
-      },
-      mouseout: (e) => {
-        const layer = e.target as L.Polygon;
-        layer.setStyle({ fillOpacity: 0.3 });
-      },
-    });
+      // Check if this lot is owned by the current user
+      const isMyLot = user && ownerId === user.id;
 
-    const props = feature.properties;
-    if (props) {
-      const isAdmin = user?.role === "admin";
-      const lotId = props.path_id;
+      let fillColor = "#e5e7eb"; // Default: light gray (vacant)
 
-      // Get current ownership data from database instead of static GeoJSON
-      const ownershipData = lotsOwnership?.get(lotId);
-      const ownerId = ownershipData?.owner_user_id || props.owner_user_id;
-      const ownerName = ownershipData?.owner_name;
-      const lotStatus = ownershipData?.lot_status || props.status;
-      const lotLabel = ownershipData?.lot_label;
-      const lotDescription = ownershipData?.lot_description;
-      const lotType = ownershipData?.lot_type;
+      // Priority: my lots > HOA lots > status > default
+      if (isMyLot) {
+        fillColor = "#3b82f6"; // Blue - MY lots (overrides all)
+      } else if (lotType === "community") {
+        fillColor = "#a855f7"; // Purple - community areas
+      } else if (lotType === "utility") {
+        fillColor = "#ef4444"; // Red - utility areas
+      } else if (lotType === "open_space") {
+        fillColor = "#14b8a6"; // Teal - open space
+      } else {
+        // Status colors for ALL residential lots (owned or not)
+        const status = ownershipData?.lot_status || props?.status;
+        if (status === "built") fillColor = "#22c55e"; // Green
+        if (status === "under_construction") fillColor = "#f59e0b"; // Orange
+        // else: vacant (default light gray)
+      }
 
-      const ownerInfo = isAdmin
-        ? `
+      // For merged lots, use purple highlight
+      if (isMerged) {
+        fillColor = isMyLot ? fillColor : "#a78bfa"; // Light purple for merged (not primary)
+      }
+
+      return {
+        color: borderColors[fillColor] || "#6b7280",
+        weight: 2,
+        fillColor,
+        fillOpacity: 0.3,
+      };
+    },
+    [lotsOwnership, user, borderColors],
+  );
+
+  // Memoized filter function
+  const filterFeatures = useCallback(
+    (feature: GeoJSON.Feature<GeoJSON.Geometry, LotFeatureProperties>) => {
+      if (filter === "all") return true;
+      return (feature.properties?.status || "vacant_lot") === filter;
+    },
+    [filter],
+  );
+
+  // Memoized onEachFeature function
+  const onEachFeature = useCallback(
+    (
+      feature: GeoJSON.Feature<GeoJSON.Geometry, LotFeatureProperties>,
+      layer: L.Layer,
+    ) => {
+      layer.on({
+        mouseover: (e) => {
+          const layer = e.target as L.Polygon;
+          layer.setStyle({ fillOpacity: 0.6 });
+        },
+        mouseout: (e) => {
+          const layer = e.target as L.Polygon;
+          layer.setStyle({ fillOpacity: 0.3 });
+        },
+      });
+
+      const props = feature.properties;
+      if (props) {
+        const isAdmin = user?.role === "admin";
+        const lotId = props.path_id;
+
+        // Get current ownership data from database instead of static GeoJSON
+        const ownershipData = lotsOwnership?.get(lotId);
+        const ownerId = ownershipData?.owner_user_id || props.owner_user_id;
+        const ownerName = ownershipData?.owner_name;
+        const lotStatus = ownershipData?.lot_status || props.status;
+        const lotLabel = ownershipData?.lot_label;
+        const lotDescription = ownershipData?.lot_description;
+        const lotType = ownershipData?.lot_type;
+
+        const ownerInfo = isAdmin
+          ? `
         <p class="text-sm text-muted-foreground">
           Owner: ${!ownerName && !ownerId ? "HOA-Owned" : ownerName || ownerId || "Unassigned"}
         </p>
       `
-        : "";
+          : "";
 
-      const isMerged = ownershipData?.household_group_id;
-      const mergeBadge = isMerged
-        ? `<span class="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-700 ml-2">
+        const isMerged = ownershipData?.household_group_id;
+        const mergeBadge = isMerged
+          ? `<span class="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-700 ml-2">
              🔗 Merged
            </span>`
-        : "";
+          : "";
 
-      const editLink = isAdmin
-        ? `
+        const editLink = isAdmin
+          ? `
         <a href="/admin/lots" class="text-xs text-blue-600 hover:text-blue-800">
           Edit Ownership →
         </a>
       `
-        : "";
+          : "";
 
-      const popupContent = `
+        const popupContent = `
         <div class="p-2 min-w-[200px]">
           <h3 class="font-semibold text-card-foreground mb-1">
             ${
@@ -315,9 +348,11 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
           ${editLink}
         </div>
       `;
-      layer.bindPopup(popupContent);
-    }
-  };
+        layer.bindPopup(popupContent);
+      }
+    },
+    [lotsOwnership, user],
+  );
 
   return (
     <GeoJSON
@@ -327,41 +362,50 @@ function LotsGeoJSON({ data, filter, lotsOwnership }: LotsGeoJSONProps) {
       filter={filterFeatures}
     />
   );
-}
+});
 
 interface BlocksGeoJSONProps {
   data: GeoJSON.FeatureCollection | null;
 }
 
-function BlocksGeoJSON({ data }: BlocksGeoJSONProps) {
+// Memoized BlocksGeoJSON component to prevent unnecessary re-renders
+const BlocksGeoJSON = memo(function BlocksGeoJSON({
+  data,
+}: BlocksGeoJSONProps) {
   if (!data) return null;
 
-  const style = () => ({
-    color: "#7c3aed", // Purple color for blocks
-    weight: 3,
-    fillColor: "#a78bfa",
-    fillOpacity: 0.15,
-  });
+  // Memoized style function
+  const style = useCallback(
+    () => ({
+      color: "#7c3aed", // Purple color for blocks
+      weight: 3,
+      fillColor: "#a78bfa",
+      fillOpacity: 0.15,
+    }),
+    [],
+  );
 
-  const onEachFeature = (
-    feature: GeoJSON.Feature<GeoJSON.Geometry, BlockFeatureProperties>,
-    layer: L.Layer,
-  ) => {
-    layer.on({
-      mouseover: (e) => {
-        const layer = e.target as L.Polygon;
-        layer.setStyle({ fillOpacity: 0.3 });
-      },
-      mouseout: (e) => {
-        const layer = e.target as L.Polygon;
-        layer.setStyle({ fillOpacity: 0.15 });
-      },
-    });
+  // Memoized onEachFeature function
+  const onEachFeature = useCallback(
+    (
+      feature: GeoJSON.Feature<GeoJSON.Geometry, BlockFeatureProperties>,
+      layer: L.Layer,
+    ) => {
+      layer.on({
+        mouseover: (e) => {
+          const layer = e.target as L.Polygon;
+          layer.setStyle({ fillOpacity: 0.3 });
+        },
+        mouseout: (e) => {
+          const layer = e.target as L.Polygon;
+          layer.setStyle({ fillOpacity: 0.15 });
+        },
+      });
 
-    const props = feature.properties;
-    if (props) {
-      const blockId = feature.id?.toString().replace("block-", "") || "?";
-      const popupContent = `
+      const props = feature.properties;
+      if (props) {
+        const blockId = feature.id?.toString().replace("block-", "") || "?";
+        const popupContent = `
         <div class="p-2 min-w-[200px]">
           <h3 class="font-semibold text-card-foreground mb-1">
             Block ${blockId}
@@ -369,12 +413,14 @@ function BlocksGeoJSON({ data }: BlocksGeoJSONProps) {
           ${props.area_sqm ? `<p class="text-xs text-muted-foreground">Area: ${Math.round(props.area_sqm).toLocaleString()} px²</p>` : ""}
         </div>
       `;
-      layer.bindPopup(popupContent);
-    }
-  };
+        layer.bindPopup(popupContent);
+      }
+    },
+    [],
+  );
 
   return <GeoJSON data={data} style={style} onEachFeature={onEachFeature} />;
-}
+});
 
 export function MapPage() {
   const { user } = useAuth();
@@ -448,11 +494,12 @@ export function MapPage() {
           }
         }
 
-        // Load GeoJSON data in parallel with cache-busting
-        const cacheBust = Date.now();
+        // Load GeoJSON data in parallel with version-based caching
+        // Using version parameter instead of cache-busting to allow browser caching
+        const GEOJSON_VERSION = "1.0.0"; // Update this when GeoJSON files change
         const [lotsResponse, blocksResponse] = await Promise.all([
-          fetch(`/api/data/lots.geojson?t=${cacheBust}`),
-          fetch(`/data/blocks.geojson?t=${cacheBust}`),
+          fetch(`/api/data/lots.geojson?v=${GEOJSON_VERSION}`),
+          fetch(`/data/blocks.geojson?v=${GEOJSON_VERSION}`),
         ]);
 
         if (lotsResponse.ok) {

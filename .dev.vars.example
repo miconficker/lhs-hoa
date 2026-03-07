@@ -1,9 +1,11 @@
 # Local development environment variables
-# Copy this file and fill in your actual values
-# DO NOT commit .dev.vars to git (already in .gitignore)
+# Copy this file to .dev.vars and fill in your actual values
+# DO NOT commit .dev.vars to git (it's in .gitignore)
 
 # JWT Secret for authentication
-JWT_SECRET=D3g/b9I7bREI8bAlhlh/jXqes4/h90fmwHMc9UMtNPQ=
+# Generate a secure random string (at least 32 bytes)
+# Use: openssl rand -base64 32
+JWT_SECRET=your-jwt-secret-here-generate-with-openssl
 
 # Environment (development for local)
 ENVIRONMENT=development
@@ -14,6 +16,6 @@ ALLOWED_ORIGINS=http://localhost:8788
 # Google OAuth credentials
 # Get these from: https://console.cloud.google.com/apis/credentials
 # IMPORTANT: Add http://localhost:8788/api/auth/google/callback to your OAuth 2.0 client's Authorized redirect URIs
-GOOGLE_CLIENT_ID=487583822447-8c4cvkl7qlhfpouh32btusbjg3o5med0.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=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
+GOOGLE_CLIENT_ID=your-google-client-id-here
+GOOGLE_CLIENT_SECRET=your-google-client-secret-here
 GOOGLE_REDIRECT_URI=http://localhost:8788/api/auth/google/callback
