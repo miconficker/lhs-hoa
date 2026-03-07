@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { api, type AdminUser, type AdminHousehold } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import type { LotOwnership, LotStatus, User } from "@/types";
+import type { LotOwnership, LotStatus, LotType, User } from "@/types";
 import { PaymentVerificationQueue } from "@/components/PaymentVerificationQueue";
 import { LateFeeConfig } from "@/components/LateFeeConfig";
 import { PaymentExport } from "@/components/PaymentExport";
@@ -47,6 +47,8 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
       await Promise.all([
         api.admin.assignLotOwner(editingLot.lot_id, editingLot.owner_user_id),
         api.admin.updateLotStatus(editingLot.lot_id, editingLot.lot_status),
+        editingLot.lot_type &&
+          api.admin.updateLotType(editingLot.lot_id, editingLot.lot_type),
         editingLot.lot_size_sqm !== undefined &&
           api.admin.updateLotSize(editingLot.lot_id, editingLot.lot_size_sqm),
       ]);
@@ -307,6 +309,29 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
                   <option value="built">Built</option>
                   <option value="vacant_lot">Vacant Lot</option>
                   <option value="under_construction">Under Construction</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
+                  Lot Type
+                </label>
+                <select
+                  value={editingLot.lot_type || "residential"}
+                  onChange={(e) =>
+                    setEditingLot({
+                      ...editingLot,
+                      lot_type: e.target.value as LotType,
+                    })
+                  }
+                  className="w-full px-3 py-2 border dark:border-border rounded-lg"
+                >
+                  <option value="residential">Residential</option>
+                  <option value="resort">Resort</option>
+                  <option value="commercial">Commercial</option>
+                  <option value="community">Community</option>
+                  <option value="utility">Utility</option>
+                  <option value="open_space">Open Space</option>
                 </select>
               </div>
 
