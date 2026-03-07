@@ -148,13 +148,16 @@ export function DashboardPage() {
             <h2 className="text-lg font-semibold text-card-foreground mb-4">
               Payment Trends
             </h2>
-            <PaymentChart height={250} />
+            <PaymentChart height={250} data={stats?.charts?.paymentTrends} />
           </div>
           <div className="bg-card rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-card-foreground mb-4">
               Service Request Status
             </h2>
-            <RequestStatusChart height={250} />
+            <RequestStatusChart
+              height={250}
+              data={stats?.charts?.requestStatus}
+            />
           </div>
         </div>
       )}

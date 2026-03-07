@@ -210,6 +210,19 @@ interface RegisterCredentials extends LoginCredentials {
 }
 
 // Dashboard types
+export interface RequestStatusChartData {
+  name: string;
+  value: number;
+  color: string;
+}
+
+export interface PaymentTrendChartData {
+  month: string;
+  paid: number;
+  pending: number;
+  failed: number;
+}
+
 export interface DashboardStatsResponse {
   stats: {
     households: number;
@@ -218,6 +231,10 @@ export interface DashboardStatsResponse {
     unpaidPayments: number;
   };
   recentAnnouncements: Announcement[];
+  charts: {
+    requestStatus: RequestStatusChartData[];
+    paymentTrends: PaymentTrendChartData[];
+  };
 }
 
 export interface MyStatsResponse {
