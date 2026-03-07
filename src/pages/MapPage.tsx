@@ -434,7 +434,16 @@ export function MapPage() {
   const [lotsOwnership, setLotsOwnership] = useState<
     Map<
       string,
-      { owner_user_id?: string; owner_name?: string; lot_status?: string }
+      {
+        owner_user_id?: string;
+        owner_name?: string;
+        lot_status?: string;
+        lot_type?: string;
+        lot_label?: string;
+        lot_description?: string;
+        household_group_id?: string | null;
+        is_primary_lot?: boolean;
+      }
     >
   >(new Map());
   const [loading, setLoading] = useState(true);
@@ -535,6 +544,11 @@ export function MapPage() {
                 owner_user_id: lot.owner_user_id,
                 owner_name: lot.owner_name,
                 lot_status: lot.lot_status,
+                lot_type: lot.lot_type,
+                lot_label: lot.lot_label,
+                lot_description: lot.lot_description,
+                household_group_id: lot.household_group_id,
+                is_primary_lot: lot.is_primary_lot,
               });
             });
             setLotsOwnership(ownershipMap);
