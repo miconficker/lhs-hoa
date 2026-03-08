@@ -87,6 +87,11 @@ const WhitelistManagementPage = lazy(() =>
 const MessagesPage = lazy(() =>
   import("./pages/MessagesPage").then((m) => ({ default: m.MessagesPage })),
 );
+const AccountSettingsPage = lazy(() =>
+  import("./pages/AccountSettingsPage").then((m) => ({
+    default: m.AccountSettingsPage,
+  })),
+);
 const HelpPage = lazy(() =>
   import("./pages/HelpPage").then((m) => ({ default: m.HelpPage })),
 );
@@ -150,6 +155,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["admin", "resident", "staff"]}>
                   <MessagesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="account"
+              element={
+                <ProtectedRoute allowedRoles={["admin", "resident", "staff", "guest"]}>
+                  <AccountSettingsPage />
                 </ProtectedRoute>
               }
             />

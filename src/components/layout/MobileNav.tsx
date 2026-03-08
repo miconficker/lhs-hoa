@@ -86,6 +86,12 @@ const navItems = [
     roles: ["admin", "resident", "staff"],
   },
   {
+    to: "/account",
+    icon: Settings,
+    label: "Account Settings",
+    roles: ["admin", "resident", "staff", "guest"],
+  },
+  {
     to: "/announcements",
     icon: Megaphone,
     label: "Announcements",

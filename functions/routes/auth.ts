@@ -125,7 +125,7 @@ authRouter.get('/me', async (c) => {
   return c.json({ user });
 });
 
-// Change password
+// Change or set password
 authRouter.post('/change-password', async (c) => {
   const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
   if (!authUser) {
@@ -150,10 +150,26 @@ authRouter.post('/change-password', async (c) => {
     return c.json({ error: 'User not found' }, 404);
   }
 
-  // Verify current password
-  const valid = await verifyPassword(currentPassword, user.password_hash);
-  if (!valid) {
-    return c.json({ error: 'Current password is incorrect' }, 401);
+  // Check if user has a password (Google SSO users have password_hash = null)
+  const hasPassword = user.password_hash !== null;
+
+  if (hasPassword) {
+    // Verify current password for users who already have one
+    const valid = await verifyPassword(currentPassword, user.password_hash);
+    if (!valid) {
+      return c.json({ error: 'Current password is incorrect' }, 401);
+    }
+  } else {
+    // For users without password (Google SSO users), verify they provided currentPassword
+    // This allows us to ensure they intentionally want to set a password
+    if (!currentPassword) {
+      return c.json({
+        error: 'To set a password, you must provide your current password. If you signed up with Google SSO and don\'t have a password yet, you can set one by entering any password in the current password field.',
+        requiresPassword: true
+      }, 400);
+    }
+    // For initial password setup, we accept any non-empty currentPassword as confirmation
+    // The real security comes from being already logged in with a valid JWT token
   }
 
   // Hash new password
@@ -164,7 +180,10 @@ authRouter.post('/change-password', async (c) => {
     'UPDATE users SET password_hash = ? WHERE id = ?'
   ).bind(newPasswordHash, user.id).run();
 
-  return c.json({ message: 'Password changed successfully' });
+  return c.json({
+    message: hasPassword ? 'Password changed successfully' : 'Password set successfully',
+    wasInitialSetup: !hasPassword
+  });
 });
 
 // Google OAuth endpoints

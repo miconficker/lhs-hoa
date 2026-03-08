@@ -560,6 +560,17 @@ export const api = {
         body: JSON.stringify(credentials),
       }),
     getMe: () => apiRequest<{ user: User }>("/auth/me"),
+    changePassword: (input: {
+      currentPassword?: string;
+      newPassword: string;
+    }) =>
+      apiRequest<{
+        message: string;
+        wasInitialSetup?: boolean;
+      }>("/auth/change-password", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
     getGoogleUrl: () => apiRequest<{ url: string }>("/auth/google/url"),
     // Whitelist management (admin only)
     whitelist: {
