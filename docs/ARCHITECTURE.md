@@ -39,7 +39,7 @@ The Laguna Hills HOA system is a **serverless, full-stack web application** desi
 3. **Service Requests**: Maintenance request tracking
 4. **Reservations**: Amenity booking system
 5. **Payments**: Dues management, payment tracking, verification queue
-6. **Communications**: Announcements, events, notifications
+6. **Communications**: Announcements, events, notifications, messaging threads
 7. **Polling**: Community voting system
 8. **Document Repository**: HOA rules, forms, minutes
 9. **Pass Management**: Employee and vehicle pass system
@@ -108,6 +108,7 @@ lhs-hoa/
 │   │   ├── documents.ts          # /api/documents/*
 │   │   ├── events.ts             # /api/events/*
 │   │   ├── households.ts         # /api/households/*
+│   │   ├── messages.ts           # /api/messages/*
 │   │   ├── notifications.ts      # /api/notifications/*
 │   │   ├── pass-management.ts    # /api/pass-requests/*
 │   │   ├── payments.ts           # /api/payments/*
@@ -146,6 +147,7 @@ lhs-hoa/
 │   │   ├── EventsPage.tsx
 │   │   ├── PollsPage.tsx
 │   │   ├── DocumentsPage.tsx
+│   │   ├── MessagesPage.tsx
 │   │   ├── NotificationsPage.tsx
 │   │   ├── PassesPage.tsx
 │   │   ├── MyLotsPage.tsx
@@ -156,6 +158,7 @@ lhs-hoa/
 │   │   ├── DuesConfigPage.tsx
 │   │   ├── InPersonPaymentsPage.tsx
 │   │   ├── PassManagementPage.tsx
+│   │   ├── AccountSettingsPage.tsx
 │   │   └── WhitelistManagementPage.tsx
 │   ├── types/
 │   │   └── index.ts              # Frontend TypeScript types
@@ -227,10 +230,12 @@ The app uses **React Router v6** with nested routes:
     ├── /passes
     ├── /payments
     ├── /documents
+    ├── /messages
     ├── /announcements
     ├── /events
     ├── /polls
     ├── /notifications (admin, resident, staff)
+    ├── /account
     ├── /debug
     └── /admin/* (admin-only)
         ├── /admin/lots
@@ -418,10 +423,10 @@ CREATE TABLE users (
 ```sql
 CREATE TABLE households (
   id TEXT PRIMARY KEY,
-  address TEXT NOT NULL,
-  street TEXT,
-  block TEXT,
-  lot TEXT,
+  address TEXT NOT NULL,           -- Auto-generated from street, block, lot
+  street TEXT,                     -- Street name (e.g., "Mahogany Street")
+  block TEXT,                      -- Block number
+  lot TEXT,                        -- Lot number
   latitude REAL,
   longitude REAL,
   map_marker_x REAL,
@@ -437,6 +442,8 @@ CREATE TABLE households (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 ```
+
+**Address Format**: Auto-generated as `{street}, Block {block}, Lot {lot}` (e.g., "Mahogany Street, Block 15, Lot 12")
 
 #### `service_requests`
 ```sql
@@ -924,6 +931,14 @@ PUT    /api/service-requests/:id
 DELETE /api/service-requests/:id
 ```
 
+#### Messages
+```
+GET    /api/messages/threads        # List message threads
+GET    /api/messages/threads/:id    # Get thread with messages
+POST   /api/messages/threads        # Create new thread
+POST   /api/messages/threads/:id    # Reply to thread
+```
+
 #### Payments
 ```
 GET    /api/payments/my/:householdId
@@ -1166,6 +1181,17 @@ npm run build      # TypeScript compilation + Vite build
    - `owner_user_id = 'developer-owner'`
    - `lot_type IN ('community', 'utility', 'open_space')`
    - These don't pay dues or vote
+
+6. **Nullish Coalescing for Optional Fields**:
+   - When updating optional text fields (street, block, lot), use `??` not `||`
+   - `||` converts empty strings to null (loses user input)
+   - `??` only converts `null`/`undefined` to null (preserves empty strings)
+   - Example: `values.push(street ?? null)` not `values.push(street || null)`
+
+7. **SQLite Boolean Handling**:
+   - SQLite stores booleans as `0` or `1` (integers)
+   - When loading from database, convert to proper boolean: `Boolean(dbValue)`
+   - When saving, Zod expects actual boolean, not number
 
 ---
 
@@ -1411,10 +1437,18 @@ jobs:
 
 ## Document Metadata
 
-**Last Updated**: 2026-03-05
-**Version**: 1.1.0
+**Last Updated**: 2026-03-08
+**Version**: 1.2.0
 **Status**: Production System (Audit Complete)
 **Maintained By**: Development Team
+
+**Recent Updates (v1.2.0)**:
+- Added `messages.ts` route to functions directory (was missing, causing 404s)
+- Removed obsolete `worker/` directory (duplicate/conflicting codebase)
+- Fixed household street field save bug (nullish coalescing `??` instead of `||`)
+- Updated household schema to use `street` field with auto-generated `address`
+- Fixed `is_primary` boolean conversion from SQLite's 0/1 numbers
+- Updated project structure to reflect single codebase (functions/ only)
 
 **Recent Updates (v1.1.0)**:
 - Added comprehensive Security Status section with current gaps and roadmap

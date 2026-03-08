@@ -260,7 +260,8 @@ adminRouter.get('/households', async (c) => {
 
 // Create household
 const createHouseholdSchema = z.object({
-  address: z.string().min(1),
+  // address is auto-generated from street, block, lot
+  street: z.string().optional(),
   block: z.string().optional(),
   lot: z.string().optional(),
   latitude: z.number().optional(),
@@ -289,7 +290,10 @@ adminRouter.post('/households', async (c) => {
     return c.json({ error: 'Invalid input', details: result.error.flatten() }, 400);
   }
 
-  const { address, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id, residents } = result.data;
+  const { street, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id, residents } = result.data;
+
+  // Auto-generate address from street, block, lot
+  const generatedAddress = `${street || ''}${street ? ', ' : ''}Block ${block || '?'}, Lot ${lot || '?'}`;
 
   // Verify owner exists if provided
   if (owner_id) {
@@ -303,18 +307,19 @@ adminRouter.post('/households', async (c) => {
   const householdId = generateId();
 
   await c.env.DB.prepare(`
-    INSERT INTO households (id, address, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO households (id, address, street, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     householdId,
-    address,
-    block || null,
-    lot || null,
-    latitude || null,
-    longitude || null,
-    map_marker_x || null,
-    map_marker_y || null,
-    owner_id || null
+    generatedAddress,
+    street ?? null,
+    block ?? null,
+    lot ?? null,
+    latitude ?? null,
+    longitude ?? null,
+    map_marker_x ?? null,
+    map_marker_y ?? null,
+    owner_id ?? null
   ).run();
 
   // Create residents if provided
@@ -367,7 +372,7 @@ adminRouter.put('/households/:id', async (c) => {
     return c.json({ error: 'Invalid input', details: result.error.flatten() }, 400);
   }
 
-  const { address, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id, owner_email, residents } = result.data;
+  const { street, block, lot, latitude, longitude, map_marker_x, map_marker_y, owner_id, owner_email, residents } = result.data;
 
   console.log('[Admin] Parsed data - owner_email:', owner_email, 'owner_id:', owner_id, 'residents:', residents);
 
@@ -401,37 +406,54 @@ adminRouter.put('/households/:id', async (c) => {
   const updates: string[] = [];
   const values: any[] = [];
 
-  if (address) {
+  // If street, block, or lot is being updated, also update address
+  const needsAddressUpdate = street !== undefined || block !== undefined || lot !== undefined;
+  if (needsAddressUpdate) {
+    // Get existing values to generate new address
+    const existing = await c.env.DB.prepare(
+      'SELECT street, block, lot FROM households WHERE id = ?'
+    ).bind(id).first() as any;
+
+    const finalStreet = street !== undefined ? street : (existing?.street || '');
+    const finalBlock = block !== undefined ? block : (existing?.block || '');
+    const finalLot = lot !== undefined ? lot : (existing?.lot || '');
+
+    const generatedAddress = `${finalStreet || ''}${finalStreet ? ', ' : ''}Block ${finalBlock || '?'}, Lot ${finalLot || '?'}`;
     updates.push('address = ?');
-    values.push(address);
+    values.push(generatedAddress);
+  }
+
+  if (street !== undefined) {
+    updates.push('street = ?');
+    values.push(street ?? null);
   }
   if (block !== undefined) {
     updates.push('block = ?');
-    values.push(block || null);
+    values.push(block ?? null);
   }
   if (lot !== undefined) {
     updates.push('lot = ?');
-    values.push(lot || null);
+    values.push(lot ?? null);
   }
   if (latitude !== undefined) {
     updates.push('latitude = ?');
-    values.push(latitude || null);
+    values.push(latitude ?? null);
   }
   if (longitude !== undefined) {
     updates.push('longitude = ?');
-    values.push(longitude || null);
+    values.push(longitude ?? null);
   }
   if (map_marker_x !== undefined) {
     updates.push('map_marker_x = ?');
-    values.push(map_marker_x || null);
+    values.push(map_marker_x ?? null);
   }
   if (map_marker_y !== undefined) {
     updates.push('map_marker_y = ?');
-    values.push(map_marker_y || null);
+    values.push(map_marker_y ?? null);
   }
   if (finalOwnerId !== undefined) {
     updates.push('owner_id = ?');
-    values.push(finalOwnerId || null);
+    values.push(finalOwnerId ?? null);
   }
 
   if (updates.length === 0) {

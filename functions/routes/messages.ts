@@ -205,8 +205,8 @@ messagesRouter.post('/threads', async (c) => {
     return c.json({ error: 'Unauthorized' }, 401);
   }
 
-  const body = await c.req.json();
-  const result = createThreadSchema.safeParse(body);
+  const reqBody = await c.req.json();
+  const result = createThreadSchema.safeParse(reqBody);
 
   if (!result.success) {
     return c.json({ error: 'Invalid input', details: result.error.flatten() }, 400);
