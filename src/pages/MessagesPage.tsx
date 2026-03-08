@@ -2,17 +2,8 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { format } from "date-fns";
-import {
-  ArrowLeft,
-  MessageSquare,
-  Plus,
-  Send,
-  Users,
-  MoreVertical,
-  Trash2,
-  UserPlus,
-} from "lucide-react";
-import type { MessageThread, Message, ThreadParticipant } from "@/types";
+import { MessageSquare, Plus, Send, Users } from "lucide-react";
+import type { MessageThread, ThreadParticipant, Message } from "@/types";
 
 export function MessagesPage() {
   const { user } = useAuth();

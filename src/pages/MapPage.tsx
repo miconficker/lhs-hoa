@@ -441,7 +441,7 @@ export function MapPage() {
         lot_type?: string;
         lot_label?: string;
         lot_description?: string;
-        household_group_id?: string | null;
+        household_group_id?: string;
         is_primary_lot?: boolean;
       }
     >

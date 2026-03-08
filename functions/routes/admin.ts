@@ -709,6 +709,8 @@ adminRouter.get('/lots/ownership', async (c) => {
         h.lot_size_sqm,
         h.lot_label,
         h.lot_description,
+        h.household_group_id,
+        h.is_primary_lot,
         u.email as owner_email,
         CASE
           WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN u.first_name || ' ' || u.last_name

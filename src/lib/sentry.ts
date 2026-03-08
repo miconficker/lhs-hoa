@@ -6,7 +6,6 @@
  */
 
 import * as Sentry from "@sentry/browser";
-import { BrowserProfilingIntegration } from "@sentry/browser";
 
 // Only initialize in production or when explicitly enabled
 const shouldInitSentry =
@@ -28,20 +27,6 @@ if (shouldInitSentry && import.meta.env.VITE_SENTRY_DSN) {
       import.meta.env.VITE_SENTRY_REPLAYS_SAMPLE_RATE || "0.1",
     ),
     replaysOnErrorSampleRate: 1.0, // 100% of sessions with errors
-
-    // Performance monitoring
-    integrations: [
-      new BrowserProfilingIntegration(),
-      new Sentry.Replay(),
-      new Sentry.BrowserTracing({
-        // Trace frontend navigation and user interactions
-        tracePropagationTargets: [
-          "localhost",
-          /^https:\/\/your-production-domain\.com/,
-          /^\//,
-        ],
-      }),
-    ],
 
     // Filter out noise from development
     beforeSend(event, hint) {
@@ -78,12 +63,6 @@ if (shouldInitSentry && import.meta.env.VITE_SENTRY_DSN) {
         });
       }
       return scope;
-    },
-
-    // Custom tags for filtering
-    tags: {
-      framework: "vite",
-      runtime: "browser",
     },
   });
 
@@ -134,13 +113,6 @@ export const clearUser = () => {
  */
 export const addBreadcrumb = (breadcrumb: Sentry.Breadcrumb) => {
   Sentry.addBreadcrumb(breadcrumb);
-};
-
-/**
- * Start a performance transaction
- */
-export const startTransaction = (name: string, op: string) => {
-  return Sentry.startTransaction({ name, op });
 };
 
 export { Sentry };

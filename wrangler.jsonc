@@ -8,7 +8,8 @@
       "binding": "DB",
       "database_name": "laguna_hills_hoa",
       "database_id": "f7542e2f-7602-41d9-87a5-e2670dc1853e",
-      "migrations_dir": "migrations"
+      "migrations_dir": "migrations",
+      "remote": true
     }
   ],
   "r2_buckets": [
