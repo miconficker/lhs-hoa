@@ -51,6 +51,8 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
           api.admin.updateLotType(editingLot.lot_id, editingLot.lot_type),
         editingLot.lot_size_sqm !== undefined &&
           api.admin.updateLotSize(editingLot.lot_id, editingLot.lot_size_sqm),
+        editingLot.street !== undefined &&
+          api.admin.updateLotStreet(editingLot.lot_id, editingLot.street),
       ]);
 
       setEditingLot(null);
@@ -290,6 +292,24 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
+                  Street
+                </label>
+                <input
+                  type="text"
+                  value={editingLot.street || ""}
+                  onChange={(e) =>
+                    setEditingLot({
+                      ...editingLot,
+                      street: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border dark:border-border rounded-lg"
+                  placeholder="e.g., Mahogany Street"
+                />
               </div>
 
               <div>

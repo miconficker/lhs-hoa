@@ -94,6 +94,7 @@ householdsRouter.get('/my-lots', async (c) => {
     const lots = await c.env.DB.prepare(`
       SELECT
         h.id as lot_id,
+        h.street,
         h.block,
         h.lot,
         h.address,
@@ -177,6 +178,7 @@ householdsRouter.get('/my-lots', async (c) => {
     // Build my lots list with annual dues
     const myLots = groupedLots.map((lot: any) => ({
       lot_id: lot.lot_id,
+      street: lot.street,
       block: lot.block,
       lot: lot.lot,
       address: lot.address,
@@ -313,4 +315,48 @@ householdsRouter.get('/:id', async (c) => {
   }
 
   return c.json({ household });
+});
+
+/**
+ * PUT /api/households/:id
+ * Update household street (owner only)
+ * Allows residents to update which street their entrance faces
+ */
+householdsRouter.put('/:id', async (c) => {
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+  if (!authUser) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const id = c.req.param('id');
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON' }, 400);
+  }
+
+  // Verify user owns this household
+  const household = await c.env.DB.prepare(
+    'SELECT id, owner_id, block, lot FROM households WHERE id = ?'
+  ).bind(id).first();
+
+  if (!household) {
+    return c.json({ error: 'Household not found' }, 404);
+  }
+
+  if (household.owner_id !== authUser.userId) {
+    return c.json({ error: 'Forbidden - you can only update your own household' }, 403);
+  }
+
+  // Update street and regenerate address
+  const street = body.street;
+  const finalStreet = street !== undefined ? street : null;
+  const generatedAddress = `${finalStreet || ''}${finalStreet ? ', ' : ''}Block ${household.block || '?'}, Lot ${household.lot || '?'}`;
+
+  await c.env.DB.prepare(
+    'UPDATE households SET street = ?, address = ? WHERE id = ?'
+  ).bind(finalStreet, generatedAddress, id).run();
+
+  return c.json({ success: true, address: generatedAddress });
 });

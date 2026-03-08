@@ -903,6 +903,13 @@ export const api = {
       apiPut<{ success: boolean }>(`/admin/lots/${lotId}/type`, {
         lot_type: lotType,
       }),
+    updateLotStreet: (
+      lotId: string,
+      street: string,
+    ): Promise<ApiResponse<{ success: boolean }>> =>
+      apiPut<{ success: boolean }>(`/admin/lots/${lotId}/street`, {
+        street,
+      }),
     updateLotSize: (
       lotId: string,
       size: number | null,
@@ -1422,8 +1429,8 @@ export const api = {
           method: "DELETE",
         }),
     },
-    // Get current pass fees (uses admin endpoint)
-    getFees: () => apiRequest<PassFeesResponse>("/admin/pass-management/fees"),
+    // Get current pass fees
+    getFees: () => apiRequest<PassFeesResponse>("/pass-requests/fees"),
   },
   messages: {
     // Get all threads for current user

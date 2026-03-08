@@ -724,6 +724,7 @@ adminRouter.get('/lots/ownership', async (c) => {
         h.id as lot_id,
         h.block as block_number,
         h.lot as lot_number,
+        h.street,
         h.address,
         h.owner_id as owner_user_id,
         h.lot_status,
@@ -1035,6 +1036,45 @@ adminRouter.put('/lots/:lotId/description', async (c) => {
     console.error('Error updating lot description:', error);
     return c.json({ error: 'Failed to update lot description' }, 500);
   }
+});
+
+/**
+ * PUT /api/admin/lots/:lotId/street
+ * Update lot street name (admin only)
+ */
+adminRouter.put('/lots/:lotId/street', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const lotId = c.req.param('lotId');
+  let body;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON' }, 400);
+  }
+  const { street } = body;
+
+  // Verify lot exists
+  const lot = await c.env.DB.prepare(
+    'SELECT id, block, lot FROM households WHERE id = ?'
+  ).bind(lotId).first();
+
+  if (!lot) {
+    return c.json({ error: 'Lot not found' }, 404);
+  }
+
+  // Update street (and regenerate address)
+  const finalStreet = street !== undefined ? street : null;
+  const generatedAddress = `${finalStreet || ''}${finalStreet ? ', ' : ''}Block ${lot.block || '?'}, Lot ${lot.lot || '?'}`;
+
+  await c.env.DB.prepare(
+    'UPDATE households SET street = ?, address = ? WHERE id = ?'
+  ).bind(finalStreet, generatedAddress, lotId).run();
+
+  return c.json({ success: true });
 });
 
 /**
@@ -2562,37 +2602,43 @@ adminRouter.put('/pass-management/fees', async (c) => {
 
   try {
     const body = await c.req.json();
-    const { fees } = body;
-
-    if (!Array.isArray(fees)) {
-      return c.json({ error: 'fees must be an array' }, 400);
-    }
+    const { sticker_fee, rfid_fee } = body;
 
     const effective_date = new Date().toISOString().split('T')[0];
     const updated = [];
 
-    for (const feeData of fees) {
-      const { fee_type, amount } = feeData;
-
-      if (!fee_type || amount === undefined) {
-        continue;
-      }
-
-      if (!['sticker', 'rfid', 'both'].includes(fee_type)) {
-        continue;
-      }
-
+    // Update sticker fee if provided
+    if (sticker_fee !== undefined) {
       const id = generateId();
       await c.env.DB.prepare(
         `INSERT INTO pass_fees (id, fee_type, amount, effective_date)
          VALUES (?, ?, ?, ?)`
-      ).bind(id, fee_type, amount, effective_date).run();
+      ).bind(id, 'sticker', sticker_fee, effective_date).run();
 
       const fee = await c.env.DB.prepare(
         'SELECT * FROM pass_fees WHERE id = ?'
       ).bind(id).first();
 
       updated.push(fee);
+    }
+
+    // Update RFID fee if provided
+    if (rfid_fee !== undefined) {
+      const id = generateId();
+      await c.env.DB.prepare(
+        `INSERT INTO pass_fees (id, fee_type, amount, effective_date)
+         VALUES (?, ?, ?, ?)`
+      ).bind(id, 'rfid', rfid_fee, effective_date).run();
+
+      const fee = await c.env.DB.prepare(
+        'SELECT * FROM pass_fees WHERE id = ?'
+      ).bind(id).first();
+
+      updated.push(fee);
+    }
+
+    if (updated.length === 0) {
+      return c.json({ error: 'No fees provided to update' }, 400);
     }
 
     return c.json({ fees: updated });

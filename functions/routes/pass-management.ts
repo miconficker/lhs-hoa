@@ -615,3 +615,36 @@ passManagementRouter.delete('/vehicles/:id', async (c) => {
     return c.json({ error: 'Failed to cancel vehicle' }, 500);
   }
 });
+
+/**
+ * GET /api/pass-requests/fees
+ * Get current pass fees (for residents to see costs before requesting)
+ */
+passManagementRouter.get('/fees', async (c) => {
+  try {
+    const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+    if (!authUser) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const fees = await c.env.DB.prepare(`
+      SELECT * FROM pass_fees
+      WHERE effective_date <= DATE('now')
+      ORDER BY effective_date DESC
+    `).all();
+
+    // Get latest fee for each type
+    const feeMap: Record<string, any> = {};
+    for (const fee of fees.results || []) {
+      const feeType = fee.fee_type as string;
+      if (!feeMap[feeType]) {
+        feeMap[feeType] = fee;
+      }
+    }
+
+    return c.json({ fees: Object.values(feeMap) });
+  } catch (error) {
+    console.error('Error fetching pass fees:', error);
+    return c.json({ error: 'Failed to fetch pass fees' }, 500);
+  }
+});

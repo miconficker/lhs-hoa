@@ -77,6 +77,8 @@ export function PassesPage() {
   const [employees, setEmployees] = useState<HouseholdEmployee[]>([]);
   const [vehicles, setVehicles] = useState<VehicleRegistration[]>([]);
   const [fees, setFees] = useState<PassFee[]>([]);
+  const [households, setHouseholds] = useState<any[]>([]);
+  const [selectedHouseholdId, setSelectedHouseholdId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -104,9 +106,6 @@ export function PassesPage() {
     pass_type: "sticker",
   });
 
-  // Mock household ID - in production, this would come from user's household relation
-  const householdId = user?.id || "mock-household-id";
-
   useEffect(() => {
     loadData();
   }, []);
@@ -115,12 +114,28 @@ export function PassesPage() {
     setLoading(true);
     setError("");
 
+    // Load user's households first
+    const houseResult = await api.households.list();
+    if (houseResult.data) {
+      const userHouseholds = houseResult.data.households.filter(
+        (h: any) => h.owner_id === user?.id,
+      );
+      setHouseholds(userHouseholds);
+      if (userHouseholds.length > 0 && !selectedHouseholdId) {
+        setSelectedHouseholdId(userHouseholds[0].id);
+      }
+    }
+
     // Load employees
     const empResult = await api.passRequests.employees.list();
     if (empResult.error) {
       setError(empResult.error);
     } else if (empResult.data) {
       setEmployees(empResult.data.employees);
+      // Also set household_id from employees if not set
+      if (empResult.data.employees.length > 0 && !selectedHouseholdId) {
+        setSelectedHouseholdId(empResult.data.employees[0].household_id);
+      }
     }
 
     // Load vehicles
@@ -129,6 +144,10 @@ export function PassesPage() {
       setError(vehResult.error);
     } else if (vehResult.data) {
       setVehicles(vehResult.data.vehicles);
+      // Also set household_id from vehicles if not set
+      if (vehResult.data.vehicles.length > 0 && !selectedHouseholdId) {
+        setSelectedHouseholdId(vehResult.data.vehicles[0].household_id);
+      }
     }
 
     // Load fees
@@ -146,7 +165,7 @@ export function PassesPage() {
     setSuccessMessage("");
 
     const result = await api.passRequests.employees.create({
-      household_id: householdId,
+      household_id: selectedHouseholdId,
       full_name: employeeForm.full_name,
       employee_type: employeeForm.employee_type,
       photo: employeeForm.photo,
@@ -187,7 +206,7 @@ export function PassesPage() {
     setSuccessMessage("");
 
     const result = await api.passRequests.vehicles.create({
-      household_id: householdId,
+      household_id: selectedHouseholdId,
       plate_number: vehicleForm.plate_number,
       make: vehicleForm.make,
       model: vehicleForm.model,
@@ -228,6 +247,12 @@ export function PassesPage() {
   }
 
   function getFeeForType(passType: PassType): number {
+    if (passType === "both") {
+      const stickerFee =
+        fees.find((f) => f.fee_type === "sticker")?.amount || 0;
+      const rfidFee = fees.find((f) => f.fee_type === "rfid")?.amount || 0;
+      return stickerFee + rfidFee;
+    }
     const fee = fees.find((f) => f.fee_type === passType);
     return fee?.amount || 0;
   }
@@ -809,7 +834,7 @@ export function PassesPage() {
           setPaymentForVehicle(null);
           setPaymentForEmployee(null);
         }}
-        householdId={householdId}
+        selectedHouseholdId={selectedHouseholdId}
         defaultType={
           paymentForVehicle
             ? "vehicle_pass"

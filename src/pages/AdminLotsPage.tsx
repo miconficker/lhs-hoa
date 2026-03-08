@@ -65,6 +65,7 @@ export function AdminLotsPage() {
   const [lotSize, setLotSize] = useState<string>("");
   const [lotLabel, setLotLabel] = useState<string>("");
   const [lotDescription, setLotDescription] = useState<string>("");
+  const [lotStreet, setLotStreet] = useState<string>("");
   const [selectedLots, setSelectedLots] = useState<Set<string>>(new Set());
   const [highlightOwnerId, setHighlightOwnerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -112,6 +113,7 @@ export function AdminLotsPage() {
       setLotSize(lot.lot_size_sqm?.toString() || "");
       setLotLabel(lot.lot_label || "");
       setLotDescription(lot.lot_description || "");
+      setLotStreet(lot.street || "");
     }
   }
 
@@ -167,6 +169,7 @@ export function AdminLotsPage() {
           selectedLot.lot_id,
           lotDescription || null,
         ),
+        api.admin.updateLotStreet(selectedLot.lot_id, lotStreet),
       ]);
 
       await loadData();
@@ -521,6 +524,19 @@ export function AdminLotsPage() {
                         Clear highlight
                       </button>
                     )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-card-foreground mb-1">
+                      Street
+                    </label>
+                    <input
+                      type="text"
+                      value={lotStreet}
+                      onChange={(e) => setLotStreet(e.target.value)}
+                      placeholder="e.g., Main Street"
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
                   </div>
 
                   <div>

@@ -20,7 +20,7 @@ export function MyLotsPage() {
   const [data, setData] = useState<MyLotsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingLot, setEditingLot] = useState<MyLot | null>(null);
-  const [newAddress, setNewAddress] = useState("");
+  const [newStreet, setNewStreet] = useState("");
   const [saving, setSaving] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
 
@@ -43,7 +43,7 @@ export function MyLotsPage() {
 
   function openEditDialog(lot: MyLot) {
     setEditingLot(lot);
-    setNewAddress(lot.address);
+    setNewStreet(lot.street || "");
     setShowEditDialog(true);
   }
 
@@ -58,18 +58,19 @@ export function MyLotsPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify({ address: newAddress }),
+        body: JSON.stringify({ street: newStreet }),
       });
 
       if (response.ok) {
-        // Update local state
+        const result = await response.json();
+        // Update local state with the new address from server
         setData((prev) => {
           if (!prev) return prev;
           return {
             ...prev,
             lots: prev.lots.map((lot) =>
               lot.lot_id === editingLot.lot_id
-                ? { ...lot, address: newAddress }
+                ? { ...lot, street: newStreet, address: result.address }
                 : lot,
             ),
           };
@@ -77,13 +78,13 @@ export function MyLotsPage() {
         setShowEditDialog(false);
       } else {
         const error = await response.json();
-        alert(error.error || "Failed to update address");
+        alert(error.error || "Failed to update street");
       }
     } catch (error) {
-      logger.error("Error updating address", error, {
+      logger.error("Error updating street", error, {
         component: "MyLotsPage",
       });
-      alert("Failed to update address");
+      alert("Failed to update street");
     } finally {
       setSaving(false);
     }
@@ -347,19 +348,24 @@ export function MyLotsPage() {
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Address</DialogTitle>
+            <DialogTitle>Edit Street</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
+              <Label htmlFor="street">Street</Label>
               <Input
-                id="address"
-                value={newAddress}
-                onChange={(e) => setNewAddress(e.target.value)}
-                placeholder="Enter address"
+                id="street"
+                value={newStreet}
+                onChange={(e) => setNewStreet(e.target.value)}
+                placeholder="e.g., Main Street"
               />
+              <p className="text-xs text-muted-foreground">
+                Specify which street your entrance faces (for lots facing
+                multiple streets)
+              </p>
             </div>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground border rounded-md p-3 bg-muted/50">
+              <p className="font-medium mb-1">Current location:</p>
               <p>Street: {editingLot?.street || "—"}</p>
               <p>Block: {editingLot?.block || "—"}</p>
               <p>Lot: {editingLot?.lot || "—"}</p>
