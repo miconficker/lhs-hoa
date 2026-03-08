@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
-import { Lock, KeyRound, CheckCircle, AlertCircle, Eye, EyeOff } from "lucide-react";
+import {
+  Lock,
+  KeyRound,
+  CheckCircle,
+  AlertCircle,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 
 export function AccountSettingsPage() {
   const { user } = useAuth();
@@ -24,7 +31,7 @@ export function AccountSettingsPage() {
   async function checkPasswordStatus() {
     try {
       // Try to get user info which includes whether they have a password
-      const result = await api.auth.getMe();
+      await api.auth.getMe();
       // We can determine from the login flow - if they logged in via Google, they might not have a password
       // For now, we'll assume users can always set a password
       setHasPassword(true); // Default to true, will update based on API response
@@ -61,7 +68,7 @@ export function AccountSettingsPage() {
         setSuccess(
           result.data.wasInitialSetup
             ? "Password set successfully! You can now log in with your email and password."
-            : "Password changed successfully!"
+            : "Password changed successfully!",
         );
         setCurrentPassword("");
         setNewPassword("");
@@ -100,8 +107,8 @@ export function AccountSettingsPage() {
               Password & Login
             </h2>
             <p className="text-sm text-muted-foreground">
-              Set a password to enable email/password login, or change your existing
-              password
+              Set a password to enable email/password login, or change your
+              existing password
             </p>
           </div>
         </div>
@@ -111,12 +118,16 @@ export function AccountSettingsPage() {
             <Lock className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
             <div className="text-sm text-blue-800 dark:text-blue-200">
               <p className="font-medium mb-1">Login Options</p>
-              <p className="opacity-90">
-                You can sign in using either:
-              </p>
+              <p className="opacity-90">You can sign in using either:</p>
               <ul className="mt-2 space-y-1 ml-4 list-disc">
-                <li><strong>Google SSO</strong> - Click "Sign in with Google" on the login page</li>
-                <li><strong>Email & Password</strong> - Use your email and the password you set here</li>
+                <li>
+                  <strong>Google SSO</strong> - Click "Sign in with Google" on
+                  the login page
+                </li>
+                <li>
+                  <strong>Email & Password</strong> - Use your email and the
+                  password you set here
+                </li>
               </ul>
             </div>
           </div>
@@ -162,7 +173,8 @@ export function AccountSettingsPage() {
               </button>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Required to verify your identity. If you signed up with Google and haven't set a password yet, enter any password as confirmation.
+              Required to verify your identity. If you signed up with Google and
+              haven't set a password yet, enter any password as confirmation.
             </p>
           </div>
 
@@ -247,7 +259,9 @@ export function AccountSettingsPage() {
         <div className="space-y-3 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Email</span>
-            <span className="font-medium text-card-foreground">{user?.email}</span>
+            <span className="font-medium text-card-foreground">
+              {user?.email}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Role</span>
@@ -257,7 +271,9 @@ export function AccountSettingsPage() {
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Account ID</span>
-            <span className="font-mono text-xs text-muted-foreground">{user?.id?.slice(0, 8)}...</span>
+            <span className="font-mono text-xs text-muted-foreground">
+              {user?.id?.slice(0, 8)}...
+            </span>
           </div>
         </div>
       </div>

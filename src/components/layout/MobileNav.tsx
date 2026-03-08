@@ -28,6 +28,7 @@ import {
   UserCheck,
   Home as HomeIcon,
   Megaphone,
+  Settings,
 } from "lucide-react";
 
 const navItems = [
