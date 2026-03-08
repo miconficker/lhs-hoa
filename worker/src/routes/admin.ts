@@ -485,15 +485,15 @@ adminRouter.put('/households/:id', async (c) => {
 
   if (street !== undefined) {
     updates.push('street = ?');
-    values.push(street || null);
+    values.push(street ?? null);
   }
   if (block !== undefined) {
     updates.push('block = ?');
-    values.push(block || null);
+    values.push(block ?? null);
   }
   if (lot !== undefined) {
     updates.push('lot = ?');
-    values.push(lot || null);
+    values.push(lot ?? null);
   }
   if (latitude !== undefined) {
     updates.push('latitude = ?');

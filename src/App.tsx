@@ -161,7 +161,9 @@ function App() {
             <Route
               path="account"
               element={
-                <ProtectedRoute allowedRoles={["admin", "resident", "staff", "guest"]}>
+                <ProtectedRoute
+                  allowedRoles={["admin", "resident", "staff", "guest"]}
+                >
                   <AccountSettingsPage />
                 </ProtectedRoute>
               }
