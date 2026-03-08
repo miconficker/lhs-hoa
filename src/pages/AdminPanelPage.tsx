@@ -1260,7 +1260,7 @@ function HouseholdModal({
     household?.residents.map((r) => ({
       first_name: r.first_name,
       last_name: r.last_name,
-      is_primary: r.is_primary,
+      is_primary: Boolean(r.is_primary),
     })) || [],
   );
 
