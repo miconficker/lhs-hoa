@@ -307,7 +307,23 @@ reservationsRouter.post('/', async (c) => {
 
   const { household_id, amenity_type, date, slot, purpose } = result.data;
 
-  // Check for double-booking - prevent same date/slot/amenity
+  // Check for existing reservation by same household (prevent duplicates)
+  const existingHouseholdReservation = await c.env.DB.prepare(
+    `SELECT id FROM reservations
+     WHERE household_id = ?
+       AND amenity_type = ?
+       AND date = ?
+       AND slot = ?
+       AND status != 'cancelled'`
+  ).bind(household_id, amenity_type, date, slot).first();
+
+  if (existingHouseholdReservation) {
+    return c.json({
+      error: 'You already have a reservation for this amenity, date, and time slot.'
+    }, 409);
+  }
+
+  // Check for double-booking - prevent same date/slot/amenity by ANY household
   const existingReservation = await c.env.DB.prepare(
     `SELECT id FROM reservations
      WHERE amenity_type = ?
@@ -318,7 +334,7 @@ reservationsRouter.post('/', async (c) => {
 
   if (existingReservation) {
     return c.json({
-      error: 'This slot is already booked. Please select a different date or time slot.'
+      error: 'This slot is already booked by another household. Please select a different date or time slot.'
     }, 409);
   }
 
@@ -352,10 +368,20 @@ reservationsRouter.post('/', async (c) => {
 
   const id = generateId();
 
-  await c.env.DB.prepare(
-    `INSERT INTO reservations (id, household_id, amenity_type, date, slot, purpose, status)
-     VALUES (?, ?, ?, ?, ?, ?, 'pending')`
-  ).bind(id, household_id, amenity_type, date, slot, purpose || null).run();
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO reservations (id, household_id, amenity_type, date, slot, purpose, status)
+       VALUES (?, ?, ?, ?, ?, ?, 'pending')`
+    ).bind(id, household_id, amenity_type, date, slot, purpose || null).run();
+  } catch (error: any) {
+    // Handle UNIQUE constraint violation
+    if (error.message?.includes('UNIQUE constraint failed')) {
+      return c.json({
+        error: 'You already have a reservation for this amenity, date, and time slot.'
+      }, 409);
+    }
+    throw error;
+  }
 
   const reservation = await c.env.DB.prepare(
     'SELECT * FROM reservations WHERE id = ?'
