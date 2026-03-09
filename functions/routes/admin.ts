@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { getUserFromRequest, hashPassword } from '../lib/auth';
 import type { User, UserRole } from '../types';
+import { timeBlocksRouter } from './admin/time-blocks';
 
 type Env = {
   DB: D1Database;
@@ -18,6 +19,9 @@ async function requireAdmin(c: any, env: Env): Promise<{ userId: string } | null
 }
 
 export const adminRouter = new Hono<{ Bindings: Env }>();
+
+// Mount sub-routers
+adminRouter.route('/time-blocks', timeBlocksRouter);
 
 // Helper function to generate UUID
 function generateId(): string {
@@ -1804,6 +1808,32 @@ adminRouter.post('/payments/in-person', async (c) => {
 // ADMIN: Pass Management (/admin/pass-management/*)
 // =============================================================================
 
+// -----------------------------------------------------------------------------
+// Pass Types Management
+// -----------------------------------------------------------------------------
+
+/**
+ * GET /api/admin/pass-management/pass-types
+ * Get all pass types (admin only)
+ */
+adminRouter.get('/pass-management/pass-types', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const passTypes = await c.env.DB.prepare(`
+      SELECT * FROM pass_types WHERE is_active = 1 ORDER BY category, code
+    `).all();
+
+    return c.json({ pass_types: passTypes.results || [] });
+  } catch (error) {
+    console.error('Error fetching pass types:', error);
+    return c.json({ error: 'Failed to fetch pass types' }, 500);
+  }
+});
+
 /**
  * GET /api/admin/pass-management/stats
  * Get pass management statistics (admin only)
@@ -1959,6 +1989,103 @@ adminRouter.get('/pass-management/employees', async (c) => {
   } catch (error) {
     console.error('Error fetching employees:', error);
     return c.json({ error: 'Failed to fetch employees' }, 500);
+  }
+});
+
+/**
+ * POST /api/admin/pass-management/employees
+ * Create employee pass on behalf of household (admin only)
+ * Updated for unified pass system - uses pass_type_id and payment fields
+ */
+adminRouter.post('/pass-management/employees', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const body = await c.req.json();
+    const { household_id, full_name, employee_type, photo, expiry_date } = body;
+
+    if (!household_id || !full_name || !employee_type) {
+      return c.json({ error: 'Missing required fields: household_id, full_name, employee_type' }, 400);
+    }
+
+    // Verify household exists
+    const household = await c.env.DB.prepare(`
+      SELECT id, address FROM households WHERE id = ?
+    `).bind(household_id).first();
+
+    if (!household) {
+      return c.json({ error: 'Household not found' }, 404);
+    }
+
+    // Validate employee_type
+    const validTypes = ['driver', 'housekeeper', 'caretaker', 'other'];
+    if (!validTypes.includes(employee_type)) {
+      return c.json({ error: `Invalid employee_type. Must be one of: ${validTypes.join(', ')}` }, 400);
+    }
+
+    // Generate unique ID number
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 6);
+    const idNumber = `EMP-${timestamp}-${random}`.toUpperCase();
+
+    // Get current employee ID fee
+    const feeResult = await c.env.DB.prepare(`
+      SELECT amount FROM pass_fees WHERE pass_type_id = 'pt-employee'
+      ORDER BY effective_date DESC LIMIT 1
+    `).first();
+    const feeAmount = feeResult?.amount ? Number(feeResult.amount) : 100;
+
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    // Handle photo if provided (base64 string or R2 storage)
+    let photoUrl: string | undefined;
+    if (photo) {
+      // Assuming photo is base64 data URL
+      const matches = photo.match(/^data:image\/(\w+);base64,(.+)$/);
+      if (matches) {
+        const [_, format, base64Data] = matches;
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const key = `employee-photos/${id}.${format}`;
+        await c.env.R2.put(key, bytes);
+        photoUrl = `r2://${key}`;
+      }
+    }
+
+    await c.env.DB.prepare(`
+      INSERT INTO household_employees (id, household_id, full_name, employee_type, id_number, photo_url, pass_type_id, amount_due, amount_paid, payment_status, status, issued_date, created_at, updated_at${expiry_date ? ', expiry_date' : ''})
+      VALUES (?, ?, ?, ?, ?, ?, 'pt-employee', ?, 0, 'unpaid', 'active', ?, ?${expiry_date ? ', ?' : ''})
+    `).bind(
+      id,
+      household_id,
+      full_name,
+      employee_type,
+      idNumber,
+      photoUrl || null,
+      feeAmount,
+      now,
+      now,
+      ...(expiry_date ? [expiry_date] : [])
+    ).run();
+
+    const employee = await c.env.DB.prepare(`
+      SELECT he.*, h.address as household_address
+      FROM household_employees he
+      JOIN households h ON he.household_id = h.id
+      WHERE he.id = ?
+    `).bind(id).first();
+
+    return c.json({ employee }, 201);
+  } catch (error) {
+    console.error('Error creating employee:', error);
+    return c.json({ error: 'Failed to create employee' }, 500);
   }
 });
 
@@ -2188,6 +2315,7 @@ adminRouter.put('/pass-management/employees/:id/status', async (c) => {
 /**
  * GET /api/admin/pass-management/vehicles
  * Get all vehicles with optional filters (admin only)
+ * Updated for unified pass system - uses vehicles_with_passes_view
  */
 adminRouter.get('/pass-management/vehicles', async (c) => {
   const authUser = await requireAdmin(c, c.env);
@@ -2196,19 +2324,44 @@ adminRouter.get('/pass-management/vehicles', async (c) => {
   }
 
   try {
-    const { status, payment_status, pass_type, household_id, search } = c.req.query();
+    const { status, payment_status, household_id, search } = c.req.query();
 
+    // Use the new view for unified pass system
     let query = `
       SELECT
-        vr.*,
-        h.address as household_address,
+        v.id,
+        v.household_id,
+        v.household_address,
+        v.plate_number,
+        v.make,
+        v.model,
+        v.color,
+        v.vehicle_status as status,
+        v.pass_type,
+        v.sticker_pass_id,
+        v.sticker_number,
+        v.sticker_amount_due,
+        v.sticker_amount_paid,
+        v.sticker_payment_status,
+        v.sticker_issued_date,
+        v.sticker_expiry_date,
+        v.rfid_pass_id,
+        v.rfid_code,
+        v.rfid_amount_due,
+        v.rfid_amount_paid,
+        v.rfid_payment_status,
+        v.total_amount_due,
+        v.total_amount_paid,
+        v.total_balance_due,
+        v.created_at,
+        v.updated_at,
         h.block,
         h.lot,
         u.email as owner_email,
         u.first_name || ' ' || u.last_name as owner_name,
         u.phone as owner_phone
-      FROM vehicle_registrations vr
-      JOIN households h ON vr.household_id = h.id
+      FROM vehicles_with_passes_view v
+      JOIN households h ON v.household_id = h.id
       LEFT JOIN users u ON h.owner_id = u.id
     `;
 
@@ -2216,27 +2369,28 @@ adminRouter.get('/pass-management/vehicles', async (c) => {
     const values: any[] = [];
 
     if (status) {
-      conditions.push('vr.status = ?');
+      conditions.push('v.vehicle_status = ?');
       values.push(status);
     }
 
     if (payment_status) {
-      conditions.push('vr.payment_status = ?');
-      values.push(payment_status);
-    }
-
-    if (pass_type) {
-      conditions.push('vr.pass_type = ?');
-      values.push(pass_type);
+      // For unified system, check overall payment status
+      if (payment_status === 'paid') {
+        conditions.push('(v.sticker_payment_status = ? OR v.rfid_payment_status = ?)');
+        values.push('paid', 'paid');
+      } else {
+        conditions.push('(v.sticker_payment_status = ? OR v.rfid_payment_status = ?)');
+        values.push(payment_status, payment_status);
+      }
     }
 
     if (household_id) {
-      conditions.push('vr.household_id = ?');
+      conditions.push('v.household_id = ?');
       values.push(household_id);
     }
 
     if (search) {
-      conditions.push('(vr.plate_number LIKE ? OR u.first_name || \' \' || u.last_name LIKE ?)');
+      conditions.push('(v.plate_number LIKE ? OR u.first_name || \' \' || u.last_name LIKE ?)');
       values.push(`%${search}%`, `%${search}%`);
     }
 
@@ -2244,7 +2398,7 @@ adminRouter.get('/pass-management/vehicles', async (c) => {
       query += ' WHERE ' + conditions.join(' AND ');
     }
 
-    query += ' ORDER BY vr.created_at DESC';
+    query += ' ORDER BY v.created_at DESC';
 
     const vehicles = await c.env.DB.prepare(query).bind(...values).all();
 
@@ -2252,6 +2406,139 @@ adminRouter.get('/pass-management/vehicles', async (c) => {
   } catch (error) {
     console.error('Error fetching vehicles:', error);
     return c.json({ error: 'Failed to fetch vehicles' }, 500);
+  }
+});
+
+/**
+ * POST /api/admin/pass-management/vehicles
+ * Create vehicle registration on behalf of household (admin only)
+ * Updated for unified pass system - uses checkboxes for pass types
+ */
+adminRouter.post('/pass-management/vehicles', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const body = await c.req.json();
+    // Support both old format (pass_type) and new format (has_sticker, has_rfid)
+    const { household_id, plate_number, make, model, color, pass_type, has_sticker, has_rfid } = body;
+
+    if (!household_id || !plate_number || !make || !model || !color) {
+      return c.json({ error: 'Missing required fields: household_id, plate_number, make, model, color' }, 400);
+    }
+
+    // Verify household exists
+    const household = await c.env.DB.prepare(`
+      SELECT id, address FROM households WHERE id = ?
+    `).bind(household_id).first();
+
+    if (!household) {
+      return c.json({ error: 'Household not found' }, 404);
+    }
+
+    // Determine which passes to create (backward compatible)
+    let createSticker = has_sticker || false;
+    let createRfid = has_rfid || false;
+
+    // Handle legacy pass_type format
+    if (pass_type) {
+      const validPassTypes = ['sticker', 'rfid', 'both'];
+      if (!validPassTypes.includes(pass_type)) {
+        return c.json({ error: `Invalid pass_type. Must be one of: ${validPassTypes.join(', ')}` }, 400);
+      }
+      if (pass_type === 'sticker') createSticker = true;
+      if (pass_type === 'rfid') createRfid = true;
+      if (pass_type === 'both') {
+        createSticker = true;
+        createRfid = true;
+      }
+    }
+
+    // At least one pass type must be selected
+    if (!createSticker && !createRfid) {
+      return c.json({ error: 'At least one pass type must be selected' }, 400);
+    }
+
+    // Convert plate number to uppercase
+    const normalizedPlate = plate_number.toUpperCase();
+
+    // Create vehicle registration
+    const vehicleId = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    // Set pass_type for backward compatibility
+    const legacyPassType = createSticker && createRfid ? 'both' : createSticker ? 'sticker' : 'rfid';
+
+    await c.env.DB.prepare(`
+      INSERT INTO vehicle_registrations (id, household_id, plate_number, make, model, color, pass_type, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'pending_payment', ?, ?)
+    `).bind(
+      vehicleId,
+      household_id,
+      normalizedPlate,
+      make,
+      model,
+      color,
+      legacyPassType,
+      now,
+      now
+    ).run();
+
+    // Create sticker pass if requested
+    if (createSticker) {
+      const stickerFee = await c.env.DB.prepare(`
+        SELECT amount FROM pass_fees WHERE pass_type_id = 'pt-sticker'
+        ORDER BY effective_date DESC LIMIT 1
+      `).first();
+      const feeAmount = stickerFee?.amount ? Number(stickerFee.amount) : 500;
+
+      // Stickers expire at end of current year
+      await c.env.DB.prepare(`
+        INSERT INTO vehicle_passes (id, vehicle_id, pass_type_id, identifier, amount_due, amount_paid, payment_status, status, issued_date, expiry_date, created_at, updated_at)
+        VALUES (?, ?, 'pt-sticker', ?, ?, 0, 'unpaid', 'active', DATE('now'), DATE('now', 'start of year', '+1 year', '-1 day'), ?, ?)
+      `).bind(
+        crypto.randomUUID(),
+        vehicleId,
+        `ST-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+        feeAmount,
+        now,
+        now
+      ).run();
+    }
+
+    // Create RFID pass if requested
+    if (createRfid) {
+      const rfidFee = await c.env.DB.prepare(`
+        SELECT amount FROM pass_fees WHERE pass_type_id = 'pt-rfid'
+        ORDER BY effective_date DESC LIMIT 1
+      `).first();
+      const feeAmount = rfidFee?.amount ? Number(rfidFee.amount) : 800;
+
+      // RFID passes don't expire
+      await c.env.DB.prepare(`
+        INSERT INTO vehicle_passes (id, vehicle_id, pass_type_id, identifier, amount_due, amount_paid, payment_status, status, issued_date, created_at, updated_at)
+        VALUES (?, ?, 'pt-rfid', ?, ?, 0, 'unpaid', 'active', DATE('now'), ?, ?)
+      `).bind(
+        crypto.randomUUID(),
+        vehicleId,
+        `RF-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+        feeAmount,
+        now,
+        now
+      ).run();
+    }
+
+    // Get vehicle with passes using the view
+    const vehicle = await c.env.DB.prepare(`
+      SELECT * FROM vehicles_with_passes_view WHERE id = ?
+    `).bind(vehicleId).first();
+
+    return c.json({ vehicle }, 201);
+  } catch (error) {
+    console.error('Error creating vehicle:', error);
+    return c.json({ error: 'Failed to create vehicle' }, 500);
   }
 });
 
@@ -2357,6 +2644,7 @@ adminRouter.put('/pass-management/vehicles/:id/status', async (c) => {
 /**
  * PUT /api/admin/pass-management/vehicles/:id/assign-rfid
  * Assign RFID code to vehicle (admin only)
+ * Updated for unified pass system - works with vehicle_passes table
  */
 adminRouter.put('/pass-management/vehicles/:id/assign-rfid', async (c) => {
   const authUser = await requireAdmin(c, c.env);
@@ -2382,24 +2670,48 @@ adminRouter.put('/pass-management/vehicles/:id/assign-rfid', async (c) => {
       return c.json({ error: 'Vehicle not found' }, 404);
     }
 
+    // Check if vehicle has RFID pass
+    const existingPass = await c.env.DB.prepare(
+      'SELECT id FROM vehicle_passes WHERE vehicle_id = ? AND pass_type_id = ?'
+    ).bind(id, 'pt-rfid').first();
+
+    if (!existingPass) {
+      return c.json({ error: 'Vehicle does not have an RFID pass. Please add one first.' }, 400);
+    }
+
     // Check RFID uniqueness
     const existing = await c.env.DB.prepare(
-      'SELECT id FROM vehicle_registrations WHERE rfid_code = ? AND id != ?'
-    ).bind(rfid_code, id).first();
+      'SELECT id FROM vehicle_passes WHERE identifier = ? AND id != ?'
+    ).bind(rfid_code, existingPass.id).first();
 
     if (existing) {
       return c.json({ error: 'RFID code already in use' }, 409);
     }
 
-    // Update vehicle with RFID
+    // Update vehicle_pass with RFID code
+    await c.env.DB.prepare(`
+      UPDATE vehicle_passes
+      SET identifier = ?, updated_at = ?
+      WHERE id = ?
+    `).bind(rfid_code, new Date().toISOString(), existingPass.id).run();
+
+    // Also update legacy field for backward compatibility
     await c.env.DB.prepare(`
       UPDATE vehicle_registrations
       SET rfid_code = ?, updated_at = ?
       WHERE id = ?
     `).bind(rfid_code, new Date().toISOString(), id).run();
 
-    // Auto-approve if pass_type is rfid or both
-    if (vehicle.pass_type === 'rfid' || (vehicle.pass_type === 'both' && vehicle.sticker_number)) {
+    // Auto-approve if all assigned passes have codes
+    const passes = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM vehicle_passes WHERE vehicle_id = ? AND identifier IS NOT NULL'
+    ).bind(id).first() as any;
+
+    const totalPasses = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM vehicle_passes WHERE vehicle_id = ?'
+    ).bind(id).first() as any;
+
+    if (passes.count === totalPasses.count) {
       await c.env.DB.prepare(`
         UPDATE vehicle_registrations
         SET status = 'active', issued_date = DATE('now')
@@ -2408,10 +2720,7 @@ adminRouter.put('/pass-management/vehicles/:id/assign-rfid', async (c) => {
     }
 
     const updated = await c.env.DB.prepare(`
-      SELECT vr.*, h.address as household_address
-      FROM vehicle_registrations vr
-      JOIN households h ON vr.household_id = h.id
-      WHERE vr.id = ?
+      SELECT * FROM vehicles_with_passes_view WHERE id = ?
     `).bind(id).first();
 
     return c.json({ vehicle: updated });
@@ -2424,6 +2733,7 @@ adminRouter.put('/pass-management/vehicles/:id/assign-rfid', async (c) => {
 /**
  * PUT /api/admin/pass-management/vehicles/:id/assign-sticker
  * Assign sticker number to vehicle (admin only)
+ * Updated for unified pass system - works with vehicle_passes table
  */
 adminRouter.put('/pass-management/vehicles/:id/assign-sticker', async (c) => {
   const authUser = await requireAdmin(c, c.env);
@@ -2449,24 +2759,48 @@ adminRouter.put('/pass-management/vehicles/:id/assign-sticker', async (c) => {
       return c.json({ error: 'Vehicle not found' }, 404);
     }
 
+    // Check if vehicle has sticker pass
+    const existingPass = await c.env.DB.prepare(
+      'SELECT id FROM vehicle_passes WHERE vehicle_id = ? AND pass_type_id = ?'
+    ).bind(id, 'pt-sticker').first();
+
+    if (!existingPass) {
+      return c.json({ error: 'Vehicle does not have a sticker pass. Please add one first.' }, 400);
+    }
+
     // Check sticker uniqueness
     const existing = await c.env.DB.prepare(
-      'SELECT id FROM vehicle_registrations WHERE sticker_number = ? AND id != ?'
-    ).bind(sticker_number, id).first();
+      'SELECT id FROM vehicle_passes WHERE identifier = ? AND id != ?'
+    ).bind(sticker_number, existingPass.id).first();
 
     if (existing) {
       return c.json({ error: 'Sticker number already in use' }, 409);
     }
 
-    // Update vehicle with sticker
+    // Update vehicle_pass with sticker number
+    await c.env.DB.prepare(`
+      UPDATE vehicle_passes
+      SET identifier = ?, updated_at = ?
+      WHERE id = ?
+    `).bind(sticker_number, new Date().toISOString(), existingPass.id).run();
+
+    // Also update legacy field for backward compatibility
     await c.env.DB.prepare(`
       UPDATE vehicle_registrations
       SET sticker_number = ?, updated_at = ?
       WHERE id = ?
     `).bind(sticker_number, new Date().toISOString(), id).run();
 
-    // Auto-approve if pass_type is sticker or both
-    if (vehicle.pass_type === 'sticker' || (vehicle.pass_type === 'both' && vehicle.rfid_code)) {
+    // Auto-approve if all assigned passes have codes
+    const passes = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM vehicle_passes WHERE vehicle_id = ? AND identifier IS NOT NULL'
+    ).bind(id).first() as any;
+
+    const totalPasses = await c.env.DB.prepare(
+      'SELECT COUNT(*) as count FROM vehicle_passes WHERE vehicle_id = ?'
+    ).bind(id).first() as any;
+
+    if (passes.count === totalPasses.count) {
       await c.env.DB.prepare(`
         UPDATE vehicle_registrations
         SET status = 'active', issued_date = DATE('now')
@@ -2475,10 +2809,7 @@ adminRouter.put('/pass-management/vehicles/:id/assign-sticker', async (c) => {
     }
 
     const updated = await c.env.DB.prepare(`
-      SELECT vr.*, h.address as household_address
-      FROM vehicle_registrations vr
-      JOIN households h ON vr.household_id = h.id
-      WHERE vr.id = ?
+      SELECT * FROM vehicles_with_passes_view WHERE id = ?
     `).bind(id).first();
 
     return c.json({ vehicle: updated });
@@ -2489,8 +2820,136 @@ adminRouter.put('/pass-management/vehicles/:id/assign-sticker', async (c) => {
 });
 
 /**
+ * POST /api/admin/pass-management/vehicles/:id/replace-rfid
+ * Replace damaged RFID card with new one (admin only)
+ * Old RFID is marked as 'replaced', new RFID is created with unpaid status
+ */
+adminRouter.post('/pass-management/vehicles/:id/replace-rfid', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json();
+    const { notes } = body;
+
+    // Verify vehicle exists
+    const vehicle = await c.env.DB.prepare(
+      'SELECT * FROM vehicle_registrations WHERE id = ?'
+    ).bind(id).first() as any;
+
+    if (!vehicle) {
+      return c.json({ error: 'Vehicle not found' }, 404);
+    }
+
+    // Check if vehicle has an active RFID pass
+    const existingRfid = await c.env.DB.prepare(
+      'SELECT * FROM vehicle_passes WHERE vehicle_id = ? AND pass_type_id = ? AND status = ?'
+    ).bind(id, 'pt-rfid', 'active').first() as any;
+
+    if (!existingRfid) {
+      return c.json({ error: 'Vehicle does not have an active RFID pass to replace' }, 400);
+    }
+
+    // Get current RFID fee
+    const fee = await c.env.DB.prepare(
+      'SELECT amount FROM pass_fees WHERE pass_type_id = ? ORDER BY effective_date DESC LIMIT 1'
+    ).bind('pt-rfid').first() as any;
+
+    const rfidFee = fee?.amount || 800;
+
+    // Mark old RFID as replaced
+    await c.env.DB.prepare(`
+      UPDATE vehicle_passes
+      SET status = 'replaced', notes = ?, updated_at = ?
+      WHERE id = ?
+    `).bind(notes || 'Replaced due to damage', new Date().toISOString(), existingRfid.id).run();
+
+    // Create new RFID pass
+    const newRfidId = crypto.randomUUID();
+    const timestamp = new Date().toISOString();
+    const newRfidCode = `RF-${Date.now()}`;
+
+    await c.env.DB.prepare(`
+      INSERT INTO vehicle_passes (id, vehicle_id, pass_type_id, identifier, amount_due, amount_paid, payment_status, status, issued_date, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, 0, 'unpaid', 'active', DATE('now'), ?, ?)
+    `).bind(newRfidId, id, 'pt-rfid', newRfidCode, rfidFee, timestamp, timestamp).run();
+
+    // Update legacy rfid_code field
+    await c.env.DB.prepare(`
+      UPDATE vehicle_registrations
+      SET rfid_code = ?, updated_at = ?
+      WHERE id = ?
+    `).bind(newRfidCode, timestamp, id).run();
+
+    const updated = await c.env.DB.prepare(`
+      SELECT * FROM vehicles_with_passes_view WHERE id = ?
+    `).bind(id).first();
+
+    return c.json({
+      vehicle: updated,
+      new_rfid_pass: {
+        id: newRfidId,
+        identifier: newRfidCode,
+        amount_due: rfidFee,
+        payment_status: 'unpaid',
+      },
+    });
+  } catch (error) {
+    console.error('Error replacing RFID:', error);
+    return c.json({ error: 'Failed to replace RFID' }, 500);
+  }
+});
+
+/**
+ * DELETE /api/admin/pass-management/vehicles/:id
+ * Permanently delete vehicle registration (admin only)
+ * This is a hard delete - removes the vehicle and all associated passes
+ */
+adminRouter.delete('/pass-management/vehicles/:id', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const id = c.req.param('id');
+
+    // Verify vehicle exists
+    const vehicle = await c.env.DB.prepare(
+      'SELECT id, status FROM vehicle_registrations WHERE id = ?'
+    ).bind(id).first();
+
+    if (!vehicle) {
+      return c.json({ error: 'Vehicle not found' }, 404);
+    }
+
+    // Warning: only allow deletion of cancelled or pending vehicles
+    // Active vehicles should be cancelled first
+    if (vehicle.status === 'active') {
+      return c.json({
+        error: 'Cannot delete active vehicle. Please cancel it first.',
+      }, 400);
+    }
+
+    // Delete vehicle (cascades to vehicle_passes via ON DELETE CASCADE)
+    await c.env.DB.prepare('DELETE FROM vehicle_registrations WHERE id = ?')
+      .bind(id)
+      .run();
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting vehicle:', error);
+    return c.json({ error: 'Failed to delete vehicle' }, 500);
+  }
+});
+
+/**
  * POST /api/admin/pass-management/vehicles/:id/record-payment
  * Record in-person payment for vehicle pass (admin only)
+ * Updated for unified pass system - works with specific vehicle_pass
  */
 adminRouter.post('/pass-management/vehicles/:id/record-payment', async (c) => {
   const authUser = await requireAdmin(c, c.env);
@@ -2501,7 +2960,7 @@ adminRouter.post('/pass-management/vehicles/:id/record-payment', async (c) => {
   try {
     const id = c.req.param('id');
     const body = await c.req.json();
-    const { amount, method, reference_number } = body;
+    const { amount, method, reference_number, pass_type } = body;
 
     if (!amount || !method) {
       return c.json({ error: 'amount and method are required' }, 400);
@@ -2520,35 +2979,146 @@ adminRouter.post('/pass-management/vehicles/:id/record-payment', async (c) => {
       return c.json({ error: 'Vehicle not found' }, 404);
     }
 
-    // Update payment info
+    // Determine which pass to pay (sticker, rfid, or both)
+    let passTypeIds: string[] = [];
+    if (pass_type === 'sticker' || (!pass_type && vehicle.pass_type === 'sticker')) {
+      passTypeIds.push('pt-sticker');
+    }
+    if (pass_type === 'rfid' || (!pass_type && vehicle.pass_type === 'rfid')) {
+      passTypeIds.push('pt-rfid');
+    }
+    if (pass_type === 'both' || (!pass_type && vehicle.pass_type === 'both')) {
+      passTypeIds.push('pt-sticker');
+      passTypeIds.push('pt-rfid');
+    }
+
+    if (passTypeIds.length === 0) {
+      return c.json({ error: 'No valid pass type found for this vehicle' }, 400);
+    }
+
+    // Get all passes for this vehicle
+    const passes = await c.env.DB.prepare(
+      `SELECT id, amount_due, amount_paid FROM vehicle_passes WHERE vehicle_id = ? AND pass_type_id IN (${passTypeIds.map(() => '?').join(',')})`
+    ).bind(id, ...passTypeIds).all() as any[];
+
+    if (!passes.results || passes.results.length === 0) {
+      return c.json({ error: 'No passes found for this vehicle' }, 404);
+    }
+
+    const now = new Date().toISOString();
+    let totalPaid = 0;
+
+    // Update each pass with payment
+    for (const pass of passes.results) {
+      const paymentAmount = Math.min(amount - totalPaid, pass.amount_due - pass.amount_paid);
+      if (paymentAmount > 0) {
+        const newAmountPaid = pass.amount_paid + paymentAmount;
+        const paymentStatus = newAmountPaid >= pass.amount_due ? 'paid' : newAmountPaid > 0 ? 'partial' : 'unpaid';
+
+        await c.env.DB.prepare(`
+          UPDATE vehicle_passes
+          SET amount_paid = ?, payment_status = ?, updated_at = ?
+          WHERE id = ?
+        `).bind(newAmountPaid, paymentStatus, now, pass.id).run();
+
+        totalPaid += paymentAmount;
+      }
+    }
+
+    // Update vehicle status based on payment
+    const allPasses = await c.env.DB.prepare(
+      'SELECT payment_status FROM vehicle_passes WHERE vehicle_id = ?'
+    ).bind(id).all() as any[];
+
+    const allPaid = allPasses.results?.every((p: any) => p.payment_status === 'paid');
+    if (allPaid) {
+      await c.env.DB.prepare(`
+        UPDATE vehicle_registrations
+        SET status = 'active', issued_date = DATE('now'), updated_at = ?
+        WHERE id = ?
+      `).bind(now, id).run();
+    }
+
+    // Create payment record for the first pass (for tracking)
+    const firstPass = passes.results[0];
+    const paymentId = generateId();
+    await c.env.DB.prepare(
+      `INSERT INTO payments (id, household_id, amount, currency, method, reference_number, status, payment_category, period, received_by, pass_type_id, vehicle_pass_id)
+       VALUES (?, ?, ?, 'PHP', ?, ?, 'completed', 'vehicle_pass', DATE('now'), ?, ?, ?)`
+    ).bind(paymentId, vehicle.household_id, totalPaid, method, reference_number || null, authUser.userId, passTypeIds[0], firstPass.id).run();
+
+    const updated = await c.env.DB.prepare(`
+      SELECT * FROM vehicles_with_passes_view WHERE id = ?
+    `).bind(id).first();
+
+    return c.json({ vehicle: updated, payment_id: paymentId, amount_paid: totalPaid });
+  } catch (error) {
+    console.error('Error recording payment:', error);
+    return c.json({ error: 'Failed to record payment' }, 500);
+  }
+});
+
+/**
+ * POST /api/admin/pass-management/employees/:id/record-payment
+ * Record in-person payment for employee pass (admin only)
+ * New endpoint for unified payment system
+ */
+adminRouter.post('/pass-management/employees/:id/record-payment', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json();
+    const { amount, method, reference_number } = body;
+
+    if (!amount || !method) {
+      return c.json({ error: 'amount and method are required' }, 400);
+    }
+
+    if (!['gcash', 'paymaya', 'instapay', 'cash', 'in-person'].includes(method)) {
+      return c.json({ error: 'Invalid payment method' }, 400);
+    }
+
+    // Verify employee exists
+    const employee = await c.env.DB.prepare(
+      'SELECT * FROM household_employees WHERE id = ?'
+    ).bind(id).first() as any;
+
+    if (!employee) {
+      return c.json({ error: 'Employee not found' }, 404);
+    }
+
+    const now = new Date().toISOString();
+    const newAmountPaid = (employee.amount_paid || 0) + amount;
+    const paymentStatus = newAmountPaid >= (employee.amount_due || 0) ? 'paid' : newAmountPaid > 0 ? 'partial' : 'unpaid';
+
+    // Update employee payment status
     await c.env.DB.prepare(`
-      UPDATE vehicle_registrations
-      SET payment_status = 'paid',
-          amount_paid = ?,
-          payment_method = ?,
-          payment_reference = ?,
-          status = 'pending_approval',
-          updated_at = ?
+      UPDATE household_employees
+      SET amount_paid = ?, payment_status = ?, updated_at = ?
       WHERE id = ?
-    `).bind(amount, method, reference_number || null, new Date().toISOString(), id).run();
+    `).bind(newAmountPaid, paymentStatus, now, id).run();
 
     // Create payment record
     const paymentId = generateId();
     await c.env.DB.prepare(
-      `INSERT INTO payments (id, household_id, amount, currency, method, reference_number, status, payment_category, period, received_by)
-       VALUES (?, ?, ?, 'PHP', ?, ?, 'completed', 'vehicle_pass', DATE('now'), ?)`
-    ).bind(paymentId, vehicle.household_id, amount, method, reference_number || null, authUser.userId).run();
+      `INSERT INTO payments (id, household_id, amount, currency, method, reference_number, status, payment_category, period, received_by, pass_type_id, employee_pass_id)
+       VALUES (?, ?, ?, 'PHP', ?, ?, 'completed', 'employee_id', DATE('now'), ?, ?, ?)`
+    ).bind(paymentId, employee.household_id, amount, method, reference_number || null, authUser.userId, employee.pass_type_id || 'pt-employee', id).run();
 
     const updated = await c.env.DB.prepare(`
-      SELECT vr.*, h.address as household_address
-      FROM vehicle_registrations vr
-      JOIN households h ON vr.household_id = h.id
-      WHERE vr.id = ?
+      SELECT he.*, h.address as household_address
+      FROM household_employees he
+      JOIN households h ON he.household_id = h.id
+      WHERE he.id = ?
     `).bind(id).first();
 
-    return c.json({ vehicle: updated, payment_id: paymentId });
+    return c.json({ employee: updated, payment_id: paymentId, amount_paid: amount });
   } catch (error) {
-    console.error('Error recording payment:', error);
+    console.error('Error recording employee payment:', error);
     return c.json({ error: 'Failed to record payment' }, 500);
   }
 });
@@ -2560,6 +3130,7 @@ adminRouter.post('/pass-management/vehicles/:id/record-payment', async (c) => {
 /**
  * GET /api/admin/pass-management/fees
  * Get current fee structure (admin only)
+ * Updated for unified pass system - uses pass_type_id
  */
 adminRouter.get('/pass-management/fees', async (c) => {
   const authUser = await requireAdmin(c, c.env);
@@ -2568,18 +3139,21 @@ adminRouter.get('/pass-management/fees', async (c) => {
   }
 
   try {
+    // Get fees with pass type details
     const fees = await c.env.DB.prepare(`
-      SELECT * FROM pass_fees
-      WHERE effective_date <= DATE('now')
-      ORDER BY effective_date DESC
+      SELECT pf.*, pt.code as pass_type_code, pt.name as pass_type_name, pt.category
+      FROM pass_fees pf
+      JOIN pass_types pt ON pt.id = pf.pass_type_id
+      WHERE pf.effective_date <= DATE('now')
+      ORDER BY pf.pass_type_id, pf.effective_date DESC
     `).all();
 
-    // Get latest fee for each type
+    // Get latest fee for each pass type
     const feeMap: Record<string, any> = {};
     for (const fee of fees.results || []) {
-      const feeType = fee.fee_type as string;
-      if (!feeMap[feeType]) {
-        feeMap[feeType] = fee;
+      const passTypeId = fee.pass_type_id as string;
+      if (!feeMap[passTypeId]) {
+        feeMap[passTypeId] = fee;
       }
     }
 
@@ -2593,6 +3167,7 @@ adminRouter.get('/pass-management/fees', async (c) => {
 /**
  * PUT /api/admin/pass-management/fees
  * Update fee structure (admin only)
+ * Updated for unified pass system - uses pass_type_id
  */
 adminRouter.put('/pass-management/fees', async (c) => {
   const authUser = await requireAdmin(c, c.env);
@@ -2602,37 +3177,63 @@ adminRouter.put('/pass-management/fees', async (c) => {
 
   try {
     const body = await c.req.json();
-    const { sticker_fee, rfid_fee } = body;
+    const { sticker_fee, rfid_fee, employee_fee } = body;
 
-    const effective_date = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const effective_date = now.toISOString().split('T')[0];
+    const timestamp = now.toISOString();
     const updated = [];
 
     // Update sticker fee if provided
     if (sticker_fee !== undefined) {
-      const id = generateId();
+      const id = `fee-sticker-${Date.now()}`;
       await c.env.DB.prepare(
-        `INSERT INTO pass_fees (id, fee_type, amount, effective_date)
-         VALUES (?, ?, ?, ?)`
-      ).bind(id, 'sticker', sticker_fee, effective_date).run();
+        `INSERT OR REPLACE INTO pass_fees (id, pass_type_id, amount, effective_date, created_at, updated_at)
+         VALUES (?, 'pt-sticker', ?, ?, ?, ?)`
+      ).bind(id, sticker_fee, effective_date, timestamp, timestamp).run();
 
-      const fee = await c.env.DB.prepare(
-        'SELECT * FROM pass_fees WHERE id = ?'
-      ).bind(id).first();
+      const fee = await c.env.DB.prepare(`
+        SELECT pf.*, pt.code as pass_type_code, pt.name as pass_type_name
+        FROM pass_fees pf
+        JOIN pass_types pt ON pt.id = pf.pass_type_id
+        WHERE pf.id = ?
+      `).bind(id).first();
 
       updated.push(fee);
     }
 
     // Update RFID fee if provided
     if (rfid_fee !== undefined) {
-      const id = generateId();
+      const id = `fee-rfid-${Date.now()}`;
       await c.env.DB.prepare(
-        `INSERT INTO pass_fees (id, fee_type, amount, effective_date)
-         VALUES (?, ?, ?, ?)`
-      ).bind(id, 'rfid', rfid_fee, effective_date).run();
+        `INSERT OR REPLACE INTO pass_fees (id, pass_type_id, amount, effective_date, created_at, updated_at)
+         VALUES (?, 'pt-rfid', ?, ?, ?, ?)`
+      ).bind(id, rfid_fee, effective_date, timestamp, timestamp).run();
 
-      const fee = await c.env.DB.prepare(
-        'SELECT * FROM pass_fees WHERE id = ?'
-      ).bind(id).first();
+      const fee = await c.env.DB.prepare(`
+        SELECT pf.*, pt.code as pass_type_code, pt.name as pass_type_name
+        FROM pass_fees pf
+        JOIN pass_types pt ON pt.id = pf.pass_type_id
+        WHERE pf.id = ?
+      `).bind(id).first();
+
+      updated.push(fee);
+    }
+
+    // Update employee fee if provided (new for unified system)
+    if (employee_fee !== undefined) {
+      const id = `fee-employee-${Date.now()}`;
+      await c.env.DB.prepare(
+        `INSERT OR REPLACE INTO pass_fees (id, pass_type_id, amount, effective_date, created_at, updated_at)
+         VALUES (?, 'pt-employee', ?, ?, ?, ?)`
+      ).bind(id, employee_fee, effective_date, timestamp, timestamp).run();
+
+      const fee = await c.env.DB.prepare(`
+        SELECT pf.*, pt.code as pass_type_code, pt.name as pass_type_name
+        FROM pass_fees pf
+        JOIN pass_types pt ON pt.id = pf.pass_type_id
+        WHERE pf.id = ?
+      `).bind(id).first();
 
       updated.push(fee);
     }
@@ -2645,5 +3246,173 @@ adminRouter.put('/pass-management/fees', async (c) => {
   } catch (error) {
     console.error('Error updating pass fees:', error);
     return c.json({ error: 'Failed to update pass fees' }, 500);
+  }
+});
+
+/**
+ * GET /api/admin/pass-management/rfid-replacement-requests
+ * Get all RFID replacement requests (admin only)
+ */
+adminRouter.get('/pass-management/rfid-replacement-requests', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const { status } = c.req.query();
+    const conditions: string[] = [];
+    const values: any[] = [];
+
+    if (status) {
+      conditions.push('r.status = ?');
+      values.push(status);
+    }
+
+    let query = `
+      SELECT
+        r.*,
+        v.plate_number,
+        v.make,
+        v.model,
+        v.color,
+        h.address as household_address,
+        h.block,
+        h.lot,
+        req.email as requester_email,
+        req.first_name || ' ' || req.last_name as requester_name
+      FROM rfid_replacement_requests r
+      JOIN vehicle_registrations v ON v.id = r.vehicle_id
+      JOIN households h ON h.id = r.household_id
+      LEFT JOIN users req ON req.id = r.requested_by
+    `;
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    query += ' ORDER BY r.created_at DESC';
+
+    const requests = await c.env.DB.prepare(query).bind(...values).all();
+
+    return c.json({ requests: requests.results || [] });
+  } catch (error) {
+    console.error('Error fetching replacement requests:', error);
+    return c.json({ error: 'Failed to fetch replacement requests' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/pass-management/rfid-replacement-requests/:id/approve
+ * Approve RFID replacement request (admin only)
+ * Creates new RFID pass and marks old one as replaced
+ */
+adminRouter.put('/pass-management/rfid-replacement-requests/:id/approve', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json();
+    const { admin_notes } = body;
+
+    // Get the request
+    const request = await c.env.DB.prepare(`
+      SELECT * FROM rfid_replacement_requests WHERE id = ?
+    `).bind(id).first() as any;
+
+    if (!request) {
+      return c.json({ error: 'Request not found' }, 404);
+    }
+
+    if (request.status !== 'pending') {
+      return c.json({ error: 'Request is not pending' }, 400);
+    }
+
+    // Get current RFID fee
+    const fee = await c.env.DB.prepare(`
+      SELECT amount FROM pass_fees WHERE pass_type_id = 'pt-rfid'
+      ORDER BY effective_date DESC LIMIT 1
+    `).first() as any;
+    const rfidFee = fee?.amount || 800;
+
+    // Mark old RFID as replaced
+    await c.env.DB.prepare(`
+      UPDATE vehicle_passes
+      SET status = 'replaced', notes = 'Replaced via request #' || ?, updated_at = ?
+      WHERE id = ?
+    `).bind(id, new Date().toISOString(), request.old_rfid_pass_id).run();
+
+    // Create new RFID pass
+    const newRfidId = crypto.randomUUID();
+    const timestamp = new Date().toISOString();
+    const newRfidCode = `RF-${Date.now()}`;
+
+    await c.env.DB.prepare(`
+      INSERT INTO vehicle_passes (id, vehicle_id, pass_type_id, identifier, amount_due, amount_paid, payment_status, status, issued_date, created_at, updated_at)
+      VALUES (?, ?, 'pt-rfid', ?, ?, 0, 'unpaid', 'active', DATE('now'), ?, ?)
+    `).bind(newRfidId, request.vehicle_id, newRfidCode, rfidFee, timestamp, timestamp).run();
+
+    // Update legacy rfid_code field
+    await c.env.DB.prepare(`
+      UPDATE vehicle_registrations
+      SET rfid_code = ?, updated_at = ?
+      WHERE id = ?
+    `).bind(newRfidCode, timestamp, request.vehicle_id).run();
+
+    // Update request status
+    await c.env.DB.prepare(`
+      UPDATE rfid_replacement_requests
+      SET status = 'completed', admin_notes = ?, new_rfid_pass_id = ?, updated_at = ?
+      WHERE id = ?
+    `).bind(admin_notes || '', newRfidId, timestamp, id).run();
+
+    return c.json({
+      success: true,
+      new_rfid_pass: {
+        id: newRfidId,
+        identifier: newRfidCode,
+        amount_due: rfidFee,
+        payment_status: 'unpaid',
+      }
+    });
+  } catch (error) {
+    console.error('Error approving replacement request:', error);
+    return c.json({ error: 'Failed to approve replacement request' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/pass-management/rfid-replacement-requests/:id/reject
+ * Reject RFID replacement request (admin only)
+ */
+adminRouter.put('/pass-management/rfid-replacement-requests/:id/reject', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json();
+    const { reason } = body;
+
+    if (!reason) {
+      return c.json({ error: 'Rejection reason is required' }, 400);
+    }
+
+    // Update request status
+    await c.env.DB.prepare(`
+      UPDATE rfid_replacement_requests
+      SET status = 'rejected', admin_notes = ?, updated_at = ?
+      WHERE id = ?
+    `).bind(reason, new Date().toISOString(), id).run();
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Error rejecting replacement request:', error);
+    return c.json({ error: 'Failed to reject replacement request' }, 500);
   }
 });
