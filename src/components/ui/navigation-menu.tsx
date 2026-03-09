@@ -15,20 +15,6 @@ const NavigationMenu = React.forwardRef<
     {...props}
   >
     {children}
-    {/* Viewport lives here, as a sibling to the List */}
-    <div
-      className="absolute top-full"
-      style={{
-        left: "var(--radix-navigation-menu-viewport-left)",
-        perspective: "2000px",
-      }}
-    >
-      <NavigationMenuPrimitive.Viewport
-        className={cn(
-          "relative mt-1.5 h-[var(--radix-navigation-menu-viewport-height)] w-[var(--radix-navigation-menu-viewport-width)] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90",
-        )}
-      />
-    </div>
   </NavigationMenuPrimitive.Root>
 ));
 NavigationMenu.displayName = NavigationMenuPrimitive.Root.displayName;
@@ -76,6 +62,8 @@ const NavigationMenuContent = React.forwardRef<
   <NavigationMenuPrimitive.Content
     ref={ref}
     className={cn(
+      "absolute top-full left-0 mt-1.5 min-w-[180px] rounded-md border bg-popover text-popover-foreground shadow-lg z-50",
+      "data-[state=closed]:hidden",
       "data-[motion^=from-]:animate-in data-[motion^=to-]:animate-out data-[motion^=from-]:fade-in data-[motion^=to-]:fade-out data-[motion=from-end]:slide-in-from-right-52 data-[motion=from-start]:slide-in-from-left-52 data-[motion=to-end]:slide-out-to-right-52 data-[motion=to-start]:slide-out-to-left-52",
       className,
     )}
