@@ -11,15 +11,18 @@ const NavigationMenu = React.forwardRef<
 >(({ className, children, ...props }, ref) => (
   <NavigationMenuPrimitive.Root
     ref={ref}
-    className={cn(
-      "relative z-10 flex max-w-max flex-1 items-center",
-      className,
-    )}
+    className={cn("relative z-10 flex flex-1 items-center", className)}
     {...props}
   >
     {children}
     {/* Viewport lives here, as a sibling to the List */}
-    <div className="absolute top-full left-0" style={{ perspective: "2000px" }}>
+    <div
+      className="absolute top-full"
+      style={{
+        left: "var(--radix-navigation-menu-viewport-left)",
+        perspective: "2000px",
+      }}
+    >
       <NavigationMenuPrimitive.Viewport
         className={cn(
           "relative mt-1.5 h-[var(--radix-navigation-menu-viewport-height)] w-[var(--radix-navigation-menu-viewport-width)] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90",

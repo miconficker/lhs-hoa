@@ -145,56 +145,54 @@ export function Header() {
     if (!user) return null;
 
     return (
-      <div className="relative hidden lg:flex">
-        <NavigationMenu>
-          <NavigationMenuList className="flex items-center gap-1">
-            {visibleNavItems.map((item) => {
-              if (item.children) {
-                return (
-                  <NavigationMenuItem key={item.label}>
-                    <NavigationMenuTrigger className="gap-1">
-                      {item.icon && <item.icon className="h-4 w-4" />}
-                      {item.label}
-                    </NavigationMenuTrigger>
-                    <NavigationMenuContent>
-                      <ul className="grid gap-1 p-2 min-w-[200px]">
-                        {item.children
-                          .filter((child) => child.roles.includes(user.role))
-                          .map((child) => (
-                            <li key={child.to}>
-                              <NavigationMenuLink asChild>
-                                <Link
-                                  to={child.to!}
-                                  className="block select-none rounded-md px-3 py-2 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                                >
-                                  {child.label}
-                                </Link>
-                              </NavigationMenuLink>
-                            </li>
-                          ))}
-                      </ul>
-                    </NavigationMenuContent>
-                  </NavigationMenuItem>
-                );
-              }
-
+      <NavigationMenu className="hidden lg:flex">
+        <NavigationMenuList className="flex items-center gap-1">
+          {visibleNavItems.map((item) => {
+            if (item.children) {
               return (
-                <NavigationMenuItem key={item.to}>
-                  <NavigationMenuLink asChild>
-                    <Link
-                      to={item.to!}
-                      className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50"
-                    >
-                      {item.icon && <item.icon className="mr-2 h-4 w-4" />}
-                      {item.label}
-                    </Link>
-                  </NavigationMenuLink>
+                <NavigationMenuItem key={item.label}>
+                  <NavigationMenuTrigger className="gap-1">
+                    {item.icon && <item.icon className="h-4 w-4" />}
+                    {item.label}
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <ul className="grid gap-1 p-2 min-w-[200px]">
+                      {item.children
+                        .filter((child) => child.roles.includes(user.role))
+                        .map((child) => (
+                          <li key={child.to}>
+                            <NavigationMenuLink asChild>
+                              <Link
+                                to={child.to!}
+                                className="block select-none rounded-md px-3 py-2 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                              >
+                                {child.label}
+                              </Link>
+                            </NavigationMenuLink>
+                          </li>
+                        ))}
+                    </ul>
+                  </NavigationMenuContent>
                 </NavigationMenuItem>
               );
-            })}
-          </NavigationMenuList>
-        </NavigationMenu>
-      </div>
+            }
+
+            return (
+              <NavigationMenuItem key={item.to}>
+                <NavigationMenuLink asChild>
+                  <Link
+                    to={item.to!}
+                    className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    {item.icon && <item.icon className="mr-2 h-4 w-4" />}
+                    {item.label}
+                  </Link>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+            );
+          })}
+        </NavigationMenuList>
+      </NavigationMenu>
     );
   };
 
@@ -208,7 +206,9 @@ export function Header() {
               <img
                 src={lhsLogo}
                 alt="Laguna Hills HOA"
-                className="h-10 w-auto"
+                width="40"
+                height="40"
+                className="h-10"
               />
               <span className="text-xl font-bold text-foreground hidden sm:inline">
                 Laguna Hills HOA
