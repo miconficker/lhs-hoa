@@ -133,8 +133,12 @@ export interface ServiceRequest {
 }
 
 // Reservations
-export type AmenityType = "clubhouse" | "pool" | "basketball-court";
-export type ReservationSlot = "AM" | "PM";
+export type AmenityType =
+  | "clubhouse"
+  | "pool"
+  | "basketball-court"
+  | "tennis-court";
+export type ReservationSlot = "AM" | "PM" | "FULL_DAY";
 export type ReservationStatus = "pending" | "confirmed" | "cancelled";
 
 export interface Reservation {
@@ -153,6 +157,71 @@ export interface AmenityAvailability {
   amenity_type: AmenityType;
   am_available: boolean;
   pm_available: boolean;
+  am_blocked?: boolean;
+  pm_blocked?: boolean;
+  block_reason?: string;
+}
+
+// New types for reservations management
+export type TimeBlockSlot = "AM" | "PM" | "FULL_DAY";
+export type RentalPaymentStatus = "unpaid" | "partial" | "paid" | "overdue";
+
+export interface TimeBlock {
+  id: string;
+  amenity_type: AmenityType;
+  date: string;
+  slot: TimeBlockSlot;
+  reason: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface ExternalRental {
+  id: string;
+  amenity_type: AmenityType;
+  date: string;
+  slot: TimeBlockSlot;
+  renter_name: string;
+  renter_contact?: string;
+  amount: number;
+  payment_status: RentalPaymentStatus;
+  amount_paid: number;
+  payment_method?: string;
+  receipt_number?: string;
+  notes?: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface TimeBlocksResponse {
+  time_blocks: TimeBlock[];
+}
+
+export interface ExternalRentalsResponse {
+  rentals: ExternalRental[];
+}
+
+export interface CreateTimeBlockInput {
+  amenity_type: AmenityType;
+  date: string; // YYYY-MM-DD format
+  slot: TimeBlockSlot;
+  reason: string;
+}
+
+export interface CreateExternalRentalInput {
+  amenity_type: AmenityType;
+  date: string; // YYYY-MM-DD format
+  slot: TimeBlockSlot;
+  renter_name: string;
+  renter_contact?: string;
+  amount: number;
+  notes?: string;
+}
+
+export interface RecordPaymentInput {
+  amount: number;
+  payment_method?: string;
+  receipt_number?: string;
 }
 
 // Announcements & Events
@@ -598,7 +667,14 @@ export interface AdminNotificationsResponse {
 
 export type EmployeeType = "driver" | "housekeeper" | "caretaker" | "other";
 export type EmployeeStatus = "pending" | "active" | "revoked" | "expired";
+// Legacy pass type (kept for backward compatibility)
 export type PassType = "sticker" | "rfid" | "both";
+
+// New unified pass system types
+export type PassTypeCategory = "vehicle" | "employee" | "resident" | "visitor";
+export type PassTypeCode = "sticker" | "rfid" | "employee_id" | "vip" | "valet";
+export type PassPaymentStatus = "unpaid" | "paid" | "partial";
+
 export type VehicleStatus =
   | "pending_payment"
   | "pending_approval"
@@ -606,6 +682,45 @@ export type VehicleStatus =
   | "cancelled";
 export type VehiclePaymentStatus = "unpaid" | "paid";
 
+// Pass Type Registry
+export interface PassTypeRecord {
+  id: string;
+  code: PassTypeCode;
+  name: string;
+  category: PassTypeCategory;
+  description?: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+// Individual Vehicle Pass (new unified system)
+export interface VehiclePass {
+  id: string;
+  vehicle_id: string;
+  pass_type_id: string;
+  identifier: string; // sticker_number or rfid_code
+  amount_due: number;
+  amount_paid: number;
+  payment_status: PassPaymentStatus;
+  issued_date?: string;
+  expiry_date?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+
+  // Joined fields (from views)
+  pass_type_code?: PassTypeCode;
+  pass_type_name?: string;
+  pass_type_category?: PassTypeCategory;
+  plate_number?: string;
+  make?: string;
+  model?: string;
+  color?: string;
+  household_address?: string;
+  balance_due?: number;
+}
+
+// Updated Household Employee with payment fields
 export interface HouseholdEmployee {
   id: string;
   household_id: string;
@@ -620,8 +735,20 @@ export interface HouseholdEmployee {
   notes?: string;
   created_at: string;
   updated_at: string;
+
+  // New payment fields
+  pass_type_id?: string;
+  amount_due?: number;
+  amount_paid?: number;
+  payment_status?: PassPaymentStatus;
+  balance_due?: number;
+
+  // Pass type details (from view)
+  pass_type_code?: PassTypeCode;
+  pass_type_name?: string;
 }
 
+// Vehicle Registration (updated to work with new system)
 export interface VehicleRegistration {
   id: string;
   household_id: string;
@@ -630,7 +757,7 @@ export interface VehicleRegistration {
   make: string;
   model: string;
   color: string;
-  pass_type: PassType;
+  pass_type: PassType; // Legacy field, kept for backward compatibility
   rfid_code?: string;
   sticker_number?: string;
   status: VehicleStatus;
@@ -642,14 +769,53 @@ export interface VehicleRegistration {
   notes?: string;
   created_at: string;
   updated_at: string;
+
+  // New unified system fields (from view)
+  sticker_pass_id?: string;
+  sticker_amount_due?: number;
+  sticker_amount_paid?: number;
+  sticker_payment_status?: PassPaymentStatus;
+  rfid_pass_id?: string;
+  rfid_amount_due?: number;
+  rfid_amount_paid?: number;
+  rfid_payment_status?: PassPaymentStatus;
+  total_amount_due?: number;
+  total_amount_paid?: number;
+  total_balance_due?: number;
 }
 
+// Updated Pass Fee (references pass_types)
 export interface PassFee {
   id: string;
-  fee_type: PassType;
+  pass_type_id: string;
+  pass_type_code?: PassTypeCode;
+  pass_type_name?: string;
   amount: number;
   effective_date: string;
+  notes?: string;
   created_at: string;
+  updated_at?: string;
+}
+
+// Create vehicle with individual pass selection (new system)
+export interface CreateVehicleInputUnified {
+  household_id: string;
+  plate_number: string;
+  make: string;
+  model: string;
+  color: string;
+  has_sticker: boolean;
+  has_rfid: boolean;
+}
+
+// Record payment for a specific pass (new system)
+export interface RecordPassPaymentInput {
+  vehicle_pass_id?: string;
+  employee_pass_id?: string;
+  amount: number;
+  method: PaymentMethod;
+  reference_number?: string;
+  notes?: string;
 }
 
 // API Response types for pass management
@@ -698,7 +864,9 @@ export interface CreateVehicleInput {
   make: string;
   model: string;
   color: string;
-  pass_type: PassType;
+  pass_type?: PassType; // Legacy field for backward compatibility
+  has_sticker?: boolean; // New field for unified system
+  has_rfid?: boolean; // New field for unified system
 }
 
 export interface UpdateVehicleInput {
@@ -717,12 +885,8 @@ export interface AssignStickerInput {
   sticker_number: string;
 }
 
-export interface RecordPaymentInput {
-  amount: number;
-  method: PaymentMethod;
-  reference_number?: string;
-  received_by: string;
-}
+// NOTE: RecordPaymentInput was moved to line 221 for external rentals
+// For pass payments, use RecordPassPaymentInput (line 812) instead
 
 export interface UpdateEmployeeStatusInput {
   status: EmployeeStatus;

@@ -7,6 +7,8 @@ import type {
   ServiceRequest,
   MapHousehold,
   Reservation,
+  ReservationSlot,
+  AmenityType,
   AmenityAvailability,
   Payment,
   PaymentMethod,
@@ -38,7 +40,6 @@ import type {
   UpdateVehicleInput,
   AssignRFIDInput,
   AssignStickerInput,
-  RecordPaymentInput,
   UpdateEmployeeStatusInput,
   UpdateVehicleStatusInput,
   PassStats,
@@ -55,6 +56,11 @@ import type {
   ThreadResponse,
   CreateThreadResponse,
   MessageResponse,
+  // New unified pass system types
+  PassTypeRecord,
+  HouseholdEmployee,
+  VehicleRegistration,
+  PassType,
 } from "@/types";
 
 import { logger } from "@/lib/logger";
@@ -319,9 +325,9 @@ export interface AvailabilityResponse {
 
 export interface CreateReservationInput {
   household_id: string;
-  amenity_type: "clubhouse" | "pool" | "basketball-court";
+  amenity_type: AmenityType;
   date: string; // YYYY-MM-DD format
-  slot: "AM" | "PM";
+  slot: ReservationSlot;
   purpose?: string;
 }
 
@@ -1200,6 +1206,13 @@ export const api = {
     // Get list of users for admin dropdowns - already defined above in admin object
     // Pass Management
     passManagement: {
+      // Pass Types (new for unified system)
+      passTypes: {
+        list: () =>
+          apiRequest<{ pass_types: PassTypeRecord[] }>(
+            "/admin/pass-management/pass-types",
+          ),
+      },
       // Stats
       getStats: () =>
         apiRequest<{ stats: PassStats }>("/admin/pass-management/stats"),
@@ -1230,6 +1243,22 @@ export const api = {
               body: JSON.stringify(input),
             },
           ),
+        recordPayment: (
+          id: string,
+          input: {
+            amount: number;
+            method: PaymentMethod;
+            reference_number?: string;
+          },
+        ) =>
+          apiRequest<{
+            employee: HouseholdEmployee;
+            payment_id: string;
+            amount_paid: number;
+          }>(`/admin/pass-management/employees/${id}/record-payment`, {
+            method: "POST",
+            body: JSON.stringify(input),
+          }),
         delete: (id: string) =>
           apiRequest<{ success: boolean }>(
             `/admin/pass-management/employees/${id}`,
@@ -1237,6 +1266,11 @@ export const api = {
               method: "DELETE",
             },
           ),
+        create: (input: CreateEmployeeInput) =>
+          apiRequest<EmployeeResponse>("/admin/pass-management/employees", {
+            method: "POST",
+            body: JSON.stringify(input),
+          }),
       },
       // Vehicle Management
       vehicles: {
@@ -1260,7 +1294,7 @@ export const api = {
           apiRequest<VehicleResponse>(`/admin/pass-management/vehicles/${id}`),
         assignRFID: (id: string, input: AssignRFIDInput) =>
           apiRequest<VehicleResponse>(
-            `/admin/pass-management/vehicles/${id}/rfid`,
+            `/admin/pass-management/vehicles/${id}/assign-rfid`,
             {
               method: "PUT",
               body: JSON.stringify(input),
@@ -1268,20 +1302,29 @@ export const api = {
           ),
         assignSticker: (id: string, input: AssignStickerInput) =>
           apiRequest<VehicleResponse>(
-            `/admin/pass-management/vehicles/${id}/sticker`,
+            `/admin/pass-management/vehicles/${id}/assign-sticker`,
             {
               method: "PUT",
               body: JSON.stringify(input),
             },
           ),
-        recordPayment: (id: string, input: RecordPaymentInput) =>
-          apiRequest<VehicleResponse>(
-            `/admin/pass-management/vehicles/${id}/payment`,
-            {
-              method: "PUT",
-              body: JSON.stringify(input),
-            },
-          ),
+        recordPayment: (
+          id: string,
+          input: {
+            amount: number;
+            method: PaymentMethod;
+            reference_number?: string;
+            pass_type?: PassType;
+          },
+        ) =>
+          apiRequest<{
+            vehicle: VehicleRegistration;
+            payment_id: string;
+            amount_paid: number;
+          }>(`/admin/pass-management/vehicles/${id}/record-payment`, {
+            method: "POST",
+            body: JSON.stringify(input),
+          }),
         updateStatus: (id: string, input: UpdateVehicleStatusInput) =>
           apiRequest<VehicleResponse>(
             `/admin/pass-management/vehicles/${id}/status`,
@@ -1297,15 +1340,67 @@ export const api = {
               method: "DELETE",
             },
           ),
+        create: (input: CreateVehicleInput) =>
+          apiRequest<VehicleResponse>("/admin/pass-management/vehicles", {
+            method: "POST",
+            body: JSON.stringify(input),
+          }),
+        replaceRfid: (id: string, input: { notes?: string }) =>
+          apiRequest<{
+            vehicle: VehicleRegistration;
+            new_rfid_pass: {
+              id: string;
+              identifier: string;
+              amount_due: number;
+              payment_status: string;
+            };
+          }>(`/admin/pass-management/vehicles/${id}/replace-rfid`, {
+            method: "POST",
+            body: JSON.stringify(input),
+          }),
       },
       // Pass Fee Management
       fees: {
         list: () => apiRequest<PassFeesResponse>("/admin/pass-management/fees"),
-        update: (input: { sticker_fee?: number; rfid_fee?: number }) =>
+        update: (input: {
+          sticker_fee?: number;
+          rfid_fee?: number;
+          employee_fee?: number;
+        }) =>
           apiRequest<PassFeesUpdateResponse>("/admin/pass-management/fees", {
             method: "PUT",
             body: JSON.stringify(input),
           }),
+      },
+      // RFID Replacement Requests Management
+      rfidReplacementRequests: {
+        list: (params?: { status?: string }) => {
+          const query = params?.status ? `?status=${params.status}` : "";
+          return apiRequest<{ requests: any[] }>(
+            `/admin/pass-management/rfid-replacement-requests${query}`,
+          );
+        },
+        approve: (id: string, input: { admin_notes?: string }) =>
+          apiRequest<{
+            success: boolean;
+            new_rfid_pass: {
+              id: string;
+              identifier: string;
+              amount_due: number;
+              payment_status: string;
+            };
+          }>(`/admin/pass-management/rfid-replacement-requests/${id}/approve`, {
+            method: "PUT",
+            body: JSON.stringify(input),
+          }),
+        reject: (id: string, input: { reason: string }) =>
+          apiRequest<{ success: boolean }>(
+            `/admin/pass-management/rfid-replacement-requests/${id}/reject`,
+            {
+              method: "PUT",
+              body: JSON.stringify(input),
+            },
+          ),
       },
     },
   },
@@ -1428,9 +1523,35 @@ export const api = {
         apiRequest<{ success: boolean }>(`/pass-requests/vehicles/${id}`, {
           method: "DELETE",
         }),
+      requestRfidReplacement: (id: string, input: { reason: string }) =>
+        apiRequest<{
+          success: boolean;
+          request: { id: string; status: string };
+        }>(`/pass-requests/vehicles/${id}/request-rfid-replacement`, {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      requestStickerRenewal: (id: string) =>
+        apiRequest<{
+          success: boolean;
+          new_pass: {
+            id: string;
+            identifier: string;
+            amount_due: number;
+            expiry_year: number;
+          };
+        }>(`/pass-requests/vehicles/${id}/request-sticker-renewal`, {
+          method: "POST",
+        }),
     },
     // Get current pass fees
     getFees: () => apiRequest<PassFeesResponse>("/pass-requests/fees"),
+    rfidReplacementRequests: {
+      list: () =>
+        apiRequest<{ requests: any[] }>(
+          "/pass-requests/rfid-replacement-requests",
+        ),
+    },
   },
   messages: {
     // Get all threads for current user

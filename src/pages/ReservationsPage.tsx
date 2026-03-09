@@ -21,12 +21,14 @@ const amenityLabels: Record<AmenityType, string> = {
   clubhouse: "Clubhouse",
   pool: "Swimming Pool",
   "basketball-court": "Basketball Court",
+  "tennis-court": "Tennis Court",
 };
 
 const amenityIcons: Record<AmenityType, string> = {
   clubhouse: "🏠",
   pool: "🏊",
   "basketball-court": "🏀",
+  "tennis-court": "🎾",
 };
 
 const statusColors: Record<ReservationStatus, string> = {
@@ -38,6 +40,7 @@ const statusColors: Record<ReservationStatus, string> = {
 const slotLabels: Record<ReservationSlot, string> = {
   AM: "Morning (8AM - 12PM)",
   PM: "Afternoon (1PM - 5PM)",
+  FULL_DAY: "Full Day (8AM - 5PM)",
 };
 
 interface BookingForm {
@@ -60,6 +63,7 @@ export function ReservationsPage() {
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [viewMonth, setViewMonth] = useState(new Date());
+  const [userHouseholdId, setUserHouseholdId] = useState<string>("");
 
   // Form state
   const [bookingForm, setBookingForm] = useState<BookingForm>({
@@ -70,19 +74,47 @@ export function ReservationsPage() {
     purpose: "",
   });
 
-  // Mock household ID - in production, this would come from user's household relation
-  const householdId = user?.id || "mock-household-id";
+  useEffect(() => {
+    loadUserHousehold();
+  }, []);
 
   useEffect(() => {
-    loadData();
-  }, [viewMonth, bookingForm.amenity_type]);
+    if (userHouseholdId) {
+      loadData();
+    }
+  }, [viewMonth, bookingForm.amenity_type, userHouseholdId]);
+
+  async function loadUserHousehold() {
+    if (!user) return;
+
+    // Get user's household
+    const houseResult = await api.households.list();
+    if (houseResult.data) {
+      const userHouseholds = houseResult.data.households.filter(
+        (h: any) => h.owner_id === user.id,
+      );
+      if (userHouseholds.length > 0) {
+        setUserHouseholdId(userHouseholds[0].id);
+        setBookingForm((prev) => ({
+          ...prev,
+          household_id: userHouseholds[0].id,
+        }));
+      } else {
+        setError(
+          "You don't have a household assigned. Please contact the admin.",
+        );
+      }
+    }
+  }
 
   async function loadData() {
+    if (!userHouseholdId) return;
+
     setLoading(true);
     setError("");
 
     // Load my reservations
-    const myResResult = await api.reservations.getMy(householdId);
+    const myResResult = await api.reservations.getMy(userHouseholdId);
     if (myResResult.error) {
       setError(myResResult.error);
     } else if (myResResult.data) {
@@ -112,7 +144,7 @@ export function ReservationsPage() {
     setSuccessMessage("");
 
     const result = await api.reservations.create({
-      household_id: householdId,
+      household_id: userHouseholdId,
       amenity_type: bookingForm.amenity_type,
       date: bookingForm.date,
       slot: bookingForm.slot,
@@ -125,7 +157,7 @@ export function ReservationsPage() {
       setSuccessMessage("Reservation created successfully!");
       setShowBookingForm(false);
       setBookingForm({
-        household_id: householdId,
+        household_id: userHouseholdId,
         amenity_type: "clubhouse",
         date: format(new Date(), "yyyy-MM-dd"),
         slot: "AM",
@@ -270,18 +302,135 @@ export function ReservationsPage() {
         </div>
       )}
 
-      {/* Booking Form */}
-      {showBookingForm && (
-        <div className="bg-card rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-card-foreground mb-4">
-            Book an Amenity
-          </h2>
-          <form onSubmit={handleSubmitBooking} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-card-foreground mb-1">
-                  Amenity
-                </label>
+      {/* Show content only when household is loaded */}
+      {!userHouseholdId && !loading && (
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 p-8 rounded-lg text-center">
+          <p className="mb-2">Loading your household information...</p>
+          <p className="text-sm">
+            If this persists, please contact the admin to ensure you have a
+            household assigned.
+          </p>
+        </div>
+      )}
+
+      {userHouseholdId && (
+        <>
+          {/* Booking Form */}
+          {showBookingForm && (
+            <div className="bg-card rounded-lg shadow p-6">
+              <h2 className="text-lg font-semibold text-card-foreground mb-4">
+                Book an Amenity
+              </h2>
+              <form onSubmit={handleSubmitBooking} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-card-foreground mb-1">
+                      Amenity
+                    </label>
+                    <select
+                      value={bookingForm.amenity_type}
+                      onChange={(e) =>
+                        setBookingForm({
+                          ...bookingForm,
+                          amenity_type: e.target.value as AmenityType,
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                      required
+                    >
+                      <option value="clubhouse">🏠 Clubhouse</option>
+                      <option value="pool">🏊 Swimming Pool</option>
+                      <option value="basketball-court">
+                        🏀 Basketball Court
+                      </option>
+                      <option value="tennis-court">🎾 Tennis Court</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-card-foreground mb-1">
+                      Date
+                    </label>
+                    <input
+                      type="date"
+                      value={bookingForm.date}
+                      onChange={(e) =>
+                        setBookingForm({ ...bookingForm, date: e.target.value })
+                      }
+                      min={format(new Date(), "yyyy-MM-dd")}
+                      className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-card-foreground mb-1">
+                      Time Slot
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(["AM", "PM"] as ReservationSlot[]).map((slot) => {
+                        const available = isSlotAvailable(
+                          parseISO(bookingForm.date),
+                          slot,
+                        );
+                        return (
+                          <button
+                            key={slot}
+                            type="button"
+                            onClick={() =>
+                              setBookingForm({ ...bookingForm, slot })
+                            }
+                            disabled={!available}
+                            className={`px-3 py-2 border rounded-lg text-center transition-colors ${
+                              bookingForm.slot === slot
+                                ? "bg-primary-600 text-white border-primary-600"
+                                : available
+                                  ? "bg-card text-card-foreground border-border hover:bg-muted"
+                                  : "bg-gray-100 text-gray-400 border-border cursor-not-allowed"
+                            }`}
+                          >
+                            {slotLabels[slot]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-card-foreground mb-1">
+                      Purpose (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={bookingForm.purpose}
+                      onChange={(e) =>
+                        setBookingForm({
+                          ...bookingForm,
+                          purpose: e.target.value,
+                        })
+                      }
+                      placeholder="e.g., Birthday party, Family gathering"
+                      className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                  >
+                    Create Reservation
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Calendar View */}
+          <div className="bg-card rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-card-foreground">
+                Availability Calendar -{" "}
+                {amenityLabels[bookingForm.amenity_type]}
+              </h2>
+              <div className="flex items-center gap-4">
                 <select
                   value={bookingForm.amenity_type}
                   onChange={(e) =>
@@ -290,203 +439,115 @@ export function ReservationsPage() {
                       amenity_type: e.target.value as AmenityType,
                     })
                   }
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                  required
+                  className="px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 >
                   <option value="clubhouse">🏠 Clubhouse</option>
                   <option value="pool">🏊 Swimming Pool</option>
                   <option value="basketball-court">🏀 Basketball Court</option>
+                  <option value="tennis-court">🎾 Tennis Court</option>
                 </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-card-foreground mb-1">
-                  Date
-                </label>
-                <input
-                  type="date"
-                  value={bookingForm.date}
-                  onChange={(e) =>
-                    setBookingForm({ ...bookingForm, date: e.target.value })
-                  }
-                  min={format(new Date(), "yyyy-MM-dd")}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-card-foreground mb-1">
-                  Time Slot
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(["AM", "PM"] as ReservationSlot[]).map((slot) => {
-                    const available = isSlotAvailable(
-                      parseISO(bookingForm.date),
-                      slot,
-                    );
-                    return (
-                      <button
-                        key={slot}
-                        type="button"
-                        onClick={() => setBookingForm({ ...bookingForm, slot })}
-                        disabled={!available}
-                        className={`px-3 py-2 border rounded-lg text-center transition-colors ${
-                          bookingForm.slot === slot
-                            ? "bg-primary-600 text-white border-primary-600"
-                            : available
-                              ? "bg-card text-card-foreground border-border hover:bg-muted"
-                              : "bg-gray-100 text-gray-400 border-border cursor-not-allowed"
-                        }`}
-                      >
-                        {slotLabels[slot]}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-card-foreground mb-1">
-                  Purpose (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={bookingForm.purpose}
-                  onChange={(e) =>
-                    setBookingForm({ ...bookingForm, purpose: e.target.value })
-                  }
-                  placeholder="e.g., Birthday party, Family gathering"
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                />
+                <button
+                  onClick={() => setViewMonth(addDays(viewMonth, -30))}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  Previous
+                </button>
+                <span className="text-sm font-medium text-card-foreground">
+                  {format(viewMonth, "MMMM yyyy")}
+                </span>
+                <button
+                  onClick={() => setViewMonth(addDays(viewMonth, 30))}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  Next
+                </button>
               </div>
             </div>
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-              >
-                Create Reservation
-              </button>
+            {renderCalendar()}
+            <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-green-100 rounded"></div>
+                <span>Available</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-red-100 rounded"></div>
+                <span>Booked</span>
+              </div>
             </div>
-          </form>
-        </div>
-      )}
+          </div>
 
-      {/* Calendar View */}
-      <div className="bg-card rounded-lg shadow p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-card-foreground">
-            Availability Calendar - {amenityLabels[bookingForm.amenity_type]}
-          </h2>
-          <div className="flex items-center gap-4">
-            <select
-              value={bookingForm.amenity_type}
-              onChange={(e) =>
-                setBookingForm({
-                  ...bookingForm,
-                  amenity_type: e.target.value as AmenityType,
-                })
-              }
-              className="px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="clubhouse">🏠 Clubhouse</option>
-              <option value="pool">🏊 Swimming Pool</option>
-              <option value="basketball-court">🏀 Basketball Court</option>
-            </select>
-            <button
-              onClick={() => setViewMonth(addDays(viewMonth, -30))}
-              className="p-2 hover:bg-gray-100 rounded-lg"
-            >
-              Previous
-            </button>
-            <span className="text-sm font-medium text-card-foreground">
-              {format(viewMonth, "MMMM yyyy")}
-            </span>
-            <button
-              onClick={() => setViewMonth(addDays(viewMonth, 30))}
-              className="p-2 hover:bg-gray-100 rounded-lg"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-        {renderCalendar()}
-        <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-100 rounded"></div>
-            <span>Available</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-red-100 rounded"></div>
-            <span>Booked</span>
-          </div>
-        </div>
-      </div>
-
-      {/* My Reservations */}
-      <div className="bg-card rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-card-foreground mb-4">
-          My Reservations
-        </h2>
-        {myReservations?.reservations &&
-        myReservations.reservations.length > 0 ? (
-          <div className="space-y-4">
-            {myReservations.reservations.map((reservation) => (
-              <div
-                key={reservation.id}
-                className="flex items-start justify-between p-4 border border-border rounded-lg hover:bg-muted"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="text-4xl">
-                    {amenityIcons[reservation.amenity_type]}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium text-card-foreground">
-                        {amenityLabels[reservation.amenity_type]}
-                      </h3>
-                      <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[reservation.status]}`}
-                      >
-                        {reservation.status}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {format(new Date(reservation.date), "MMM d, yyyy")}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {slotLabels[reservation.slot]}
-                      </span>
-                    </div>
-                    {reservation.purpose && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Purpose: {reservation.purpose}
-                      </p>
-                    )}
-                    <p className="text-xs text-gray-400 mt-1">
-                      Booked on{" "}
-                      {format(new Date(reservation.created_at), "MMM d, yyyy")}
-                    </p>
-                  </div>
-                </div>
-                {reservation.status !== "cancelled" && (
-                  <button
-                    onClick={() => handleCancelReservation(reservation.id)}
-                    className="px-3 py-1 text-sm border border-red-300 text-destructive rounded-lg hover:bg-red-50"
+          {/* My Reservations */}
+          <div className="bg-card rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-card-foreground mb-4">
+              My Reservations
+            </h2>
+            {myReservations?.reservations &&
+            myReservations.reservations.length > 0 ? (
+              <div className="space-y-4">
+                {myReservations.reservations.map((reservation) => (
+                  <div
+                    key={reservation.id}
+                    className="flex items-start justify-between p-4 border border-border rounded-lg hover:bg-muted"
                   >
-                    Cancel
-                  </button>
-                )}
+                    <div className="flex items-start gap-4">
+                      <div className="text-4xl">
+                        {amenityIcons[reservation.amenity_type]}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-medium text-card-foreground">
+                            {amenityLabels[reservation.amenity_type]}
+                          </h3>
+                          <span
+                            className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[reservation.status]}`}
+                          >
+                            {reservation.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            {format(new Date(reservation.date), "MMM d, yyyy")}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            {slotLabels[reservation.slot]}
+                          </span>
+                        </div>
+                        {reservation.purpose && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Purpose: {reservation.purpose}
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-400 mt-1">
+                          Booked on{" "}
+                          {format(
+                            new Date(reservation.created_at),
+                            "MMM d, yyyy",
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    {reservation.status !== "cancelled" && (
+                      <button
+                        onClick={() => handleCancelReservation(reservation.id)}
+                        className="px-3 py-1 text-sm border border-red-300 text-destructive rounded-lg hover:bg-red-50"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No reservations found. Create your first reservation to get
+                started.
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            No reservations found. Create your first reservation to get started.
-          </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }
