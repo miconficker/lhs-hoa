@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Menu } from "lucide-react";
-import React from "react";
+import { Menu, ChevronRight, ChevronDown } from "lucide-react";
+import { useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -9,29 +9,42 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import {
   Home,
   Map,
-  ClipboardList,
   Calendar,
   CreditCard,
   FileText,
   MessageSquare,
-  BarChart,
   Bell,
   Building2,
   DollarSign,
   Receipt,
-  Trees,
   Badge,
   UserCheck,
-  Home as HomeIcon,
   Megaphone,
   Settings,
+  CarFront,
+  Wrench,
 } from "lucide-react";
 
-const navItems = [
+interface NavItem {
+  label?: string;
+  icon?: any;
+  to?: string;
+  roles: string[];
+  children?: NavItem[];
+  separator?: boolean;
+  sectionHeader?: string;
+}
+
+const navItems: NavItem[] = [
   {
     to: "/dashboard",
     icon: Home,
@@ -41,44 +54,88 @@ const navItems = [
   {
     to: "/map",
     icon: Map,
-    label: "Subdivision Map",
+    label: "Map",
     roles: ["admin", "resident", "staff"],
   },
   {
-    to: "/service-requests",
-    icon: ClipboardList,
-    label: "Service Requests",
+    label: "Community",
+    icon: Megaphone,
+    roles: ["admin", "resident", "staff", "guest"],
+    children: [
+      {
+        to: "/announcements",
+        label: "Announcements",
+        roles: ["admin", "resident", "staff", "guest"],
+      },
+      {
+        to: "/events",
+        label: "Events",
+        roles: ["admin", "resident", "staff", "guest"],
+      },
+      {
+        to: "/polls",
+        label: "Polls",
+        roles: ["admin", "resident", "staff", "guest"],
+      },
+    ],
+  },
+  {
+    label: "Resources",
+    icon: FileText,
     roles: ["admin", "resident", "staff"],
+    children: [
+      {
+        to: "/documents",
+        label: "Documents",
+        roles: ["admin", "resident", "staff"],
+      },
+      {
+        to: "/help",
+        label: "Help",
+        roles: ["admin", "resident", "staff", "guest"],
+      },
+    ],
   },
   {
     to: "/reservations",
     icon: Calendar,
-    label: "Amenity Reservations",
+    label: "Reservations",
     roles: ["admin", "resident", "guest"],
   },
   {
-    to: "/my-lots",
-    icon: HomeIcon,
-    label: "My Lots",
-    roles: ["admin", "resident"],
-  },
-  {
-    to: "/passes",
-    icon: Badge,
-    label: "Passes",
-    roles: ["admin", "resident"],
-  },
-  {
-    to: "/payments",
-    icon: CreditCard,
     label: "Payments",
+    icon: CreditCard,
     roles: ["admin", "resident"],
+    children: [
+      { to: "/payments", label: "My Payments", roles: ["admin", "resident"] },
+      {
+        to: "/payments?action=new",
+        label: "Make Payment",
+        roles: ["admin", "resident"],
+      },
+    ],
   },
   {
-    to: "/documents",
-    icon: FileText,
-    label: "Documents",
+    label: "Passes & IDs",
+    icon: CarFront,
+    roles: ["admin", "resident"],
+    children: [
+      { to: "/passes", label: "Vehicle Passes", roles: ["admin", "resident"] },
+      { to: "/passes?type=employee", label: "Employee IDs", roles: ["admin"] },
+    ],
+  },
+  {
+    label: "Services",
+    icon: Wrench,
     roles: ["admin", "resident", "staff"],
+    children: [
+      {
+        to: "/service-requests",
+        label: "Service Requests",
+        roles: ["admin", "resident", "staff"],
+      },
+      { to: "/admin/common-areas", label: "Common Areas", roles: ["admin"] },
+    ],
   },
   {
     to: "/messages",
@@ -87,30 +144,12 @@ const navItems = [
     roles: ["admin", "resident", "staff"],
   },
   {
-    to: "/account",
-    icon: Settings,
-    label: "Account Settings",
-    roles: ["admin", "resident", "staff", "guest"],
-  },
-  {
-    to: "/announcements",
-    icon: Megaphone,
-    label: "Announcements",
-    roles: ["admin", "resident", "staff", "guest"],
-  },
-  {
-    to: "/polls",
-    icon: BarChart,
-    label: "Polls",
-    roles: ["admin", "resident", "staff", "guest"],
-  },
-  {
     to: "/notifications",
     icon: Bell,
     label: "Notifications",
     roles: ["admin", "resident", "staff"],
   },
-  { separator: true, roles: ["admin", "resident", "staff"] },
+  { separator: true, roles: ["admin"] },
   { sectionHeader: "Admin Panel", roles: ["admin"] },
   {
     to: "/admin/lots",
@@ -131,12 +170,6 @@ const navItems = [
     roles: ["admin"],
   },
   {
-    to: "/admin/common-areas",
-    icon: Trees,
-    label: "Common Areas",
-    roles: ["admin"],
-  },
-  {
     to: "/admin/pass-management",
     icon: Badge,
     label: "Pass Management",
@@ -150,9 +183,15 @@ const navItems = [
   },
   {
     to: "/admin",
-    icon: "Settings" as any,
+    icon: Settings,
     label: "Admin Panel",
     roles: ["admin"],
+  },
+  {
+    to: "/account",
+    icon: Settings,
+    label: "Account Settings",
+    roles: ["admin", "resident", "staff", "guest"],
   },
 ];
 
@@ -163,7 +202,8 @@ interface MobileNavProps {
 
 export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
   const { user } = useAuth();
-  const [internalOpen, setInternalOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const openControlled = isOpen !== undefined;
   const is_open = openControlled ? isOpen : internalOpen;
   const set_open = openControlled ? onOpenChange! : setInternalOpen;
@@ -174,6 +214,18 @@ export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
 
   const handleLinkClick = () => {
     set_open(false);
+  };
+
+  const toggleGroup = (label: string) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) {
+        next.delete(label);
+      } else {
+        next.add(label);
+      }
+      return next;
+    });
   };
 
   if (!user || visibleItems.length === 0) {
@@ -218,6 +270,59 @@ export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
                   </div>
                 );
               }
+
+              // Item with children (collapsible group)
+              if (item.children) {
+                if (!item.label) return null;
+                const isOpen = openGroups.has(item.label);
+                const visibleChildren = item.children.filter((child) =>
+                  child.roles.includes(user.role),
+                );
+                if (visibleChildren.length === 0) return null;
+
+                return (
+                  <Collapsible
+                    key={item.label}
+                    open={isOpen}
+                    onOpenChange={() => toggleGroup(item.label!)}
+                    className="group"
+                  >
+                    <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-base transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 hover:bg-gray-100 dark:hover:bg-gray-800">
+                      <span className="flex items-center gap-3">
+                        {item.icon && (
+                          <item.icon className="w-5 h-5" aria-hidden="true" />
+                        )}
+                        <span className="font-medium">{item.label}</span>
+                      </span>
+                      {isOpen ? (
+                        <ChevronDown className="w-4 h-4" aria-hidden="true" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4" aria-hidden="true" />
+                      )}
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pl-8 pr-2 py-1 space-y-1">
+                      {visibleChildren.map((child) => (
+                        <NavLink
+                          key={child.to}
+                          to={child.to!}
+                          onClick={handleLinkClick}
+                          className={({ isActive }) =>
+                            `flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 ${
+                              isActive
+                                ? "bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 font-medium"
+                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                            }`
+                          }
+                        >
+                          <span>{child.label}</span>
+                        </NavLink>
+                      ))}
+                    </CollapsibleContent>
+                  </Collapsible>
+                );
+              }
+
+              // Single link item
               if (!item.to) return null;
               return (
                 <NavLink
