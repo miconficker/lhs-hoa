@@ -152,6 +152,14 @@ function App() {
               }
             />
             <Route
+              path="admin/reservations/:tab"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminPanelPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="admin/*"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>

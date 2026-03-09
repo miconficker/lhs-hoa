@@ -456,14 +456,18 @@ export function AdminPanelPage() {
   // Parse the current path to determine which section to show
   const getPathSection = () => {
     const path = location.pathname;
-    if (path === "/admin") return "dashboard";
+    if (path === "/admin") return { section: "dashboard", tab: null };
     if (path.startsWith("/admin/")) {
-      return path.replace("/admin/", "").split("/")[0];
+      const parts = path.replace("/admin/", "").split("/");
+      return {
+        section: parts[0],
+        tab: parts[1] || null,
+      };
     }
-    return "dashboard";
+    return { section: "dashboard", tab: null };
   };
 
-  const pathSection = getPathSection();
+  const pathInfo = getPathSection();
 
   // Users state
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -661,7 +665,7 @@ export function AdminPanelPage() {
   }
 
   // Handle reservations section
-  if (pathSection === "reservations") {
+  if (pathInfo.section === "reservations") {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -673,7 +677,7 @@ export function AdminPanelPage() {
   }
 
   // Handle lots section
-  if (pathSection === "lots") {
+  if (pathInfo.section === "lots") {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -685,7 +689,7 @@ export function AdminPanelPage() {
   }
 
   // Handle dues section
-  if (pathSection === "dues") {
+  if (pathInfo.section === "dues") {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -697,7 +701,10 @@ export function AdminPanelPage() {
   }
 
   // Handle payments/in-person section
-  if (pathSection === "payments" && location.pathname.includes("in-person")) {
+  if (
+    pathInfo.section === "payments" &&
+    location.pathname.includes("in-person")
+  ) {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -709,7 +716,7 @@ export function AdminPanelPage() {
   }
 
   // Handle common-areas section
-  if (pathSection === "common-areas") {
+  if (pathInfo.section === "common-areas") {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -721,7 +728,7 @@ export function AdminPanelPage() {
   }
 
   // Handle pass-management section
-  if (pathSection === "pass-management") {
+  if (pathInfo.section === "pass-management") {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -733,7 +740,7 @@ export function AdminPanelPage() {
   }
 
   // Handle whitelist section
-  if (pathSection === "whitelist") {
+  if (pathInfo.section === "whitelist") {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -745,7 +752,7 @@ export function AdminPanelPage() {
   }
 
   // Handle pre-approved section (same as whitelist)
-  if (pathSection === "pre-approved") {
+  if (pathInfo.section === "pre-approved") {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -757,7 +764,7 @@ export function AdminPanelPage() {
   }
 
   // Handle residents section (use users tab)
-  if (pathSection === "residents") {
+  if (pathInfo.section === "residents") {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -840,7 +847,7 @@ export function AdminPanelPage() {
   }
 
   // Handle announcements section
-  if (pathSection === "announcements") {
+  if (pathInfo.section === "announcements") {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -852,7 +859,7 @@ export function AdminPanelPage() {
   }
 
   // Handle notifications section
-  if (pathSection === "notifications") {
+  if (pathInfo.section === "notifications") {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -864,7 +871,7 @@ export function AdminPanelPage() {
   }
 
   // Handle messages section
-  if (pathSection === "messages") {
+  if (pathInfo.section === "messages") {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -876,7 +883,10 @@ export function AdminPanelPage() {
   }
 
   // Handle payments section (main page)
-  if (pathSection === "payments" && !location.pathname.includes("in-person")) {
+  if (
+    pathInfo.section === "payments" &&
+    !location.pathname.includes("in-person")
+  ) {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -888,7 +898,7 @@ export function AdminPanelPage() {
   }
 
   // Handle dues-settings section (same as dues)
-  if (pathSection === "dues-settings") {
+  if (pathInfo.section === "dues-settings") {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -900,7 +910,7 @@ export function AdminPanelPage() {
   }
 
   // Handle verification-queue section
-  if (pathSection === "verification-queue") {
+  if (pathInfo.section === "verification-queue") {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -915,7 +925,7 @@ export function AdminPanelPage() {
   }
 
   // Handle settings section
-  if (pathSection === "settings") {
+  if (pathInfo.section === "settings") {
     return (
       <div className="flex min-h-screen bg-background">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
