@@ -47,6 +47,12 @@ const navItems: NavItem[] = [
     roles: ["admin", "resident", "staff"],
   },
   {
+    to: "/my-lots",
+    icon: Home,
+    label: "My Lots",
+    roles: ["admin", "resident"],
+  },
+  {
     label: "Community",
     icon: Megaphone,
     roles: ["admin", "resident", "staff", "guest"],
