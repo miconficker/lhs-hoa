@@ -1398,6 +1398,87 @@ adminRouter.post('/sync-lots', async (c) => {
 });
 
 // =============================================================================
+// ADMIN: Reservations Management
+// =============================================================================
+
+/**
+ * GET /api/admin/reservations
+ * Get all reservations with household information (admin only)
+ */
+adminRouter.get('/reservations', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const reservations = await c.env.DB.prepare(`
+      SELECT
+        r.id,
+        r.household_id,
+        r.amenity_type,
+        r.date,
+        r.slot,
+        r.purpose,
+        r.status,
+        r.created_at,
+        h.address as household_address,
+        h.street as household_street,
+        h.block as household_block,
+        h.lot as household_lot,
+        u.email as household_email
+      FROM reservations r
+      LEFT JOIN households h ON r.household_id = h.id
+      LEFT JOIN users u ON h.owner_id = u.id
+      ORDER BY r.date DESC, r.slot ASC
+    `).all();
+
+    return c.json({ reservations: reservations.results || [] });
+  } catch (error) {
+    console.error('Error fetching reservations:', error);
+    return c.json({ error: 'Failed to fetch reservations' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/reservations/:id/status
+ * Update reservation status (admin only)
+ */
+adminRouter.put('/reservations/:id/status', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const id = c.req.param('id');
+  const body = await c.req.json();
+  const { status } = body;
+
+  if (!status || !['pending', 'confirmed', 'cancelled'].includes(status)) {
+    return c.json({ error: 'Invalid status. Must be pending, confirmed, or cancelled' }, 400);
+  }
+
+  try {
+    await c.env.DB.prepare(
+      'UPDATE reservations SET status = ? WHERE id = ?'
+    ).bind(status, id).run();
+
+    const reservation = await c.env.DB.prepare(
+      'SELECT * FROM reservations WHERE id = ?'
+    ).bind(id).first();
+
+    if (!reservation) {
+      return c.json({ error: 'Reservation not found' }, 404);
+    }
+
+    return c.json({ reservation });
+  } catch (error) {
+    console.error('Error updating reservation status:', error);
+    return c.json({ error: 'Failed to update reservation status' }, 500);
+  }
+});
+
+// =============================================================================
 // ADMIN: Dues Rates Management
 // =============================================================================
 
