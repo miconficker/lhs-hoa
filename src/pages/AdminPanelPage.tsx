@@ -21,6 +21,10 @@ import { InPersonPaymentsPage } from "./InPersonPaymentsPage";
 import { CommonAreasPage } from "./CommonAreasPage";
 import { PassManagementPage } from "./PassManagementPage";
 import { WhitelistManagementPage } from "./WhitelistManagementPage";
+import { AnnouncementsPage } from "./AnnouncementsPage";
+import { NotificationsPage } from "./NotificationsPage";
+import { MessagesPage } from "./MessagesPage";
+import { PaymentsPage } from "./PaymentsPage";
 
 type Tab = "users" | "households" | "lots" | "import" | "payments" | "settings";
 
@@ -735,6 +739,195 @@ export function AdminPanelPage() {
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <div className="flex-1 lg:ml-64">
           <WhitelistManagementPage />
+        </div>
+      </div>
+    );
+  }
+
+  // Handle pre-approved section (same as whitelist)
+  if (pathSection === "pre-approved") {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 lg:ml-64">
+          <WhitelistManagementPage />
+        </div>
+      </div>
+    );
+  }
+
+  // Handle residents section (use users tab)
+  if (pathSection === "residents") {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 lg:ml-64">
+          <div className="container mx-auto px-4 py-6 space-y-6">
+            <h1 className="text-2xl font-bold">Residents Management</h1>
+            <div className="bg-white dark:bg-card rounded-lg shadow p-6">
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold">User Management</h2>
+                </div>
+                {loading ? (
+                  <div className="text-center py-8">Loading...</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-muted">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Email
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Role
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Phone
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-card divide-y divide-gray-200 dark:divide-gray-700">
+                        {users.map((user) => (
+                          <tr key={user.id}>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {user.email}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span
+                                className={`px-2 py-1 text-xs rounded-full ${
+                                  user.role === "admin"
+                                    ? "bg-purple-100 text-purple-800"
+                                    : user.role === "staff"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : user.role === "resident"
+                                        ? "bg-green-100 text-green-800"
+                                        : "bg-gray-100 text-gray-800"
+                                }`}
+                              >
+                                {user.role}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {user.phone || "-"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                              <button
+                                onClick={() => {
+                                  setEditingUser(user);
+                                  setShowUserModal(true);
+                                }}
+                                className="text-primary-600 hover:text-primary-900"
+                              >
+                                Edit
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle announcements section
+  if (pathSection === "announcements") {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 lg:ml-64">
+          <AnnouncementsPage />
+        </div>
+      </div>
+    );
+  }
+
+  // Handle notifications section
+  if (pathSection === "notifications") {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 lg:ml-64">
+          <NotificationsPage />
+        </div>
+      </div>
+    );
+  }
+
+  // Handle messages section
+  if (pathSection === "messages") {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 lg:ml-64">
+          <MessagesPage />
+        </div>
+      </div>
+    );
+  }
+
+  // Handle payments section (main page)
+  if (pathSection === "payments" && !location.pathname.includes("in-person")) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 lg:ml-64">
+          <PaymentsPage />
+        </div>
+      </div>
+    );
+  }
+
+  // Handle dues-settings section (same as dues)
+  if (pathSection === "dues-settings") {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 lg:ml-64">
+          <DuesConfigPage />
+        </div>
+      </div>
+    );
+  }
+
+  // Handle verification-queue section
+  if (pathSection === "verification-queue") {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 lg:ml-64">
+          <div className="container mx-auto px-4 py-6 space-y-6">
+            <h1 className="text-2xl font-bold">Payment Verification Queue</h1>
+            <PaymentVerificationQueue status="pending" onRefresh={() => {}} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle settings section
+  if (pathSection === "settings") {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 lg:ml-64">
+          <div className="container mx-auto px-4 py-6 space-y-6">
+            <h1 className="text-2xl font-bold">System Settings</h1>
+            <div className="bg-white dark:bg-card rounded-lg shadow p-6">
+              <p className="text-muted-foreground">
+                System settings coming soon...
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     );
