@@ -128,11 +128,11 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
   const loadRentals = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem("token");
+      const hoa_token = localStorage.getItem("hoa_token");
 
       const response = await fetch("/api/admin/external-rentals", {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${hoa_token}`,
         },
       });
 
@@ -194,7 +194,7 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
 
     try {
       setIsSubmitting(true);
-      const token = localStorage.getItem("token");
+      const hoa_token = localStorage.getItem("hoa_token");
 
       const input: CreateExternalRentalInput = {
         amenity_type: formData.amenity_type as AmenityType,
@@ -214,7 +214,7 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
         method: editingRental ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${hoa_token}`,
         },
         body: JSON.stringify(
           editingRental ? { ...input, id: editingRental.id } : input,
@@ -245,12 +245,12 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
 
     try {
       setIsDeleting(rentalId);
-      const token = localStorage.getItem("token");
+      const hoa_token = localStorage.getItem("hoa_token");
 
       const response = await fetch(`/api/admin/external-rentals/${rentalId}`, {
         method: "DELETE",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${hoa_token}`,
         },
       });
 
@@ -297,7 +297,7 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
 
     try {
       setIsSubmitting(true);
-      const token = localStorage.getItem("token");
+      const hoa_token = localStorage.getItem("hoa_token");
 
       const input: RecordPaymentInput = {
         amount: parseFloat(paymentForm.amount),
@@ -311,7 +311,7 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${hoa_token}`,
           },
           body: JSON.stringify(input),
         },

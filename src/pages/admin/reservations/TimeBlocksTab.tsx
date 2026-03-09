@@ -74,11 +74,11 @@ export function TimeBlocksTab({ amenityTypes }: TimeBlocksTabProps) {
   const loadTimeBlocks = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem("token");
+      const hoa_token = localStorage.getItem("hoa_token");
 
       const response = await fetch("/api/admin/time-blocks", {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${hoa_token}`,
         },
       });
 
@@ -135,7 +135,7 @@ export function TimeBlocksTab({ amenityTypes }: TimeBlocksTabProps) {
 
     try {
       setIsSubmitting(true);
-      const token = localStorage.getItem("token");
+      const hoa_token = localStorage.getItem("hoa_token");
 
       const input: CreateTimeBlockInput = {
         amenity_type: formData.amenity_type as AmenityType,
@@ -152,7 +152,7 @@ export function TimeBlocksTab({ amenityTypes }: TimeBlocksTabProps) {
         method: editingBlock ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${hoa_token}`,
         },
         body: JSON.stringify(
           editingBlock ? { ...input, id: editingBlock.id } : input,
@@ -181,12 +181,12 @@ export function TimeBlocksTab({ amenityTypes }: TimeBlocksTabProps) {
 
     try {
       setIsDeleting(blockId);
-      const token = localStorage.getItem("token");
+      const hoa_token = localStorage.getItem("hoa_token");
 
       const response = await fetch(`/api/admin/time-blocks/${blockId}`, {
         method: "DELETE",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${hoa_token}`,
         },
       });
 

@@ -86,12 +86,12 @@ export function BookingsTab({ amenityTypes }: BookingsTabProps) {
   const loadReservations = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem("token");
+      const hoa_token = localStorage.getItem("hoa_token");
 
       // Fetch all reservations
       const response = await fetch("/api/admin/reservations", {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${hoa_token}`,
         },
       });
 
@@ -151,7 +151,7 @@ export function BookingsTab({ amenityTypes }: BookingsTabProps) {
   ) => {
     try {
       setIsProcessing(reservationId);
-      const token = localStorage.getItem("token");
+      const hoa_token = localStorage.getItem("hoa_token");
 
       const response = await fetch(
         `/api/admin/reservations/${reservationId}/status`,
@@ -159,7 +159,7 @@ export function BookingsTab({ amenityTypes }: BookingsTabProps) {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${hoa_token}`,
           },
           body: JSON.stringify({ status: newStatus }),
         },
