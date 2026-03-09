@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { api, type AdminUser, type AdminHousehold } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import type { LotOwnership, LotStatus, LotType, User } from "@/types";
@@ -11,6 +12,9 @@ import { BulkActionToolbar } from "@/components/admin/BulkActionToolbar";
 import { AssignOwnerDialog } from "@/components/admin/AssignOwnerDialog";
 import { BulkConfirmationDialog } from "@/components/admin/BulkConfirmationDialog";
 import { toast } from "sonner";
+import { Sidebar } from "@/components/admin/Sidebar";
+import { Menu } from "lucide-react";
+import AdminReservationsPage from "./admin/reservations/index";
 
 type Tab = "users" | "households" | "lots" | "import" | "payments" | "settings";
 
@@ -434,7 +438,9 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
 
 export function AdminPanelPage() {
   const { user } = useAuth();
+  const { section } = useParams<{ section?: string }>();
   const [activeTab, setActiveTab] = useState<Tab>("users");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Users state
@@ -632,232 +638,261 @@ export function AdminPanelPage() {
     );
   }
 
+  // Handle reservations section
+  if (section === "reservations") {
+    return <AdminReservationsPage />;
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
-      </div>
+    <div className="flex min-h-screen bg-background">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-border">
-        <nav className="-mb-px flex space-x-8">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center px-1 py-4 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
-                  ? "border-primary-500 text-primary-600"
-                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-              }`}
-            >
-              <span className="mr-2">{tab.icon}</span>
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {/* Content */}
-      <div className="bg-white dark:bg-card rounded-lg shadow p-6">
-        {activeTab === "users" && (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">User Management</h2>
+      <div className="flex-1 lg:ml-64">
+        <div className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center gap-4">
               <button
-                onClick={() => {
-                  setEditingUser(null);
-                  setShowUserModal(true);
-                }}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 rounded-lg hover:bg-accent"
+                aria-label="Open sidebar"
               >
-                Add User
+                <Menu className="h-5 w-5" />
               </button>
+              <h1 className="text-2xl font-bold">Admin Panel</h1>
             </div>
-
-            {loading ? (
-              <div className="text-center py-8">Loading...</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-muted">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Email
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Role
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Phone
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Households
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-card divide-y divide-gray-200 dark:divide-gray-700">
-                    {users.map((user) => (
-                      <tr key={user.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {user.email}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-1 text-xs rounded-full ${
-                              user.role === "admin"
-                                ? "bg-purple-100 text-purple-800"
-                                : user.role === "staff"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : user.role === "resident"
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {user.role}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {user.phone || "-"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {user.household_count || 0}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                          <button
-                            onClick={() => {
-                              setEditingUser(user);
-                              setShowUserModal(true);
-                            }}
-                            className="text-primary-600 hover:text-primary-900"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteUser(user.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </div>
-        )}
+        </div>
 
-        {activeTab === "households" && (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">Household Management</h2>
-              <button
-                onClick={() => {
-                  setEditingHousehold(null);
-                  setShowHouseholdModal(true);
-                }}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-              >
-                Add Household
-              </button>
-            </div>
-
-            {loading ? (
-              <div className="text-center py-8">Loading...</div>
-            ) : (
-              <div className="space-y-4">
-                {households.map((household) => (
-                  <div key={household.id} className="border rounded-lg p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-semibold">{household.address}</h3>
-                        <p className="text-sm text-gray-500">
-                          {household.street && `${household.street}, `}
-                          {household.block && `Block ${household.block}`}
-                          {household.block && household.lot && " - "}
-                          {household.lot && `Lot ${household.lot}`}
-                        </p>
-                        {household.owner_email && (
-                          <p className="text-sm text-gray-600">
-                            Owner: {household.owner_email}
-                          </p>
-                        )}
-                      </div>
-                      <div className="space-x-2">
-                        <button
-                          onClick={() => {
-                            setEditingHousehold(household);
-                            setShowHouseholdModal(true);
-                          }}
-                          className="text-primary-600 hover:text-primary-900 text-sm"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteHousehold(household.id)}
-                          className="text-red-600 hover:text-red-900 text-sm"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                    {household.residents && household.residents.length > 0 && (
-                      <div className="mt-3 pt-3 border-t">
-                        <p className="text-sm text-gray-600 mb-2">Residents:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {household.residents.map((resident) => (
-                            <span
-                              key={resident.id}
-                              className={`px-2 py-1 text-xs rounded ${
-                                resident.is_primary
-                                  ? "bg-primary-100 text-primary-800"
-                                  : "bg-gray-100 text-gray-800"
-                              }`}
-                            >
-                              {resident.first_name} {resident.last_name}
-                              {resident.is_primary && " (Primary)"}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+        <div className="container mx-auto px-4 py-6 space-y-6">
+          {/* Tabs */}
+          <div className="border-b border-gray-200 dark:border-border">
+            <nav className="-mb-px flex space-x-8">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center px-1 py-4 border-b-2 font-medium text-sm ${
+                    activeTab === tab.id
+                      ? "border-primary-500 text-primary-600"
+                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                  }`}
+                >
+                  <span className="mr-2">{tab.icon}</span>
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
           </div>
-        )}
 
-        {activeTab === "lots" && (
-          <AdminLotsTab
-            lots={lots}
-            homeowners={homeowners}
-            onRefresh={loadLots}
-          />
-        )}
-
-        {activeTab === "import" && (
-          <div>
-            <h2 className="text-xl font-semibold mb-6">
-              Bulk Import Households
-            </h2>
-
-            <div className="space-y-4">
+          {/* Content */}
+          <div className="bg-white dark:bg-card rounded-lg shadow p-6">
+            {activeTab === "users" && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-2">
-                  Paste JSON data or enter manually
-                </label>
-                <textarea
-                  value={importData}
-                  onChange={(e) => setImportData(e.target.value)}
-                  rows={10}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono text-sm"
-                  placeholder={`[
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold">User Management</h2>
+                  <button
+                    onClick={() => {
+                      setEditingUser(null);
+                      setShowUserModal(true);
+                    }}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                  >
+                    Add User
+                  </button>
+                </div>
+
+                {loading ? (
+                  <div className="text-center py-8">Loading...</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-muted">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Email
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Role
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Phone
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Households
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-card divide-y divide-gray-200 dark:divide-gray-700">
+                        {users.map((user) => (
+                          <tr key={user.id}>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {user.email}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span
+                                className={`px-2 py-1 text-xs rounded-full ${
+                                  user.role === "admin"
+                                    ? "bg-purple-100 text-purple-800"
+                                    : user.role === "staff"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : user.role === "resident"
+                                        ? "bg-green-100 text-green-800"
+                                        : "bg-gray-100 text-gray-800"
+                                }`}
+                              >
+                                {user.role}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {user.phone || "-"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {user.household_count || 0}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                              <button
+                                onClick={() => {
+                                  setEditingUser(user);
+                                  setShowUserModal(true);
+                                }}
+                                className="text-primary-600 hover:text-primary-900"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(user.id)}
+                                className="text-red-600 hover:text-red-900"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === "households" && (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold">
+                    Household Management
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setEditingHousehold(null);
+                      setShowHouseholdModal(true);
+                    }}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                  >
+                    Add Household
+                  </button>
+                </div>
+
+                {loading ? (
+                  <div className="text-center py-8">Loading...</div>
+                ) : (
+                  <div className="space-y-4">
+                    {households.map((household) => (
+                      <div key={household.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold">
+                              {household.address}
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                              {household.street && `${household.street}, `}
+                              {household.block && `Block ${household.block}`}
+                              {household.block && household.lot && " - "}
+                              {household.lot && `Lot ${household.lot}`}
+                            </p>
+                            {household.owner_email && (
+                              <p className="text-sm text-gray-600">
+                                Owner: {household.owner_email}
+                              </p>
+                            )}
+                          </div>
+                          <div className="space-x-2">
+                            <button
+                              onClick={() => {
+                                setEditingHousehold(household);
+                                setShowHouseholdModal(true);
+                              }}
+                              className="text-primary-600 hover:text-primary-900 text-sm"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleDeleteHousehold(household.id)
+                              }
+                              className="text-red-600 hover:text-red-900 text-sm"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                        {household.residents &&
+                          household.residents.length > 0 && (
+                            <div className="mt-3 pt-3 border-t">
+                              <p className="text-sm text-gray-600 mb-2">
+                                Residents:
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {household.residents.map((resident) => (
+                                  <span
+                                    key={resident.id}
+                                    className={`px-2 py-1 text-xs rounded ${
+                                      resident.is_primary
+                                        ? "bg-primary-100 text-primary-800"
+                                        : "bg-gray-100 text-gray-800"
+                                    }`}
+                                  >
+                                    {resident.first_name} {resident.last_name}
+                                    {resident.is_primary && " (Primary)"}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === "lots" && (
+              <AdminLotsTab
+                lots={lots}
+                homeowners={homeowners}
+                onRefresh={loadLots}
+              />
+            )}
+
+            {activeTab === "import" && (
+              <div>
+                <h2 className="text-xl font-semibold mb-6">
+                  Bulk Import Households
+                </h2>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-2">
+                      Paste JSON data or enter manually
+                    </label>
+                    <textarea
+                      value={importData}
+                      onChange={(e) => setImportData(e.target.value)}
+                      rows={10}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono text-sm"
+                      placeholder={`[
   {
     "address": "123 Main St",
     "block": "1",
@@ -871,265 +906,274 @@ export function AdminPanelPage() {
     ]
   }
 ]`}
-                />
-              </div>
+                    />
+                  </div>
 
-              <button
-                onClick={handleImport}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-              >
-                Import Households
-              </button>
+                  <button
+                    onClick={handleImport}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                  >
+                    Import Households
+                  </button>
 
-              {importResult && (
-                <div className="mt-4 p-4 bg-gray-50 dark:bg-muted rounded-lg">
-                  <h3 className="font-semibold mb-2">Import Results</h3>
-                  <p className="text-green-600">
-                    ✓ {importResult.success} households imported
-                  </p>
-                  <p className="text-red-600">
-                    ✗ {importResult.failed} households failed
-                  </p>
-                  {importResult.errors.length > 0 && (
-                    <div className="mt-2">
-                      <p className="font-medium">Errors:</p>
-                      <ul className="list-disc list-inside text-sm text-red-600">
-                        {importResult.errors.map((error, i) => (
-                          <li key={i}>{error}</li>
-                        ))}
-                      </ul>
+                  {importResult && (
+                    <div className="mt-4 p-4 bg-gray-50 dark:bg-muted rounded-lg">
+                      <h3 className="font-semibold mb-2">Import Results</h3>
+                      <p className="text-green-600">
+                        ✓ {importResult.success} households imported
+                      </p>
+                      <p className="text-red-600">
+                        ✗ {importResult.failed} households failed
+                      </p>
+                      {importResult.errors.length > 0 && (
+                        <div className="mt-2">
+                          <p className="font-medium">Errors:</p>
+                          <ul className="list-disc list-inside text-sm text-red-600">
+                            {importResult.errors.map((error, i) => (
+                              <li key={i}>{error}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
-            </div>
-          </div>
-        )}
+              </div>
+            )}
 
-        {activeTab === "payments" && (
-          <div>
-            <h2 className="text-xl font-semibold mb-6">Payment Management</h2>
+            {activeTab === "payments" && (
+              <div>
+                <h2 className="text-xl font-semibold mb-6">
+                  Payment Management
+                </h2>
 
-            {/* Sub-tabs */}
-            <div className="mb-4 border-b border-gray-200 dark:border-border">
-              <nav className="-mb-px flex space-x-8" aria-label="Payment tabs">
-                <button
-                  onClick={() => setPaymentSubTab("verifications")}
-                  className={`${
-                    paymentSubTab === "verifications"
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                >
-                  Verification Queue
-                </button>
-                <button
-                  onClick={() => setPaymentSubTab("settings")}
-                  className={`${
-                    paymentSubTab === "settings"
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                >
-                  Settings
-                </button>
-                <button
-                  onClick={() => setPaymentSubTab("export")}
-                  className={`${
-                    paymentSubTab === "export"
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                >
-                  Export
-                </button>
-              </nav>
-            </div>
-
-            {/* Verification Queue Sub-tab */}
-            {paymentSubTab === "verifications" && (
-              <div className="bg-white dark:bg-card rounded-lg shadow">
-                <div className="border-b border-gray-200 dark:border-border">
+                {/* Sub-tabs */}
+                <div className="mb-4 border-b border-gray-200 dark:border-border">
                   <nav
                     className="-mb-px flex space-x-8"
-                    aria-label="Status tabs"
+                    aria-label="Payment tabs"
                   >
-                    {[
-                      { id: "pending", label: "Pending" },
-                      { id: "approved", label: "Approved" },
-                      { id: "rejected", label: "Rejected" },
-                    ].map((tab) => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setPaymentStatus(tab.id as any)}
-                        className={`${
-                          paymentStatus === tab.id
-                            ? "border-blue-500 text-blue-600"
-                            : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
+                    <button
+                      onClick={() => setPaymentSubTab("verifications")}
+                      className={`${
+                        paymentSubTab === "verifications"
+                          ? "border-blue-500 text-blue-600"
+                          : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                      } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                    >
+                      Verification Queue
+                    </button>
+                    <button
+                      onClick={() => setPaymentSubTab("settings")}
+                      className={`${
+                        paymentSubTab === "settings"
+                          ? "border-blue-500 text-blue-600"
+                          : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                      } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                    >
+                      Settings
+                    </button>
+                    <button
+                      onClick={() => setPaymentSubTab("export")}
+                      className={`${
+                        paymentSubTab === "export"
+                          ? "border-blue-500 text-blue-600"
+                          : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                      } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                    >
+                      Export
+                    </button>
                   </nav>
                 </div>
 
-                <div className="p-6">
-                  <PaymentVerificationQueue
-                    status={paymentStatus}
-                    onRefresh={() => {
-                      // Optional: refresh logic
-                    }}
-                  />
-                </div>
+                {/* Verification Queue Sub-tab */}
+                {paymentSubTab === "verifications" && (
+                  <div className="bg-white dark:bg-card rounded-lg shadow">
+                    <div className="border-b border-gray-200 dark:border-border">
+                      <nav
+                        className="-mb-px flex space-x-8"
+                        aria-label="Status tabs"
+                      >
+                        {[
+                          { id: "pending", label: "Pending" },
+                          { id: "approved", label: "Approved" },
+                          { id: "rejected", label: "Rejected" },
+                        ].map((tab) => (
+                          <button
+                            key={tab.id}
+                            onClick={() => setPaymentStatus(tab.id as any)}
+                            className={`${
+                              paymentStatus === tab.id
+                                ? "border-blue-500 text-blue-600"
+                                : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
+                      </nav>
+                    </div>
+
+                    <div className="p-6">
+                      <PaymentVerificationQueue
+                        status={paymentStatus}
+                        onRefresh={() => {
+                          // Optional: refresh logic
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Settings Sub-tab */}
+                {paymentSubTab === "settings" && (
+                  <div className="bg-white rounded-lg shadow p-6">
+                    <LateFeeConfig />
+                  </div>
+                )}
+
+                {/* Export Sub-tab */}
+                {paymentSubTab === "export" && (
+                  <div className="bg-white rounded-lg shadow p-6">
+                    <PaymentExport />
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Settings Sub-tab */}
-            {paymentSubTab === "settings" && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <LateFeeConfig />
-              </div>
-            )}
+            {activeTab === "settings" && (
+              <div>
+                <h2 className="text-xl font-semibold mb-6">
+                  System Statistics
+                </h2>
 
-            {/* Export Sub-tab */}
-            {paymentSubTab === "export" && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <PaymentExport />
+                {loading ? (
+                  <div className="text-center py-8">Loading...</div>
+                ) : stats ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Users Stats */}
+                    <div className="bg-purple-50 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold text-purple-900 mb-4">
+                        Users
+                      </h3>
+                      <p className="text-3xl font-bold text-purple-600">
+                        {stats.users.total}
+                      </p>
+                      <div className="mt-4 space-y-2">
+                        {stats.users.byRole.map((item: any) => (
+                          <div
+                            key={item.role}
+                            className="flex justify-between text-sm"
+                          >
+                            <span className="capitalize">{item.role}</span>
+                            <span className="font-medium">{item.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Households Stats */}
+                    <div className="bg-blue-50 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold text-blue-900 mb-4">
+                        Households
+                      </h3>
+                      <p className="text-3xl font-bold text-blue-600">
+                        {stats.households.total}
+                      </p>
+                      <div className="mt-4 space-y-2">
+                        {stats.households.byBlock.map((item: any) => (
+                          <div
+                            key={item.block}
+                            className="flex justify-between text-sm"
+                          >
+                            <span>Block {item.block}</span>
+                            <span className="font-medium">{item.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Residents Stats */}
+                    <div className="bg-green-50 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold text-green-900 mb-4">
+                        Residents
+                      </h3>
+                      <p className="text-3xl font-bold text-green-600">
+                        {stats.residents}
+                      </p>
+                    </div>
+
+                    {/* Service Requests Stats */}
+                    <div className="bg-yellow-50 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold text-yellow-900 mb-4">
+                        Pending Requests
+                      </h3>
+                      <p className="text-3xl font-bold text-yellow-600">
+                        {stats.serviceRequests.pending}
+                      </p>
+                    </div>
+
+                    {/* Reservations Stats */}
+                    <div className="bg-indigo-50 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold text-indigo-900 mb-4">
+                        Upcoming Reservations
+                      </h3>
+                      <p className="text-3xl font-bold text-indigo-600">
+                        {stats.reservations.upcoming}
+                      </p>
+                    </div>
+
+                    {/* Payments Stats */}
+                    <div className="bg-red-50 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold text-red-900 mb-4">
+                        Unpaid Payments
+                      </h3>
+                      <p className="text-3xl font-bold text-red-600">
+                        {stats.payments.unpaid}
+                      </p>
+                      <p className="text-sm text-red-700 mt-2">
+                        PHP {stats.payments.unpaidAmount.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
-        )}
 
-        {activeTab === "settings" && (
-          <div>
-            <h2 className="text-xl font-semibold mb-6">System Statistics</h2>
+          {/* User Modal */}
+          {showUserModal && (
+            <UserModal
+              user={editingUser}
+              onSave={
+                editingUser
+                  ? (data) => handleUpdateUser(editingUser.id, data)
+                  : handleCreateUser
+              }
+              onClose={() => {
+                setShowUserModal(false);
+                setEditingUser(null);
+              }}
+            />
+          )}
 
-            {loading ? (
-              <div className="text-center py-8">Loading...</div>
-            ) : stats ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Users Stats */}
-                <div className="bg-purple-50 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-purple-900 mb-4">
-                    Users
-                  </h3>
-                  <p className="text-3xl font-bold text-purple-600">
-                    {stats.users.total}
-                  </p>
-                  <div className="mt-4 space-y-2">
-                    {stats.users.byRole.map((item: any) => (
-                      <div
-                        key={item.role}
-                        className="flex justify-between text-sm"
-                      >
-                        <span className="capitalize">{item.role}</span>
-                        <span className="font-medium">{item.count}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Households Stats */}
-                <div className="bg-blue-50 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-blue-900 mb-4">
-                    Households
-                  </h3>
-                  <p className="text-3xl font-bold text-blue-600">
-                    {stats.households.total}
-                  </p>
-                  <div className="mt-4 space-y-2">
-                    {stats.households.byBlock.map((item: any) => (
-                      <div
-                        key={item.block}
-                        className="flex justify-between text-sm"
-                      >
-                        <span>Block {item.block}</span>
-                        <span className="font-medium">{item.count}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Residents Stats */}
-                <div className="bg-green-50 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-green-900 mb-4">
-                    Residents
-                  </h3>
-                  <p className="text-3xl font-bold text-green-600">
-                    {stats.residents}
-                  </p>
-                </div>
-
-                {/* Service Requests Stats */}
-                <div className="bg-yellow-50 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-yellow-900 mb-4">
-                    Pending Requests
-                  </h3>
-                  <p className="text-3xl font-bold text-yellow-600">
-                    {stats.serviceRequests.pending}
-                  </p>
-                </div>
-
-                {/* Reservations Stats */}
-                <div className="bg-indigo-50 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-indigo-900 mb-4">
-                    Upcoming Reservations
-                  </h3>
-                  <p className="text-3xl font-bold text-indigo-600">
-                    {stats.reservations.upcoming}
-                  </p>
-                </div>
-
-                {/* Payments Stats */}
-                <div className="bg-red-50 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-red-900 mb-4">
-                    Unpaid Payments
-                  </h3>
-                  <p className="text-3xl font-bold text-red-600">
-                    {stats.payments.unpaid}
-                  </p>
-                  <p className="text-sm text-red-700 mt-2">
-                    PHP {stats.payments.unpaidAmount.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        )}
+          {/* Household Modal */}
+          {showHouseholdModal && (
+            <HouseholdModal
+              household={editingHousehold}
+              onSave={
+                editingHousehold
+                  ? (data) => handleUpdateHousehold(editingHousehold.id, data)
+                  : handleCreateHousehold
+              }
+              onClose={() => {
+                setShowHouseholdModal(false);
+                setEditingHousehold(null);
+              }}
+            />
+          )}
+        </div>
       </div>
-
-      {/* User Modal */}
-      {showUserModal && (
-        <UserModal
-          user={editingUser}
-          onSave={
-            editingUser
-              ? (data) => handleUpdateUser(editingUser.id, data)
-              : handleCreateUser
-          }
-          onClose={() => {
-            setShowUserModal(false);
-            setEditingUser(null);
-          }}
-        />
-      )}
-
-      {/* Household Modal */}
-      {showHouseholdModal && (
-        <HouseholdModal
-          household={editingHousehold}
-          onSave={
-            editingHousehold
-              ? (data) => handleUpdateHousehold(editingHousehold.id, data)
-              : handleCreateHousehold
-          }
-          onClose={() => {
-            setShowHouseholdModal(false);
-            setEditingHousehold(null);
-          }}
-        />
-      )}
     </div>
   );
 }
