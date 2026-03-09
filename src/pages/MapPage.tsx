@@ -27,6 +27,18 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { logger } from "@/lib/logger";
 
+// Suppress Leaflet touchleave warnings (React Leaflet uses non-standard touch events)
+const originalWarn = console.warn;
+console.warn = (...args) => {
+  if (
+    typeof args[0] === "string" &&
+    args[0].includes("wrong event specified: touchleave")
+  ) {
+    return; // Suppress this specific warning
+  }
+  originalWarn.apply(console, args);
+};
+
 // Fix for default marker icons in React Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({

@@ -86,7 +86,7 @@ export function BookingsTab({ amenityTypes }: BookingsTabProps) {
   const loadReservations = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem("hoa_token");
+      const token = localStorage.getItem("token");
 
       // Fetch all reservations
       const response = await fetch("/api/admin/reservations", {
@@ -151,7 +151,7 @@ export function BookingsTab({ amenityTypes }: BookingsTabProps) {
   ) => {
     try {
       setIsProcessing(reservationId);
-      const token = localStorage.getItem("hoa_token");
+      const token = localStorage.getItem("token");
 
       const response = await fetch(
         `/api/admin/reservations/${reservationId}/status`,

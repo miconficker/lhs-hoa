@@ -74,7 +74,7 @@ export function TimeBlocksTab({ amenityTypes }: TimeBlocksTabProps) {
   const loadTimeBlocks = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem("hoa_token");
+      const token = localStorage.getItem("token");
 
       const response = await fetch("/api/admin/time-blocks", {
         headers: {
@@ -135,7 +135,7 @@ export function TimeBlocksTab({ amenityTypes }: TimeBlocksTabProps) {
 
     try {
       setIsSubmitting(true);
-      const token = localStorage.getItem("hoa_token");
+      const token = localStorage.getItem("token");
 
       const input: CreateTimeBlockInput = {
         amenity_type: formData.amenity_type as AmenityType,
@@ -181,7 +181,7 @@ export function TimeBlocksTab({ amenityTypes }: TimeBlocksTabProps) {
 
     try {
       setIsDeleting(blockId);
-      const token = localStorage.getItem("hoa_token");
+      const token = localStorage.getItem("token");
 
       const response = await fetch(`/api/admin/time-blocks/${blockId}`, {
         method: "DELETE",

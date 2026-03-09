@@ -128,7 +128,7 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
   const loadRentals = async () => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem("hoa_token");
+      const token = localStorage.getItem("token");
 
       const response = await fetch("/api/admin/external-rentals", {
         headers: {
@@ -194,7 +194,7 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
 
     try {
       setIsSubmitting(true);
-      const token = localStorage.getItem("hoa_token");
+      const token = localStorage.getItem("token");
 
       const input: CreateExternalRentalInput = {
         amenity_type: formData.amenity_type as AmenityType,
@@ -245,7 +245,7 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
 
     try {
       setIsDeleting(rentalId);
-      const token = localStorage.getItem("hoa_token");
+      const token = localStorage.getItem("token");
 
       const response = await fetch(`/api/admin/external-rentals/${rentalId}`, {
         method: "DELETE",
@@ -297,7 +297,7 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
 
     try {
       setIsSubmitting(true);
-      const token = localStorage.getItem("hoa_token");
+      const token = localStorage.getItem("token");
 
       const input: RecordPaymentInput = {
         amount: parseFloat(paymentForm.amount),
