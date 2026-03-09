@@ -61,6 +61,14 @@ import type {
   HouseholdEmployee,
   VehicleRegistration,
   PassType,
+  // Time blocks and external rentals types
+  TimeBlock,
+  ExternalRental,
+  TimeBlocksResponse,
+  ExternalRentalsResponse,
+  CreateTimeBlockInput,
+  CreateExternalRentalInput,
+  RecordPaymentInput,
 } from "@/types";
 
 import { logger } from "@/lib/logger";
@@ -729,6 +737,126 @@ export const api = {
       apiRequest<{ success: boolean }>(`/reservations/${id}`, {
         method: "DELETE",
       }),
+    // Time blocks management (admin only)
+    timeBlocks: {
+      list: (filters?: {
+        amenity_type?: AmenityType;
+        start_date?: string;
+        end_date?: string;
+      }) => {
+        const params = new URLSearchParams();
+        if (filters?.amenity_type)
+          params.append("amenity_type", filters.amenity_type);
+        if (filters?.start_date)
+          params.append("start_date", filters.start_date);
+        if (filters?.end_date) params.append("end_date", filters.end_date);
+        const query = params.toString();
+        return apiRequest<TimeBlocksResponse>(
+          `/reservations/time-blocks${query ? "?" + query : ""}`,
+        );
+      },
+      get: (id: string) =>
+        apiRequest<{ time_block: TimeBlock }>(
+          `/reservations/time-blocks/${id}`,
+        ),
+      create: (input: CreateTimeBlockInput) =>
+        apiRequest<{ time_block: TimeBlock }>("/reservations/time-blocks", {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      update: (id: string, input: Partial<CreateTimeBlockInput>) =>
+        apiRequest<{ time_block: TimeBlock }>(
+          `/reservations/time-blocks/${id}`,
+          {
+            method: "PUT",
+            body: JSON.stringify(input),
+          },
+        ),
+      delete: (id: string) =>
+        apiRequest<{ success: boolean }>(`/reservations/time-blocks/${id}`, {
+          method: "DELETE",
+        }),
+    },
+    // External rentals management (admin only)
+    externalRentals: {
+      list: (filters?: {
+        amenity_type?: AmenityType;
+        start_date?: string;
+        end_date?: string;
+        payment_status?: string;
+      }) => {
+        const params = new URLSearchParams();
+        if (filters?.amenity_type)
+          params.append("amenity_type", filters.amenity_type);
+        if (filters?.start_date)
+          params.append("start_date", filters.start_date);
+        if (filters?.end_date) params.append("end_date", filters.end_date);
+        if (filters?.payment_status)
+          params.append("payment_status", filters.payment_status);
+        const query = params.toString();
+        return apiRequest<ExternalRentalsResponse>(
+          `/reservations/external-rentals${query ? "?" + query : ""}`,
+        );
+      },
+      get: (id: string) =>
+        apiRequest<{ rental: ExternalRental }>(
+          `/reservations/external-rentals/${id}`,
+        ),
+      create: (input: CreateExternalRentalInput) =>
+        apiRequest<{ rental: ExternalRental }>(
+          "/reservations/external-rentals",
+          {
+            method: "POST",
+            body: JSON.stringify(input),
+          },
+        ),
+      update: (
+        id: string,
+        input: Partial<
+          CreateExternalRentalInput & {
+            payment_status?: "unpaid" | "partial" | "paid" | "overdue";
+            amount_paid?: number;
+          }
+        >,
+      ) =>
+        apiRequest<{ rental: ExternalRental }>(
+          `/reservations/external-rentals/${id}`,
+          {
+            method: "PUT",
+            body: JSON.stringify(input),
+          },
+        ),
+      recordPayment: (id: string, input: RecordPaymentInput) =>
+        apiRequest<{
+          rental: ExternalRental;
+          payment_id: string;
+          amount_paid: number;
+        }>(`/reservations/external-rentals/${id}/record-payment`, {
+          method: "POST",
+          body: JSON.stringify(input),
+        }),
+      delete: (id: string) =>
+        apiRequest<{ success: boolean }>(
+          `/reservations/external-rentals/${id}`,
+          {
+            method: "DELETE",
+          },
+        ),
+      export: (filters?: {
+        start_date?: string;
+        end_date?: string;
+        amenity_type?: AmenityType;
+      }) => {
+        const params = new URLSearchParams();
+        if (filters?.start_date)
+          params.append("start_date", filters.start_date);
+        if (filters?.end_date) params.append("end_date", filters.end_date);
+        if (filters?.amenity_type)
+          params.append("amenity_type", filters.amenity_type);
+        const query = params.toString();
+        return `/api/reservations/external-rentals/export${query ? `?${query}` : ""}`;
+      },
+    },
   },
   payments: {
     list: (filters?: {

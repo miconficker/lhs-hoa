@@ -9,9 +9,9 @@ type Env = {
 
 const reservationSchema = z.object({
   household_id: z.string(),
-  amenity_type: z.enum(['clubhouse', 'pool', 'basketball-court']),
+  amenity_type: z.enum(['clubhouse', 'pool', 'basketball-court', 'tennis-court']),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format. Use YYYY-MM-DD'),
-  slot: z.enum(['AM', 'PM']),
+  slot: z.enum(['AM', 'PM', 'FULL_DAY']),
   purpose: z.string().optional(),
 });
 
@@ -98,12 +98,12 @@ reservationsRouter.get('/availability', async (c) => {
     return c.json({ error: 'amenity_type is required' }, 400);
   }
 
-  if (!['clubhouse', 'pool', 'basketball-court'].includes(amenityType)) {
+  if (!['clubhouse', 'pool', 'basketball-court', 'tennis-court'].includes(amenityType)) {
     return c.json({ error: 'Invalid amenity_type' }, 400);
   }
 
   // Get all confirmed/pending reservations for the date range and amenity
-  const query = `
+  const reservationsQuery = `
     SELECT date, slot
     FROM reservations
     WHERE amenity_type = ?
@@ -111,12 +111,42 @@ reservationsRouter.get('/availability', async (c) => {
       AND status IN ('pending', 'confirmed')
   `;
 
-  const reservations = await c.env.DB.prepare(query)
+  const reservations = await c.env.DB.prepare(reservationsQuery)
+    .bind(amenityType, startDate, endDate)
+    .all();
+
+  // Get time blocks for the date range and amenity
+  const timeBlocksQuery = `
+    SELECT date, slot, reason
+    FROM time_blocks
+    WHERE amenity_type = ?
+      AND date BETWEEN ? AND ?
+  `;
+
+  const timeBlocks = await c.env.DB.prepare(timeBlocksQuery)
+    .bind(amenityType, startDate, endDate)
+    .all();
+
+  // Get external rentals for the date range and amenity
+  const externalRentalsQuery = `
+    SELECT date, slot, renter_name
+    FROM external_rentals
+    WHERE amenity_type = ?
+      AND date BETWEEN ? AND ?
+  `;
+
+  const externalRentals = await c.env.DB.prepare(externalRentalsQuery)
     .bind(amenityType, startDate, endDate)
     .all();
 
   // Build availability map
-  const availability: Record<string, { am_available: boolean; pm_available: boolean }> = {};
+  const availability: Record<string, {
+    am_available: boolean;
+    pm_available: boolean;
+    am_blocked: boolean;
+    pm_blocked: boolean;
+    block_reason?: string;
+  }> = {};
 
   // Parse dates and initialize all as available
   const start = new Date(startDate);
@@ -125,7 +155,12 @@ reservationsRouter.get('/availability', async (c) => {
 
   while (currentDate <= end) {
     const dateStr = currentDate.toISOString().split('T')[0];
-    availability[dateStr] = { am_available: true, pm_available: true };
+    availability[dateStr] = {
+      am_available: true,
+      pm_available: true,
+      am_blocked: false,
+      pm_blocked: false
+    };
     currentDate.setDate(currentDate.getDate() + 1);
   }
 
@@ -135,10 +170,59 @@ reservationsRouter.get('/availability', async (c) => {
     const slot = row.slot as string;
 
     if (availability[dateStr]) {
-      if (slot === 'AM') {
+      if (slot === 'AM' || slot === 'FULL_DAY') {
         availability[dateStr].am_available = false;
-      } else if (slot === 'PM') {
+      }
+      if (slot === 'PM' || slot === 'FULL_DAY') {
         availability[dateStr].pm_available = false;
+      }
+    }
+  }
+
+  // Mark blocked slots based on time blocks
+  for (const row of timeBlocks.results || []) {
+    const dateStr = row.date as string;
+    const slot = row.slot as string;
+    const reason = row.reason as string;
+
+    if (availability[dateStr]) {
+      if (slot === 'AM' || slot === 'FULL_DAY') {
+        availability[dateStr].am_available = false;
+        availability[dateStr].am_blocked = true;
+        if (!availability[dateStr].block_reason) {
+          availability[dateStr].block_reason = reason;
+        }
+      }
+      if (slot === 'PM' || slot === 'FULL_DAY') {
+        availability[dateStr].pm_available = false;
+        availability[dateStr].pm_blocked = true;
+        if (!availability[dateStr].block_reason) {
+          availability[dateStr].block_reason = reason;
+        }
+      }
+    }
+  }
+
+  // Mark unavailable slots based on external rentals
+  for (const row of externalRentals.results || []) {
+    const dateStr = row.date as string;
+    const slot = row.slot as string;
+    const renterName = row.renter_name as string;
+
+    if (availability[dateStr]) {
+      if (slot === 'AM' || slot === 'FULL_DAY') {
+        availability[dateStr].am_available = false;
+        availability[dateStr].am_blocked = true;
+        if (!availability[dateStr].block_reason) {
+          availability[dateStr].block_reason = `External rental: ${renterName}`;
+        }
+      }
+      if (slot === 'PM' || slot === 'FULL_DAY') {
+        availability[dateStr].pm_available = false;
+        availability[dateStr].pm_blocked = true;
+        if (!availability[dateStr].block_reason) {
+          availability[dateStr].block_reason = `External rental: ${renterName}`;
+        }
       }
     }
   }
@@ -146,9 +230,12 @@ reservationsRouter.get('/availability', async (c) => {
   // Convert to array format
   const availabilityList = Object.entries(availability).map(([date, slots]) => ({
     date,
-    amenity_type: amenityType as 'clubhouse' | 'pool' | 'basketball-court',
+    amenity_type: amenityType as 'clubhouse' | 'pool' | 'basketball-court' | 'tennis-court',
     am_available: slots.am_available,
     pm_available: slots.pm_available,
+    am_blocked: slots.am_blocked,
+    pm_blocked: slots.pm_blocked,
+    block_reason: slots.block_reason,
   }));
 
   return c.json({ availability: availabilityList });
@@ -232,6 +319,34 @@ reservationsRouter.post('/', async (c) => {
   if (existingReservation) {
     return c.json({
       error: 'This slot is already booked. Please select a different date or time slot.'
+    }, 409);
+  }
+
+  // Check for time blocks
+  const timeBlock = await c.env.DB.prepare(
+    `SELECT reason FROM time_blocks
+     WHERE amenity_type = ?
+       AND date = ?
+       AND slot IN (?, 'FULL_DAY')`
+  ).bind(amenity_type, date, slot).first();
+
+  if (timeBlock) {
+    return c.json({
+      error: `This slot is blocked: ${timeBlock.reason}. Please select a different date or time slot.`
+    }, 409);
+  }
+
+  // Check for external rentals
+  const externalRental = await c.env.DB.prepare(
+    `SELECT renter_name FROM external_rentals
+     WHERE amenity_type = ?
+       AND date = ?
+       AND slot IN (?, 'FULL_DAY')`
+  ).bind(amenity_type, date, slot).first();
+
+  if (externalRental) {
+    return c.json({
+      error: `This slot is reserved for an external rental. Please select a different date or time slot.`
     }, 409);
   }
 
