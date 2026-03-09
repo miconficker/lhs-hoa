@@ -46,12 +46,34 @@ export function ServiceRequestsPage() {
     category?: string;
   }>({});
   const [showFilters, setShowFilters] = useState(false);
+  const [userHouseholdId, setUserHouseholdId] = useState<string>("");
 
   const isAdmin = user?.role === "admin" || user?.role === "staff";
 
   useEffect(() => {
-    loadRequests();
-  }, [filters]);
+    loadUserHousehold();
+  }, []);
+
+  useEffect(() => {
+    if (userHouseholdId) {
+      loadRequests();
+    }
+  }, [filters, userHouseholdId]);
+
+  async function loadUserHousehold() {
+    if (!user) return;
+
+    // Get user's household
+    const houseResult = await api.households.list();
+    if (houseResult.data) {
+      const userHouseholds = houseResult.data.households.filter(
+        (h: any) => h.owner_id === user.id,
+      );
+      if (userHouseholds.length > 0) {
+        setUserHouseholdId(userHouseholds[0].id);
+      }
+    }
+  }
 
   async function loadRequests() {
     setLoading(true);

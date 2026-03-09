@@ -12,6 +12,7 @@ import {
   Badge,
   Calendar,
   Wallet,
+  RefreshCcw,
 } from "lucide-react";
 import type {
   HouseholdEmployee,
@@ -77,7 +78,6 @@ export function PassesPage() {
   const [employees, setEmployees] = useState<HouseholdEmployee[]>([]);
   const [vehicles, setVehicles] = useState<VehicleRegistration[]>([]);
   const [fees, setFees] = useState<PassFee[]>([]);
-  const [households, setHouseholds] = useState<any[]>([]);
   const [selectedHouseholdId, setSelectedHouseholdId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -120,7 +120,6 @@ export function PassesPage() {
       const userHouseholds = houseResult.data.households.filter(
         (h: any) => h.owner_id === user?.id,
       );
-      setHouseholds(userHouseholds);
       if (userHouseholds.length > 0 && !selectedHouseholdId) {
         setSelectedHouseholdId(userHouseholds[0].id);
       }
@@ -249,11 +248,12 @@ export function PassesPage() {
   function getFeeForType(passType: PassType): number {
     if (passType === "both") {
       const stickerFee =
-        fees.find((f) => f.fee_type === "sticker")?.amount || 0;
-      const rfidFee = fees.find((f) => f.fee_type === "rfid")?.amount || 0;
+        fees.find((f) => f.pass_type_code === "sticker")?.amount || 0;
+      const rfidFee =
+        fees.find((f) => f.pass_type_code === "rfid")?.amount || 0;
       return stickerFee + rfidFee;
     }
-    const fee = fees.find((f) => f.fee_type === passType);
+    const fee = fees.find((f) => f.pass_type_code === passType);
     return fee?.amount || 0;
   }
 
@@ -267,6 +267,57 @@ export function PassesPage() {
     setPaymentForEmployee(employee);
     setPaymentForVehicle(null);
     setShowPayNowModal(true);
+  }
+
+  async function handleRequestRfidReplacement(vehicleId: string) {
+    const reason = prompt(
+      "Please provide a reason for RFID replacement (e.g., Card is damaged, Lost card):",
+    );
+    if (!reason) return;
+
+    setError("");
+    setSuccessMessage("");
+
+    const result = await api.passRequests.vehicles.requestRfidReplacement(
+      vehicleId,
+      {
+        reason,
+      },
+    );
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setSuccessMessage(
+        "RFID replacement request submitted! Admin will review and process your request.",
+      );
+      loadData();
+    }
+  }
+
+  async function handleRequestStickerRenewal(vehicleId: string) {
+    if (
+      !confirm(
+        "This will create a new sticker pass for next year with a fee. Continue?",
+      )
+    ) {
+      return;
+    }
+
+    setError("");
+    setSuccessMessage("");
+
+    const result =
+      await api.passRequests.vehicles.requestStickerRenewal(vehicleId);
+
+    if (result.error) {
+      setError(result.error);
+    } else if (result.data) {
+      setSuccessMessage(
+        `Sticker renewal requested! New sticker for ${result.data.new_pass.expiry_year} created. Fee: ₱${result.data.new_pass.amount_due}`,
+      );
+      loadData();
+    }
   }
 
   function getStats() {
@@ -761,9 +812,18 @@ export function PassesPage() {
                     <p className="text-sm text-muted-foreground">
                       {vehicle.make} {vehicle.model} ({vehicle.color})
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      {passTypeLabels[vehicle.pass_type]}
-                    </p>
+                    <div className="flex gap-1 flex-wrap mt-1">
+                      {vehicle.sticker_pass_id && (
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
+                          Sticker
+                        </span>
+                      )}
+                      {vehicle.rfid_pass_id && (
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-700">
+                          RFID
+                        </span>
+                      )}
+                    </div>
                     {vehicle.rfid_code && (
                       <p className="text-xs text-gray-400 mt-1">
                         RFID: {vehicle.rfid_code}
@@ -789,6 +849,28 @@ export function PassesPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {/* Request RFID Replacement button */}
+                  {vehicle.rfid_pass_id && vehicle.status === "active" && (
+                    <button
+                      onClick={() => handleRequestRfidReplacement(vehicle.id)}
+                      className="px-3 py-1.5 text-sm border border-orange-300 text-orange-600 rounded-lg hover:bg-orange-50 flex items-center gap-1.5"
+                      title="Request RFID Replacement"
+                    >
+                      <RefreshCcw className="w-3.5 h-3.5" />
+                      Replace RFID
+                    </button>
+                  )}
+                  {/* Renew Sticker button */}
+                  {vehicle.sticker_pass_id && vehicle.status === "active" && (
+                    <button
+                      onClick={() => handleRequestStickerRenewal(vehicle.id)}
+                      className="px-3 py-1.5 text-sm border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 flex items-center gap-1.5"
+                      title="Renew Sticker for Next Year"
+                    >
+                      <Badge className="w-3.5 h-3.5" />
+                      Renew Sticker
+                    </button>
+                  )}
                   {/* Pay Now button for unpaid vehicles */}
                   {vehicle.payment_status === "unpaid" &&
                     vehicle.amount_due && (
@@ -834,7 +916,7 @@ export function PassesPage() {
           setPaymentForVehicle(null);
           setPaymentForEmployee(null);
         }}
-        selectedHouseholdId={selectedHouseholdId}
+        householdId={selectedHouseholdId}
         defaultType={
           paymentForVehicle
             ? "vehicle_pass"

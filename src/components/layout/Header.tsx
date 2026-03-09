@@ -23,6 +23,7 @@ import {
   Wrench,
   CarFront,
   ChevronDown,
+  Settings,
 } from "lucide-react";
 
 interface NavItem {
@@ -125,6 +126,12 @@ const navItems: NavItem[] = [
       },
       { to: "/admin/common-areas", label: "Common Areas", roles: ["admin"] },
     ],
+  },
+  {
+    to: "/admin",
+    icon: Settings,
+    label: "Admin Panel",
+    roles: ["admin"],
   },
 ];
 

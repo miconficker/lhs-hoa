@@ -152,6 +152,10 @@ export interface Reservation {
   created_at: string;
 }
 
+export interface ReservationWithHousehold extends Reservation {
+  household_address?: string; // Populated by JOIN in admin queries
+}
+
 export interface AmenityAvailability {
   date: string;
   amenity_type: AmenityType;

@@ -16,6 +16,8 @@ import {
   Save,
   Trash2,
   Edit,
+  Plus,
+  RefreshCcw,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge as UIBadge } from "@/components/ui/badge";
@@ -76,12 +78,6 @@ const employeeTypeLabels: Record<EmployeeType, string> = {
   other: "Other",
 };
 
-const passTypeLabels: Record<PassType, string> = {
-  sticker: "Sticker Only",
-  rfid: "RFID Only",
-  both: "Sticker + RFID",
-};
-
 interface FilterState {
   status?: EmployeeStatus | VehicleStatus;
   paymentStatus?: VehiclePaymentStatus;
@@ -116,6 +112,8 @@ export function PassManagementPage() {
   const [employees, setEmployees] = useState<HouseholdEmployee[]>([]);
   const [vehicles, setVehicles] = useState<VehicleRegistration[]>([]);
   const [fees, setFees] = useState<PassFee[]>([]);
+  const [allHouseholds, setAllHouseholds] = useState<any[]>([]);
+  const [replacementRequests, setReplacementRequests] = useState<any[]>([]);
 
   // Filters
   const [employeeFilters, setEmployeeFilters] = useState<FilterState>({});
@@ -137,6 +135,31 @@ export function PassManagementPage() {
     rfidFee: "",
     showEditModal: false,
   });
+
+  // Admin creation states
+  const [showEmployeeModal, setShowEmployeeModal] = useState(false);
+  const [employeeForm, setEmployeeForm] = useState({
+    household_id: "",
+    full_name: "",
+    employee_type: "driver" as EmployeeType,
+    photo: "",
+    expiry_date: "",
+  });
+
+  const [showVehicleModal, setShowVehicleModal] = useState(false);
+  const [vehicleForm, setVehicleForm] = useState({
+    household_id: "",
+    plate_number: "",
+    make: "",
+    model: "",
+    color: "",
+    has_sticker: false,
+    has_rfid: false,
+  });
+
+  // Household search states
+  const [employeeHouseholdSearch, setEmployeeHouseholdSearch] = useState("");
+  const [vehicleHouseholdSearch, setVehicleHouseholdSearch] = useState("");
 
   useEffect(() => {
     loadData();
@@ -210,14 +233,29 @@ export function PassManagementPage() {
       if (feesResult.data) {
         setFees(feesResult.data.fees);
         const stickerFee = feesResult.data.fees.find(
-          (f) => f.fee_type === "sticker",
+          (f) => f.pass_type_code === "sticker",
         );
-        const rfidFee = feesResult.data.fees.find((f) => f.fee_type === "rfid");
+        const rfidFee = feesResult.data.fees.find(
+          (f) => f.pass_type_code === "rfid",
+        );
         setEditFees({
           stickerFee: stickerFee?.amount.toString() || "",
           rfidFee: rfidFee?.amount.toString() || "",
           showEditModal: false,
         });
+      }
+
+      // Load all households for admin creation
+      const householdsResult = await api.admin.listHouseholds();
+      if (householdsResult.data) {
+        setAllHouseholds(householdsResult.data.households);
+      }
+
+      // Load replacement requests
+      const replacementsResult =
+        await api.admin.passManagement.rfidReplacementRequests.list();
+      if (replacementsResult.data) {
+        setReplacementRequests(replacementsResult.data.requests);
       }
     } catch (err) {
       logger.error("Error loading data", err, {
@@ -368,6 +406,32 @@ export function PassManagementPage() {
     }
   }
 
+  async function handleReplaceRfid(id: string) {
+    const notes = prompt(
+      "Reason for RFID replacement (e.g., damaged card):",
+      "Damaged - needs replacement",
+    );
+    if (notes === null) {
+      return; // User cancelled
+    }
+
+    setError("");
+    setSuccessMessage("");
+
+    const result = await api.admin.passManagement.vehicles.replaceRfid(id, {
+      notes: notes || undefined,
+    });
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setSuccessMessage(
+        "RFID replaced successfully! New RFID created and requires payment.",
+      );
+      loadData();
+    }
+  }
+
   async function handleUpdateFees() {
     setError("");
     setSuccessMessage("");
@@ -386,8 +450,100 @@ export function PassManagementPage() {
     }
   }
 
+  async function handleApproveReplacement(requestId: string) {
+    const notes = prompt("Admin notes (optional):");
+    setError("");
+    setSuccessMessage("");
+
+    const result =
+      await api.admin.passManagement.rfidReplacementRequests.approve(
+        requestId,
+        { admin_notes: notes || undefined },
+      );
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setSuccessMessage(
+        "Replacement request approved! New RFID created and requires payment.",
+      );
+      loadData();
+    }
+  }
+
+  async function handleRejectReplacement(requestId: string) {
+    const reason = prompt("Reason for rejection (required):");
+    if (!reason) return;
+
+    setError("");
+    setSuccessMessage("");
+
+    const result =
+      await api.admin.passManagement.rfidReplacementRequests.reject(requestId, {
+        reason,
+      });
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setSuccessMessage("Replacement request rejected.");
+      loadData();
+    }
+  }
+
+  async function handleCreateEmployee() {
+    setError("");
+    setSuccessMessage("");
+
+    const result = await api.admin.passManagement.employees.create({
+      household_id: employeeForm.household_id,
+      full_name: employeeForm.full_name,
+      employee_type: employeeForm.employee_type,
+      photo: employeeForm.photo
+        ? (employeeForm.photo as unknown as File)
+        : undefined,
+      expiry_date: employeeForm.expiry_date || undefined,
+    });
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setSuccessMessage("Employee pass created successfully!");
+      setShowEmployeeModal(false);
+      loadData();
+    }
+  }
+
+  async function handleCreateVehicle() {
+    setError("");
+    setSuccessMessage("");
+
+    const result = await api.admin.passManagement.vehicles.create({
+      household_id: vehicleForm.household_id,
+      plate_number: vehicleForm.plate_number,
+      make: vehicleForm.make,
+      model: vehicleForm.model,
+      color: vehicleForm.color,
+      has_sticker: vehicleForm.has_sticker,
+      has_rfid: vehicleForm.has_rfid,
+    });
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setSuccessMessage("Vehicle registration created successfully!");
+      setShowVehicleModal(false);
+      loadData();
+    }
+  }
+
   function getFeeForType(passType: PassType): number {
-    const fee = fees.find((f) => f.fee_type === passType);
+    if (passType === "both") {
+      const stickerFee = fees.find((f) => f.pass_type_code === "sticker");
+      const rfidFee = fees.find((f) => f.pass_type_code === "rfid");
+      return (stickerFee?.amount || 0) + (rfidFee?.amount || 0);
+    }
+    const fee = fees.find((f) => f.pass_type_code === passType);
     return fee?.amount || 0;
   }
 
@@ -507,10 +663,22 @@ export function PassManagementPage() {
 
       {/* Tabbed Interface */}
       <Tabs defaultValue="employees" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="employees">Employees</TabsTrigger>
           <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
           <TabsTrigger value="fees">Fees</TabsTrigger>
+          <TabsTrigger value="replacements">
+            Replacement Requests
+            {replacementRequests.filter((r) => r.status === "pending").length >
+              0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-xs bg-red-500 text-white rounded-full">
+                {
+                  replacementRequests.filter((r) => r.status === "pending")
+                    .length
+                }
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         {/* Employees Tab */}
@@ -556,6 +724,24 @@ export function PassManagementPage() {
               </Select>
               <Button onClick={loadData} variant="outline" size="sm">
                 Reload
+              </Button>
+              <Button
+                onClick={() => {
+                  setEmployeeForm({
+                    household_id: "",
+                    full_name: "",
+                    employee_type: "driver",
+                    photo: "",
+                    expiry_date: "",
+                  });
+                  setEmployeeHouseholdSearch("");
+                  setShowEmployeeModal(true);
+                }}
+                className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700"
+                size="sm"
+              >
+                <Plus className="w-4 h-4" />
+                Add Employee
               </Button>
             </div>
 
@@ -775,6 +961,26 @@ export function PassManagementPage() {
               <Button onClick={loadData} variant="outline" size="sm">
                 Reload
               </Button>
+              <Button
+                onClick={() => {
+                  setVehicleForm({
+                    household_id: "",
+                    plate_number: "",
+                    make: "",
+                    model: "",
+                    color: "",
+                    has_sticker: false,
+                    has_rfid: false,
+                  });
+                  setVehicleHouseholdSearch("");
+                  setShowVehicleModal(true);
+                }}
+                className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700"
+                size="sm"
+              >
+                <Plus className="w-4 h-4" />
+                Add Vehicle
+              </Button>
             </div>
 
             {/* Vehicle Table */}
@@ -824,8 +1030,19 @@ export function PassManagementPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-gray-700 dark:text-card-foreground">
-                          {passTypeLabels[vehicle.pass_type]}
+                        <td className="py-3 px-4">
+                          <div className="flex gap-1 flex-wrap">
+                            {vehicle.sticker_pass_id && (
+                              <UIBadge className="bg-blue-100 text-blue-700 text-xs">
+                                Sticker
+                              </UIBadge>
+                            )}
+                            {vehicle.rfid_pass_id && (
+                              <UIBadge className="bg-green-100 text-green-700 text-xs">
+                                RFID
+                              </UIBadge>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-4 text-gray-700 text-sm">
                           {vehicle.household_address || "N/A"}
@@ -927,7 +1144,8 @@ export function PassManagementPage() {
                                 <Wallet className="w-4 h-4" />
                               </Button>
                             )}
-                            {vehicle.status === "pending_approval" && (
+                            {(vehicle.status === "pending_payment" ||
+                              vehicle.status === "pending_approval") && (
                               <Button
                                 onClick={() =>
                                   handleUpdateVehicleStatus(
@@ -943,6 +1161,18 @@ export function PassManagementPage() {
                                 <Check className="w-4 h-4" />
                               </Button>
                             )}
+                            {vehicle.rfid_pass_id &&
+                              vehicle.status === "active" && (
+                                <Button
+                                  onClick={() => handleReplaceRfid(vehicle.id)}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-orange-600 hover:text-orange-700"
+                                  title="Replace RFID"
+                                >
+                                  <RefreshCcw className="w-4 h-4" />
+                                </Button>
+                              )}
                             {vehicle.status === "active" && (
                               <Button
                                 onClick={() =>
@@ -1065,6 +1295,157 @@ export function PassManagementPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </TabsContent>
+
+        {/* Replacement Requests Tab */}
+        <TabsContent value="replacements" className="space-y-4">
+          <div className="bg-card rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-card-foreground">
+                RFID Replacement Requests
+              </h2>
+              <Button onClick={loadData} variant="outline" size="sm">
+                <RefreshCcw className="w-4 h-4 mr-2" />
+                Reload
+              </Button>
+            </div>
+
+            {replacementRequests.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No replacement requests found
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Vehicle
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Address
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Reason
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Requested By
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Status
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Date
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {replacementRequests.map((request) => (
+                      <tr key={request.id} className="border-b hover:bg-muted">
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Car className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <div className="font-medium text-card-foreground">
+                                {request.plate_number}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {request.make} {request.model} ({request.color})
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-gray-700 text-sm">
+                          {request.household_address || "N/A"}
+                        </td>
+                        <td className="py-3 px-4 text-gray-700 text-sm">
+                          {request.reason}
+                        </td>
+                        <td className="py-3 px-4 text-gray-700 text-sm">
+                          <div>
+                            <div className="font-medium">
+                              {request.requester_name || "N/A"}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {request.requester_email || ""}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <UIBadge
+                            className={
+                              request.status === "pending"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : request.status === "completed"
+                                  ? "bg-green-100 text-green-700"
+                                  : request.status === "rejected"
+                                    ? "bg-red-100 text-red-700"
+                                    : "bg-gray-100 text-gray-700"
+                            }
+                          >
+                            {request.status}
+                          </UIBadge>
+                          {request.admin_notes && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              Note: {request.admin_notes}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-gray-700 text-sm">
+                          {new Date(request.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            {request.status === "pending" && (
+                              <>
+                                <Button
+                                  onClick={() =>
+                                    handleApproveReplacement(request.id)
+                                  }
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-green-600 hover:text-green-700"
+                                  title="Approve Request"
+                                >
+                                  <Check className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  onClick={() =>
+                                    handleRejectReplacement(request.id)
+                                  }
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 hover:text-destructive"
+                                  title="Reject Request"
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </Button>
+                              </>
+                            )}
+                            {request.status === "completed" && (
+                              <span className="text-xs text-gray-500">
+                                Completed - New RFID created
+                              </span>
+                            )}
+                            {request.status === "rejected" && (
+                              <span className="text-xs text-gray-500">
+                                Rejected
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </TabsContent>
       </Tabs>
@@ -1275,6 +1656,402 @@ export function PassManagementPage() {
             <Button onClick={handleUpdateFees}>
               <Save className="w-4 h-4 mr-2" />
               Save Fees
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Employee Modal */}
+      <Dialog open={showEmployeeModal} onOpenChange={setShowEmployeeModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add Employee Pass</DialogTitle>
+            <DialogDescription>
+              Create a new employee pass for a household
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="employee-household">Household *</Label>
+              <div className="relative">
+                <Input
+                  id="employee-household"
+                  value={employeeHouseholdSearch}
+                  onChange={(e) => {
+                    setEmployeeHouseholdSearch(e.target.value);
+                    const matched = allHouseholds.find(
+                      (hh) =>
+                        hh.id === e.target.value ||
+                        (hh.address || `Block ${hh.block} Lot ${hh.lot}`)
+                          .toLowerCase()
+                          .includes(e.target.value.toLowerCase()),
+                    );
+                    if (matched && e.target.value === matched.id) {
+                      setEmployeeForm({
+                        ...employeeForm,
+                        household_id: matched.id,
+                      });
+                    }
+                  }}
+                  placeholder="Search by address, block, or lot..."
+                  className="w-full"
+                  autoComplete="off"
+                />
+                {employeeHouseholdSearch && (
+                  <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    {allHouseholds
+                      .filter(
+                        (hh) =>
+                          !employeeHouseholdSearch ||
+                          (hh.address || `Block ${hh.block} Lot ${hh.lot}`)
+                            .toLowerCase()
+                            .includes(employeeHouseholdSearch.toLowerCase()) ||
+                          hh.id
+                            .toLowerCase()
+                            .includes(employeeHouseholdSearch.toLowerCase()),
+                      )
+                      .filter((hh) => hh.id !== employeeForm.household_id)
+                      .slice(0, 20)
+                      .map((hh) => (
+                        <div
+                          key={hh.id}
+                          className="px-3 py-2 hover:bg-muted cursor-pointer text-sm"
+                          onClick={() => {
+                            setEmployeeForm({
+                              ...employeeForm,
+                              household_id: hh.id,
+                            });
+                            setEmployeeHouseholdSearch(
+                              hh.address || `Block ${hh.block} Lot ${hh.lot}`,
+                            );
+                          }}
+                        >
+                          <div className="font-medium">
+                            {hh.address || `Block ${hh.block} Lot ${hh.lot}`}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            ID: {hh.id}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+              {employeeForm.household_id && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Selected:{" "}
+                  {allHouseholds.find(
+                    (hh) => hh.id === employeeForm.household_id,
+                  )?.address ||
+                    `Block ${allHouseholds.find((hh) => hh.id === employeeForm.household_id)?.block} Lot ${allHouseholds.find((hh) => hh.id === employeeForm.household_id)?.lot}`}
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="employee-name">Full Name *</Label>
+              <Input
+                id="employee-name"
+                value={employeeForm.full_name}
+                onChange={(e) =>
+                  setEmployeeForm({
+                    ...employeeForm,
+                    full_name: e.target.value,
+                  })
+                }
+                placeholder="Enter employee's full name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="employee-type">Employee Type *</Label>
+              <Select
+                value={employeeForm.employee_type}
+                onValueChange={(value) =>
+                  setEmployeeForm({
+                    ...employeeForm,
+                    employee_type: value as EmployeeType,
+                  })
+                }
+              >
+                <SelectTrigger id="employee-type">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="driver">Driver</SelectItem>
+                  <SelectItem value="housekeeper">Housekeeper</SelectItem>
+                  <SelectItem value="caretaker">Caretaker</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="employee-expiry">Expiry Date (Optional)</Label>
+              <Input
+                id="employee-expiry"
+                type="date"
+                value={employeeForm.expiry_date}
+                onChange={(e) =>
+                  setEmployeeForm({
+                    ...employeeForm,
+                    expiry_date: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="employee-photo">Photo (Optional)</Label>
+              <Input
+                id="employee-photo"
+                type="file"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const base64 = await new Promise<string>((resolve) => {
+                      const reader = new FileReader();
+                      reader.onload = (e) =>
+                        resolve(e.target?.result as string);
+                      reader.readAsDataURL(file);
+                    });
+                    setEmployeeForm({ ...employeeForm, photo: base64 });
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowEmployeeModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateEmployee}
+              disabled={
+                !employeeForm.household_id ||
+                !employeeForm.full_name ||
+                !employeeForm.employee_type
+              }
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Create Pass
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Vehicle Modal */}
+      <Dialog open={showVehicleModal} onOpenChange={setShowVehicleModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add Vehicle Registration</DialogTitle>
+            <DialogDescription>
+              Register a new vehicle for a household
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="vehicle-household">Household *</Label>
+              <div className="relative">
+                <Input
+                  id="vehicle-household"
+                  value={vehicleHouseholdSearch}
+                  onChange={(e) => {
+                    setVehicleHouseholdSearch(e.target.value);
+                    const matched = allHouseholds.find(
+                      (hh) =>
+                        hh.id === e.target.value ||
+                        (hh.address || `Block ${hh.block} Lot ${hh.lot}`)
+                          .toLowerCase()
+                          .includes(e.target.value.toLowerCase()),
+                    );
+                    if (matched && e.target.value === matched.id) {
+                      setVehicleForm({
+                        ...vehicleForm,
+                        household_id: matched.id,
+                      });
+                    }
+                  }}
+                  placeholder="Search by address, block, or lot..."
+                  className="w-full"
+                  autoComplete="off"
+                />
+                {vehicleHouseholdSearch && (
+                  <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    {allHouseholds
+                      .filter(
+                        (hh) =>
+                          !vehicleHouseholdSearch ||
+                          (hh.address || `Block ${hh.block} Lot ${hh.lot}`)
+                            .toLowerCase()
+                            .includes(vehicleHouseholdSearch.toLowerCase()) ||
+                          hh.id
+                            .toLowerCase()
+                            .includes(vehicleHouseholdSearch.toLowerCase()),
+                      )
+                      .filter((hh) => hh.id !== vehicleForm.household_id)
+                      .slice(0, 20)
+                      .map((hh) => (
+                        <div
+                          key={hh.id}
+                          className="px-3 py-2 hover:bg-muted cursor-pointer text-sm"
+                          onClick={() => {
+                            setVehicleForm({
+                              ...vehicleForm,
+                              household_id: hh.id,
+                            });
+                            setVehicleHouseholdSearch(
+                              hh.address || `Block ${hh.block} Lot ${hh.lot}`,
+                            );
+                          }}
+                        >
+                          <div className="font-medium">
+                            {hh.address || `Block ${hh.block} Lot ${hh.lot}`}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            ID: {hh.id}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+              {vehicleForm.household_id && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Selected:{" "}
+                  {allHouseholds.find(
+                    (hh) => hh.id === vehicleForm.household_id,
+                  )?.address ||
+                    `Block ${allHouseholds.find((hh) => hh.id === vehicleForm.household_id)?.block} Lot ${allHouseholds.find((hh) => hh.id === vehicleForm.household_id)?.lot}`}
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="vehicle-plate">Plate Number *</Label>
+              <Input
+                id="vehicle-plate"
+                value={vehicleForm.plate_number}
+                onChange={(e) =>
+                  setVehicleForm({
+                    ...vehicleForm,
+                    plate_number: e.target.value.toUpperCase(),
+                  })
+                }
+                placeholder="ABC 123"
+                className="uppercase"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="vehicle-make">Make *</Label>
+                <Input
+                  id="vehicle-make"
+                  value={vehicleForm.make}
+                  onChange={(e) =>
+                    setVehicleForm({ ...vehicleForm, make: e.target.value })
+                  }
+                  placeholder="Toyota"
+                />
+              </div>
+              <div>
+                <Label htmlFor="vehicle-model">Model *</Label>
+                <Input
+                  id="vehicle-model"
+                  value={vehicleForm.model}
+                  onChange={(e) =>
+                    setVehicleForm({ ...vehicleForm, model: e.target.value })
+                  }
+                  placeholder="Vios"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="vehicle-color">Color *</Label>
+              <Input
+                id="vehicle-color"
+                value={vehicleForm.color}
+                onChange={(e) =>
+                  setVehicleForm({ ...vehicleForm, color: e.target.value })
+                }
+                placeholder="White"
+              />
+            </div>
+            <div>
+              <Label>Pass Types *</Label>
+              <div className="flex gap-4 mt-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={vehicleForm.has_sticker}
+                    onChange={(e) =>
+                      setVehicleForm({
+                        ...vehicleForm,
+                        has_sticker: e.target.checked,
+                      })
+                    }
+                    className="w-4 h-4 rounded"
+                  />
+                  <span>
+                    Sticker Pass (₱
+                    {fees.find((f) => f.pass_type_code === "sticker")?.amount ||
+                      0}
+                    )
+                  </span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={vehicleForm.has_rfid}
+                    onChange={(e) =>
+                      setVehicleForm({
+                        ...vehicleForm,
+                        has_rfid: e.target.checked,
+                      })
+                    }
+                    className="w-4 h-4 rounded"
+                  />
+                  <span>
+                    RFID Pass (₱
+                    {fees.find((f) => f.pass_type_code === "rfid")?.amount || 0}
+                    )
+                  </span>
+                </label>
+              </div>
+              {(vehicleForm.has_sticker || vehicleForm.has_rfid) && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Total Fee: ₱
+                  {(vehicleForm.has_sticker
+                    ? fees.find((f) => f.pass_type_code === "sticker")
+                        ?.amount || 0
+                    : 0) +
+                    (vehicleForm.has_rfid
+                      ? fees.find((f) => f.pass_type_code === "rfid")?.amount ||
+                        0
+                      : 0)}
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowVehicleModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateVehicle}
+              disabled={
+                !vehicleForm.household_id ||
+                !vehicleForm.plate_number ||
+                !vehicleForm.make ||
+                !vehicleForm.model ||
+                !vehicleForm.color ||
+                (!vehicleForm.has_sticker && !vehicleForm.has_rfid)
+              }
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Register Vehicle
             </Button>
           </DialogFooter>
         </DialogContent>

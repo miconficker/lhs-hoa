@@ -389,12 +389,33 @@ passManagementRouter.get('/vehicles', async (c) => {
     const placeholders = householdIds.map(() => '?').join(',');
     const vehicles = await c.env.DB.prepare(`
       SELECT
-        vr.*,
-        h.address as household_address
-      FROM vehicle_registrations vr
-      JOIN households h ON vr.household_id = h.id
-      WHERE vr.household_id IN (${placeholders})
-      ORDER BY vr.created_at DESC
+        v.id,
+        v.household_id,
+        v.household_address,
+        v.plate_number,
+        v.make,
+        v.model,
+        v.color,
+        v.vehicle_status as status,
+        v.sticker_pass_id,
+        v.sticker_number,
+        v.sticker_amount_due,
+        v.sticker_amount_paid,
+        v.sticker_payment_status,
+        v.rfid_pass_id,
+        v.rfid_code,
+        v.rfid_amount_due,
+        v.rfid_amount_paid,
+        v.rfid_payment_status,
+        v.pass_type,
+        v.total_amount_due,
+        v.total_amount_paid,
+        v.total_balance_due,
+        v.created_at,
+        v.updated_at
+      FROM vehicles_with_passes_view v
+      WHERE v.household_id IN (${placeholders})
+      ORDER BY v.created_at DESC
     `).bind(...householdIds).all();
 
     return c.json({ vehicles: vehicles.results || [] });
@@ -646,5 +667,188 @@ passManagementRouter.get('/fees', async (c) => {
   } catch (error) {
     console.error('Error fetching pass fees:', error);
     return c.json({ error: 'Failed to fetch pass fees' }, 500);
+  }
+});
+
+/**
+ * POST /api/pass-requests/vehicles/:id/request-rfid-replacement
+ * Request RFID replacement (user endpoint)
+ * Creates a request that admin needs to approve
+ */
+passManagementRouter.post('/vehicles/:id/request-rfid-replacement', async (c) => {
+  try {
+    const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+    if (!authUser) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const id = c.req.param('id');
+    const body = await c.req.json();
+    const { reason } = body;
+
+    if (!reason) {
+      return c.json({ error: 'Reason is required' }, 400);
+    }
+
+    // Get user's households
+    const households = await c.env.DB.prepare(`
+      SELECT id FROM households WHERE owner_id = ?
+    `).bind(authUser.userId).all();
+    const householdIds = (households.results || []).map((h: any) => h.id);
+
+    // Verify vehicle belongs to user's household
+    const vehicle = await c.env.DB.prepare(`
+      SELECT v.*, r.id as rfid_pass_id
+      FROM vehicles_with_passes_view v
+      WHERE v.id = ? AND v.household_id IN (${householdIds.map(() => '?').join(',')})
+    `).bind(id, ...householdIds).first() as any;
+
+    if (!vehicle) {
+      return c.json({ error: 'Vehicle not found or access denied' }, 404);
+    }
+
+    if (!vehicle.rfid_pass_id) {
+      return c.json({ error: 'Vehicle does not have an RFID pass' }, 400);
+    }
+
+    // Check if there's already a pending request
+    const existingRequest = await c.env.DB.prepare(`
+      SELECT id FROM rfid_replacement_requests
+      WHERE vehicle_id = ? AND status = 'pending'
+    `).bind(id).first();
+
+    if (existingRequest) {
+      return c.json({ error: 'A replacement request is already pending for this vehicle' }, 400);
+    }
+
+    // Create replacement request
+    const requestId = crypto.randomUUID();
+    await c.env.DB.prepare(`
+      INSERT INTO rfid_replacement_requests (id, vehicle_id, household_id, old_rfid_pass_id, reason, requested_by)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(requestId, id, vehicle.household_id, vehicle.rfid_pass_id, reason, authUser.userId).run();
+
+    return c.json({
+      success: true,
+      request: { id: requestId, status: 'pending' }
+    });
+  } catch (error) {
+    console.error('Error requesting RFID replacement:', error);
+    return c.json({ error: 'Failed to request RFID replacement' }, 500);
+  }
+});
+
+/**
+ * POST /api/pass-requests/vehicles/:id/request-sticker-renewal
+ * Request sticker renewal for next year (user endpoint)
+ * Creates a new sticker pass for the following year
+ */
+passManagementRouter.post('/vehicles/:id/request-sticker-renewal', async (c) => {
+  try {
+    const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+    if (!authUser) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const id = c.req.param('id');
+
+    // Get user's households
+    const households = await c.env.DB.prepare(`
+      SELECT id FROM households WHERE owner_id = ?
+    `).bind(authUser.userId).all();
+    const householdIds = (households.results || []).map((h: any) => h.id);
+
+    // Verify vehicle belongs to user's household
+    const vehicle = await c.env.DB.prepare(`
+      SELECT * FROM vehicles_with_passes_view
+      WHERE id = ? AND household_id IN (${householdIds.map(() => '?').join(',')})
+    `).bind(id, ...householdIds).first() as any;
+
+    if (!vehicle) {
+      return c.json({ error: 'Vehicle not found or access denied' }, 404);
+    }
+
+    if (!vehicle.sticker_pass_id) {
+      return c.json({ error: 'Vehicle does not have a sticker pass' }, 400);
+    }
+
+    // Get current sticker fee
+    const fee = await c.env.DB.prepare(`
+      SELECT amount FROM pass_fees WHERE pass_type_id = 'pt-sticker'
+      ORDER BY effective_date DESC LIMIT 1
+    `).first() as any;
+    const stickerFee = fee?.amount || 500;
+
+    // Get next year's expiry (Dec 31 of next year)
+    const nextYearExpiry = `DATE('now', 'start of year', '+2 years', '-1 day')`;
+
+    // Create new sticker pass for next year
+    const newPassId = crypto.randomUUID();
+    const timestamp = new Date().toISOString();
+    const newStickerNumber = `ST-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+    await c.env.DB.prepare(`
+      INSERT INTO vehicle_passes (id, vehicle_id, pass_type_id, identifier, amount_due, amount_paid, payment_status, status, issued_date, expiry_date, created_at, updated_at)
+      VALUES (?, ?, 'pt-sticker', ?, ?, 0, 'unpaid', 'active', DATE('now'), ${nextYearExpiry}, ?, ?)
+    `).bind(newPassId, id, newStickerNumber, stickerFee, timestamp, timestamp).run();
+
+    // Update legacy sticker_number
+    await c.env.DB.prepare(`
+      UPDATE vehicle_registrations
+      SET sticker_number = ?, updated_at = ?
+      WHERE id = ?
+    `).bind(newStickerNumber, timestamp, id).run();
+
+    return c.json({
+      success: true,
+      new_pass: {
+        id: newPassId,
+        identifier: newStickerNumber,
+        amount_due: stickerFee,
+        expiry_year: new Date().getFullYear() + 1
+      }
+    });
+  } catch (error) {
+    console.error('Error requesting sticker renewal:', error);
+    return c.json({ error: 'Failed to request sticker renewal' }, 500);
+  }
+});
+
+/**
+ * GET /api/pass-requests/rfid-replacement-requests
+ * Get user's RFID replacement requests
+ */
+passManagementRouter.get('/rfid-replacement-requests', async (c) => {
+  try {
+    const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+    if (!authUser) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    // Get user's households
+    const households = await c.env.DB.prepare(`
+      SELECT id FROM households WHERE owner_id = ?
+    `).bind(authUser.userId).all();
+    const householdIds = (households.results || []).map((h: any) => h.id);
+
+    const placeholders = householdIds.map(() => '?').join(',');
+    const requests = await c.env.DB.prepare(`
+      SELECT
+        r.*,
+        v.plate_number,
+        v.make,
+        v.model,
+        h.address as household_address
+      FROM rfid_replacement_requests r
+      JOIN vehicle_registrations v ON v.id = r.vehicle_id
+      JOIN households h ON h.id = r.household_id
+      WHERE r.household_id IN (${placeholders})
+      ORDER BY r.created_at DESC
+    `).bind(...householdIds).all();
+
+    return c.json({ requests: requests.results || [] });
+  } catch (error) {
+    console.error('Error fetching replacement requests:', error);
+    return c.json({ error: 'Failed to fetch replacement requests' }, 500);
   }
 });
