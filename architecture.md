@@ -13,6 +13,48 @@ This document describes the architecture of the Laguna Hills HOA Information and
 - **Mapping**: Leaflet + React Leaflet
 - **Icons**: lucide-react (replaced Heroicons)
 
+#### NavigationMenu Component (Custom Implementation)
+
+**Background**: The Radix UI NavigationMenu primitive uses a complex "viewport" system with CSS variables (`--radix-navigation-menu-viewport-left`, `--radix-navigation-menu-viewport-width`) to position dropdown content. This system proved unreliable in this project's setup, causing dropdowns to appear misaligned (centered or under the first item) regardless of configuration attempts.
+
+**Solution**: Bypassed the viewport system entirely and implemented direct absolute positioning:
+
+1. **Removed Viewport Component**: Eliminated `NavigationMenuViewport` wrapper div from the Root component
+2. **NavigationMenuItem as Positioning Context**: Made `NavigationMenuItem` a `forwardRef` component with `relative` class to provide positioning context for content
+3. **Direct Absolute Positioning**: `NavigationMenuContent` uses `absolute top-full left-0` to position directly under each trigger
+4. **Header Overflow**: Added `overflow-visible` to header to prevent dropdowns from being clipped
+
+**File**: `src/components/ui/navigation-menu.tsx`
+
+```tsx
+const NavigationMenuItem = React.forwardRef<...>(({ className, ...props }, ref) => (
+  <NavigationMenuPrimitive.Item
+    ref={ref}
+    className={cn("relative", className)}  // ← Provides positioning context
+    {...props}
+  />
+));
+
+const NavigationMenuContent = React.forwardRef<...>(({ className, ...props }, ref) => (
+  <NavigationMenuPrimitive.Content
+    ref={ref}
+    className={cn(
+      "absolute top-full left-0 mt-1.5 z-50",  // ← Direct positioning
+      "min-w-[180px] rounded-md border bg-popover text-popover-foreground shadow-lg",
+      "data-[state=closed]:hidden",
+      className
+    )}
+    {...props}
+  />
+));
+```
+
+**Benefits**:
+- Dropdowns position correctly under each trigger
+- No CSS variable dependencies or complex viewport calculations
+- Maintains all Radix keyboard navigation and accessibility features
+- Simpler, more predictable behavior
+
 ### Backend
 - **Runtime**: Cloudflare Workers
 - **Framework**: Hono
