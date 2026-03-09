@@ -307,17 +307,23 @@ reservationsRouter.post('/', async (c) => {
 
   const { household_id, amenity_type, date, slot, purpose } = result.data;
 
-  // Check for existing reservation by same household (prevent duplicates)
+  // Check for existing reservation by same household (including cancelled ones)
   const existingHouseholdReservation = await c.env.DB.prepare(
-    `SELECT id FROM reservations
+    `SELECT id, status FROM reservations
      WHERE household_id = ?
        AND amenity_type = ?
        AND date = ?
-       AND slot = ?
-       AND status != 'cancelled'`
+       AND slot = ?`
   ).bind(household_id, amenity_type, date, slot).first();
 
-  if (existingHouseholdReservation) {
+  // If there's an existing cancelled reservation, delete it first
+  if (existingHouseholdReservation && existingHouseholdReservation.status === 'cancelled') {
+    await c.env.DB.prepare(
+      'DELETE FROM reservations WHERE id = ?'
+    ).bind(existingHouseholdReservation.id).run();
+  }
+  // If there's an active reservation, reject the request
+  else if (existingHouseholdReservation) {
     return c.json({
       error: 'You already have a reservation for this amenity, date, and time slot.'
     }, 409);
@@ -374,10 +380,10 @@ reservationsRouter.post('/', async (c) => {
        VALUES (?, ?, ?, ?, ?, ?, 'pending')`
     ).bind(id, household_id, amenity_type, date, slot, purpose || null).run();
   } catch (error: any) {
-    // Handle UNIQUE constraint violation
+    // Handle UNIQUE constraint violation (shouldn't happen after our checks, but just in case)
     if (error.message?.includes('UNIQUE constraint failed')) {
       return c.json({
-        error: 'You already have a reservation for this amenity, date, and time slot.'
+        error: 'This time slot is no longer available. Please refresh and try again.'
       }, 409);
     }
     throw error;
