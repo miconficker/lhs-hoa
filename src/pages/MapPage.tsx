@@ -582,7 +582,7 @@ export function MapPage() {
   }
 
   return (
-    <div className="fixed top-16 left-64 right-0 bottom-0 z-40">
+    <div className="fixed top-16 left-0 right-0 bottom-0 z-40">
       {/* Fullscreen Map */}
       <div className="absolute inset-0">
         <MapContainer
