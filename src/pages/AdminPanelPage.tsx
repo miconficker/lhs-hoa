@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { api, type AdminUser, type AdminHousehold } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import type { LotOwnership, LotStatus, LotType, User } from "@/types";
@@ -15,6 +15,12 @@ import { toast } from "sonner";
 import { Sidebar } from "@/components/admin/Sidebar";
 import { Menu } from "lucide-react";
 import AdminReservationsPage from "./admin/reservations/index";
+import { AdminLotsPage } from "./AdminLotsPage";
+import { DuesConfigPage } from "./DuesConfigPage";
+import { InPersonPaymentsPage } from "./InPersonPaymentsPage";
+import { CommonAreasPage } from "./CommonAreasPage";
+import { PassManagementPage } from "./PassManagementPage";
+import { WhitelistManagementPage } from "./WhitelistManagementPage";
 
 type Tab = "users" | "households" | "lots" | "import" | "payments" | "settings";
 
@@ -438,10 +444,22 @@ function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
 
 export function AdminPanelPage() {
   const { user } = useAuth();
-  const { section } = useParams<{ section?: string }>();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<Tab>("users");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Parse the current path to determine which section to show
+  const getPathSection = () => {
+    const path = location.pathname;
+    if (path === "/admin") return "dashboard";
+    if (path.startsWith("/admin/")) {
+      return path.replace("/admin/", "").split("/")[0];
+    }
+    return "dashboard";
+  };
+
+  const pathSection = getPathSection();
 
   // Users state
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -639,8 +657,87 @@ export function AdminPanelPage() {
   }
 
   // Handle reservations section
-  if (section === "reservations") {
-    return <AdminReservationsPage />;
+  if (pathSection === "reservations") {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 lg:ml-64">
+          <AdminReservationsPage />
+        </div>
+      </div>
+    );
+  }
+
+  // Handle lots section
+  if (pathSection === "lots") {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 lg:ml-64">
+          <AdminLotsPage />
+        </div>
+      </div>
+    );
+  }
+
+  // Handle dues section
+  if (pathSection === "dues") {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 lg:ml-64">
+          <DuesConfigPage />
+        </div>
+      </div>
+    );
+  }
+
+  // Handle payments/in-person section
+  if (pathSection === "payments" && location.pathname.includes("in-person")) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 lg:ml-64">
+          <InPersonPaymentsPage />
+        </div>
+      </div>
+    );
+  }
+
+  // Handle common-areas section
+  if (pathSection === "common-areas") {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 lg:ml-64">
+          <CommonAreasPage />
+        </div>
+      </div>
+    );
+  }
+
+  // Handle pass-management section
+  if (pathSection === "pass-management") {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 lg:ml-64">
+          <PassManagementPage />
+        </div>
+      </div>
+    );
+  }
+
+  // Handle whitelist section
+  if (pathSection === "whitelist") {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 lg:ml-64">
+          <WhitelistManagementPage />
+        </div>
+      </div>
+    );
   }
 
   return (

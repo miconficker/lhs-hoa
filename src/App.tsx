@@ -50,39 +50,13 @@ const AdminPanelPage = lazy(() =>
 const DebugPage = lazy(() =>
   import("./pages/DebugPage").then((m) => ({ default: m.DebugPage })),
 );
-const AdminLotsPage = lazy(() =>
-  import("./pages/AdminLotsPage").then((m) => ({ default: m.AdminLotsPage })),
-);
-const DuesConfigPage = lazy(() =>
-  import("./pages/DuesConfigPage").then((m) => ({ default: m.DuesConfigPage })),
-);
-const InPersonPaymentsPage = lazy(() =>
-  import("./pages/InPersonPaymentsPage").then((m) => ({
-    default: m.InPersonPaymentsPage,
-  })),
-);
 const NotificationsPage = lazy(() =>
   import("./pages/NotificationsPage").then((m) => ({
     default: m.NotificationsPage,
   })),
 );
-const CommonAreasPage = lazy(() =>
-  import("./pages/CommonAreasPage").then((m) => ({
-    default: m.CommonAreasPage,
-  })),
-);
 const PassesPage = lazy(() =>
   import("./pages/PassesPage").then((m) => ({ default: m.PassesPage })),
-);
-const PassManagementPage = lazy(() =>
-  import("./pages/PassManagementPage").then((m) => ({
-    default: m.PassManagementPage,
-  })),
-);
-const WhitelistManagementPage = lazy(() =>
-  import("./pages/WhitelistManagementPage").then((m) => ({
-    default: m.WhitelistManagementPage,
-  })),
 );
 const MessagesPage = lazy(() =>
   import("./pages/MessagesPage").then((m) => ({ default: m.MessagesPage })),
@@ -170,38 +144,6 @@ function App() {
             />
             <Route path="debug" element={<DebugPage />} />
             <Route
-              path="admin"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <AdminPanelPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="admin/lots"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <AdminLotsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="admin/dues"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <DuesConfigPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="admin/payments/in-person"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <InPersonPaymentsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="notifications"
               element={
                 <ProtectedRoute allowedRoles={["admin", "resident", "staff"]}>
@@ -210,26 +152,10 @@ function App() {
               }
             />
             <Route
-              path="admin/common-areas"
+              path="admin/*"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
-                  <CommonAreasPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="admin/pass-management"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <PassManagementPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="admin/whitelist"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <WhitelistManagementPage />
+                  <AdminPanelPage />
                 </ProtectedRoute>
               }
             />
