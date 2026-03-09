@@ -4,12 +4,11 @@
 -- Separating seed data makes it easier to distinguish between schema and data changes
 -- ============================================================================
 
--- Default pass fees
-INSERT OR IGNORE INTO pass_fees (id, fee_type, amount, effective_date)
+-- Default pass fees (updated for unified pass system - uses pass_type_id)
+INSERT OR IGNORE INTO pass_fees (id, pass_type_id, amount, effective_date)
 VALUES
-  ('default-sticker', 'sticker', 500, DATE('now')),
-  ('default-rfid', 'rfid', 800, DATE('now')),
-  ('default-both', 'both', 1000, DATE('now'));
+  ('default-sticker', 'pt-sticker', 500, DATE('now')),
+  ('default-rfid', 'pt-rfid', 800, DATE('now'));
 
 -- Developer owner account (if not exists)
 -- Email: developer@lagunahills.com
