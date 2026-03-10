@@ -1769,6 +1769,26 @@ export const api = {
           lot_status: string;
         }>;
       }>("/admin/lot-members/lots/unassigned"),
+    getPendingMembers: () =>
+      apiGet<{
+        members: Array<{
+          id: string;
+          household_id: string;
+          user_id: string;
+          member_type: string;
+          can_vote: boolean;
+          verified: boolean;
+          notes: string | null;
+          created_at: string;
+          email: string;
+          first_name: string | null;
+          last_name: string | null;
+          role: string;
+          block: string;
+          lot: string;
+          address: string;
+        }>;
+      }>("/admin/lot-members/pending"),
   },
   messages: {
     // Get all threads for current user

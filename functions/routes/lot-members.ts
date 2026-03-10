@@ -202,6 +202,24 @@ adminLotMembersRouter.put('/:id/verify', async (c) => {
   });
 });
 
+// GET /api/admin/lot-members/pending - Get all unverified/pending members
+adminLotMembersRouter.get('/pending', async (c) => {
+  const stmt = c.env.DB.prepare(`
+    SELECT lm.id, lm.household_id, lm.user_id, lm.member_type, lm.can_vote,
+           lm.verified, lm.notes, lm.created_at,
+           u.email, u.first_name, u.last_name, u.role,
+           h.block, h.lot, h.address
+      FROM lot_members lm
+      JOIN users u ON lm.user_id = u.id
+      JOIN households h ON lm.household_id = h.id
+     WHERE lm.verified = 0
+     ORDER BY lm.created_at DESC
+  `);
+
+  const result = await stmt.all();
+  return c.json({ members: result.results || [] });
+});
+
 // DELETE /api/admin/lot-members/:id - Remove a membership
 adminLotMembersRouter.delete('/:id', async (c) => {
   await c.env.DB.prepare('DELETE FROM lot_members WHERE id = ?').bind(c.req.param('id')).run();

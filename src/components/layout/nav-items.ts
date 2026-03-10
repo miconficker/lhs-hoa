@@ -10,6 +10,7 @@ import {
   Settings,
   MessageSquare,
   Bell,
+  Building2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -29,6 +30,12 @@ export const navItems: NavItem[] = [
     icon: Home,
     label: "Dashboard",
     roles: ["admin", "resident", "staff"],
+  },
+  {
+    to: "/my-lots",
+    icon: Building2,
+    label: "My Lots",
+    roles: ["admin", "resident"],
   },
   {
     to: "/map",

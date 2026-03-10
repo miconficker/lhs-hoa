@@ -47,6 +47,11 @@ const DocumentsPage = lazy(() =>
 const AdminPanelPage = lazy(() =>
   import("./pages/AdminPanelPage").then((m) => ({ default: m.AdminPanelPage })),
 );
+const MemberApprovalsPage = lazy(() =>
+  import("./pages/admin/MemberApprovalsPage").then((m) => ({
+    default: m.MemberApprovalsPage,
+  })),
+);
 const DebugPage = lazy(() =>
   import("./pages/DebugPage").then((m) => ({ default: m.DebugPage })),
 );
@@ -149,6 +154,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
                   <AdminPanelPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/member-approvals"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <MemberApprovalsPage />
                 </ProtectedRoute>
               }
             />

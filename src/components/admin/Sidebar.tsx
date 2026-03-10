@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ChevronRight,
   X,
+  CheckCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +41,11 @@ const navItems: NavItem[] = [
         icon: Users,
       },
       { title: "Pre-Approved", href: "/admin/pre-approved", icon: Users },
+      {
+        title: "Member Approvals",
+        href: "/admin/member-approvals",
+        icon: CheckCircle,
+      },
     ],
   },
   {
