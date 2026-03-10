@@ -167,11 +167,10 @@ export function LotsManagementPage() {
     );
   }
 
-  const renderLotCard = (
-    lot: LotOwnership | UnassignedLot,
-    showAssignButton = false,
-  ) => {
+  const renderLotCard = (lot: LotOwnership | UnassignedLot) => {
     const info = getLotDisplayInfo(lot);
+    const hasOwnerId = "owner_user_id" in lot && lot.owner_user_id;
+
     return (
       <Card
         key={info.id}
@@ -209,32 +208,32 @@ export function LotsManagementPage() {
           </div>
           <div className="flex gap-2">
             {"lot_id" in lot && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="flex-1"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedLot(lot);
-                  setEditDialogOpen(true);
-                }}
-              >
-                <Pencil className="h-3 w-3 mr-1" />
-                Edit
-              </Button>
-            )}
-            {showAssignButton && (
-              <Button
-                className="flex-1"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedLot(lot);
-                  setAssignDialogOpen(true);
-                }}
-              >
-                Assign Owner
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedLot(lot);
+                    setEditDialogOpen(true);
+                  }}
+                >
+                  <Pencil className="h-3 w-3 mr-1" />
+                  Edit
+                </Button>
+                <Button
+                  size="sm"
+                  className="flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedLot(lot);
+                    setAssignDialogOpen(true);
+                  }}
+                >
+                  {hasOwnerId ? "Add Member" : "Assign Owner"}
+                </Button>
+              </>
             )}
           </div>
         </CardContent>
@@ -305,7 +304,7 @@ export function LotsManagementPage() {
         {/* Unassigned Lots Tab */}
         <TabsContent value="unassigned" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredUnassigned.map((lot) => renderLotCard(lot, true))}
+            {filteredUnassigned.map((lot) => renderLotCard(lot))}
           </div>
 
           {filteredUnassigned.length === 0 && (
