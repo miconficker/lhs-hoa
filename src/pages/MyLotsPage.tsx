@@ -1,8 +1,20 @@
 import { useEffect, useState } from "react";
+import React from "react";
 import { api } from "@/lib/api";
 import type { MyLot, MyLotsSummary } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
-import { AlertCircle, CheckCircle2, Edit2, Loader2 } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Edit2,
+  Loader2,
+  ChevronDown,
+  ChevronRight,
+  Users,
+  Plus,
+} from "lucide-react";
+import { HouseholdMembersPanel } from "@/components/my-lots/HouseholdMembersPanel";
+import { AddMemberDialog } from "@/components/my-lots/AddMemberDialog";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +35,10 @@ export function MyLotsPage() {
   const [newStreet, setNewStreet] = useState("");
   const [saving, setSaving] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [expandedLots, setExpandedLots] = useState<Set<string>>(new Set());
+  const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
+  const [selectedLotForMember, setSelectedLotForMember] =
+    useState<MyLot | null>(null);
 
   useEffect(() => {
     loadMyLots();
@@ -45,6 +61,28 @@ export function MyLotsPage() {
     setEditingLot(lot);
     setNewStreet(lot.street || "");
     setShowEditDialog(true);
+  }
+
+  function toggleLotExpanded(lotId: string) {
+    setExpandedLots((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(lotId)) {
+        newSet.delete(lotId);
+      } else {
+        newSet.add(lotId);
+      }
+      return newSet;
+    });
+  }
+
+  function openAddMemberDialog(lot: MyLot) {
+    setSelectedLotForMember(lot);
+    setShowAddMemberDialog(true);
+  }
+
+  function handleMemberAdded() {
+    // Reload lots data to refresh member counts
+    loadMyLots();
   }
 
   async function saveAddress() {
@@ -251,73 +289,123 @@ export function MyLotsPage() {
               </tr>
             </thead>
             <tbody className="bg-card divide-y divide-border">
-              {lots.map((lot) => (
-                <tr key={lot.lot_id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-card-foreground">
-                    {lot.street || "—"}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-card-foreground">
-                    {lot.block || "—"}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-card-foreground">
-                    {lot.lot || "—"}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
-                    {lot.address}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        lot.lot_type === "resort"
-                          ? "bg-purple-100 text-purple-700"
-                          : lot.lot_type === "commercial"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-green-100 text-green-700"
-                      }`}
-                    >
-                      {lot.lot_type === "residential"
-                        ? "Residential"
-                        : lot.lot_type === "resort"
-                          ? "Resort"
-                          : lot.lot_type === "commercial"
-                            ? "Commercial"
-                            : "Unknown"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        lot.lot_status === "built"
-                          ? "bg-green-100 text-green-700"
-                          : lot.lot_status === "under_construction"
-                            ? "bg-orange-100 text-orange-700"
-                            : "bg-gray-100 text-card-foreground"
-                      }`}
-                    >
-                      {lot.lot_status === "built"
-                        ? "Built"
-                        : lot.lot_status === "under_construction"
-                          ? "Under Construction"
-                          : "Vacant Lot"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {lot.lot_size_sqm?.toLocaleString() || "—"}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-card-foreground">
-                    ₱{lot.annual_dues.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button
-                      onClick={() => openEditDialog(lot)}
-                      className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {lots.map((lot) => {
+                const isExpanded = expandedLots.has(lot.lot_id);
+
+                return (
+                  <React.Fragment key={lot.lot_id}>
+                    {/* Main Lot Row */}
+                    <tr className={isExpanded ? "bg-muted/30" : ""}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-card-foreground">
+                        {lot.street || "—"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-card-foreground">
+                        {lot.block || "—"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-card-foreground">
+                        {lot.lot || "—"}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
+                        {lot.address}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            lot.lot_type === "resort"
+                              ? "bg-purple-100 text-purple-700"
+                              : lot.lot_type === "commercial"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-green-100 text-green-700"
+                          }`}
+                        >
+                          {lot.lot_type === "residential"
+                            ? "Residential"
+                            : lot.lot_type === "resort"
+                              ? "Resort"
+                              : lot.lot_type === "commercial"
+                                ? "Commercial"
+                                : "Unknown"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            lot.lot_status === "built"
+                              ? "bg-green-100 text-green-700"
+                              : lot.lot_status === "under_construction"
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-gray-100 text-card-foreground"
+                          }`}
+                        >
+                          {lot.lot_status === "built"
+                            ? "Built"
+                            : lot.lot_status === "under_construction"
+                              ? "Under Construction"
+                              : "Vacant Lot"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {lot.lot_size_sqm?.toLocaleString() || "—"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-card-foreground">
+                        ₱{lot.annual_dues.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => openEditDialog(lot)}
+                            className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => toggleLotExpanded(lot.lot_id)}
+                            className="text-gray-600 hover:text-gray-800 flex items-center gap-1 px-2 py-1 rounded hover:bg-muted"
+                            title={isExpanded ? "Hide members" : "View members"}
+                          >
+                            {isExpanded ? (
+                              <ChevronDown className="w-4 h-4" />
+                            ) : (
+                              <ChevronRight className="w-4 h-4" />
+                            )}
+                            <Users className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Expandable Members Row */}
+                    {isExpanded && (
+                      <tr>
+                        <td colSpan={9} className="px-6 py-4 bg-muted/20">
+                          <div className="max-w-4xl">
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="text-sm font-semibold text-card-foreground">
+                                Household Members
+                              </h4>
+                              <Button
+                                size="sm"
+                                onClick={() => openAddMemberDialog(lot)}
+                                className="flex items-center gap-1"
+                              >
+                                <Plus className="w-4 h-4" />
+                                Add Member
+                              </Button>
+                            </div>
+                            <HouseholdMembersPanel
+                              householdId={lot.lot_id}
+                              lotAddress={lot.address}
+                              isPrimaryOwner={true} // TODO: Check if current user is primary owner
+                              onMemberChange={handleMemberAdded}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -392,6 +480,16 @@ export function MyLotsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Add Member Dialog */}
+      {selectedLotForMember && (
+        <AddMemberDialog
+          open={showAddMemberDialog}
+          onOpenChange={setShowAddMemberDialog}
+          householdId={selectedLotForMember.lot_id}
+          onSuccess={handleMemberAdded}
+        />
+      )}
     </div>
   );
 }
