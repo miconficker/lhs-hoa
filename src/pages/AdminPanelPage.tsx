@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { api, type AdminUser, type AdminHousehold } from "@/lib/api";
+import { api, type AdminUser } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import type { UserRole } from "@/types";
 import { PaymentVerificationQueue } from "@/components/PaymentVerificationQueue";
 import { LateFeeConfig } from "@/components/LateFeeConfig";
 import { PaymentExport } from "@/components/PaymentExport";
 import { Sidebar } from "@/components/admin/Sidebar";
-import { Menu, Info } from "lucide-react";
+import { Menu } from "lucide-react";
 import AdminReservationsPage from "./admin/reservations/index";
 import { AdminLotsPage } from "./AdminLotsPage";
 import { LotsManagementPage } from "@/components/admin/lots/LotsManagementPage";
@@ -22,7 +22,7 @@ import { MessagesPage } from "./MessagesPage";
 import { PaymentsPage } from "./PaymentsPage";
 import { UsersSection } from "./admin/users/index";
 
-type Tab = "users" | "households" | "lots" | "import" | "payments" | "settings";
+type Tab = "users" | "lots" | "import" | "payments" | "settings";
 
 export function AdminPanelPage() {
   const { user } = useAuth();
@@ -52,12 +52,6 @@ export function AdminPanelPage() {
   const [showUserModal, setShowUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
 
-  // Households state
-  const [households, setHouseholds] = useState<AdminHousehold[]>([]);
-  const [showHouseholdModal, setShowHouseholdModal] = useState(false);
-  const [editingHousehold, setEditingHousehold] =
-    useState<AdminHousehold | null>(null);
-
   // Import state
   const [importData, setImportData] = useState("");
   const [importResult, setImportResult] = useState<{
@@ -79,7 +73,6 @@ export function AdminPanelPage() {
 
   useEffect(() => {
     if (activeTab === "users") loadUsers();
-    if (activeTab === "households") loadHouseholds();
     if (activeTab === "settings") loadStats();
   }, [activeTab]);
 
@@ -95,15 +88,6 @@ export function AdminPanelPage() {
     const response = await api.admin.listUsers();
     if (response.data) {
       setUsers(response.data.users);
-    }
-    setLoading(false);
-  };
-
-  const loadHouseholds = async () => {
-    setLoading(true);
-    const response = await api.admin.listHouseholds();
-    if (response.data) {
-      setHouseholds(response.data.households);
     }
     setLoading(false);
   };
@@ -138,48 +122,12 @@ export function AdminPanelPage() {
     loadUsers();
   };
 
-  const handleCreateHousehold = async (data: any) => {
-    const response = await api.admin.createHousehold(data);
-    if (response.error) {
-      alert(response.error);
-      return;
-    }
-    setShowHouseholdModal(false);
-    loadHouseholds();
-  };
-
-  const handleUpdateHousehold = async (id: string, data: any) => {
-    console.log("[AdminPanel] Updating household:", id, "with data:", data);
-    const response = await api.admin.updateHousehold(id, data);
-    console.log("[AdminPanel] Update response:", response);
-    if (response.error) {
-      alert(response.error);
-      return;
-    }
-    setShowHouseholdModal(false);
-    setEditingHousehold(null);
-    loadHouseholds();
-  };
-
-  const handleDeleteHousehold = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this household?")) return;
-    const response = await api.admin.deleteHousehold(id);
-    if (response.error) {
-      alert(response.error);
-      return;
-    }
-    loadHouseholds();
-  };
-
   const handleImport = async () => {
     try {
       const data = JSON.parse(importData);
       const response = await api.admin.importHouseholds({ households: data });
       if (response.data) {
         setImportResult(response.data.results);
-        if (response.data.results.success > 0) {
-          loadHouseholds();
-        }
       }
     } catch (e) {
       alert("Invalid JSON format");
@@ -188,7 +136,6 @@ export function AdminPanelPage() {
 
   const tabs = [
     { id: "users" as Tab, label: "Users", icon: "👥" },
-    { id: "households" as Tab, label: "Households", icon: "🏠" },
     { id: "lots" as Tab, label: "Lots", icon: "🏘️" },
     { id: "import" as Tab, label: "Import", icon: "📥" },
     { id: "payments" as Tab, label: "Payments", icon: "💳" },
@@ -546,117 +493,6 @@ export function AdminPanelPage() {
           <div className="bg-white dark:bg-card rounded-lg shadow p-6">
             {activeTab === "users" && <UsersSection />}
 
-            {activeTab === "households" && (
-              <div>
-                <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-4 rounded-lg mb-6">
-                  <div className="flex items-start gap-3">
-                    <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <h3 className="font-semibold text-blue-900 dark:text-blue-100">
-                        Household Address Management
-                      </h3>
-                      <p className="text-sm text-blue-700 dark:text-blue-300">
-                        Use this page to manage household addresses and lot
-                        metadata. For owner/member assignment, use{" "}
-                        <a
-                          href="/admin/lot-members"
-                          className="underline font-semibold"
-                        >
-                          Lot Members
-                        </a>
-                        .
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold">
-                    Household Management
-                  </h2>
-                  <button
-                    onClick={() => {
-                      setEditingHousehold(null);
-                      setShowHouseholdModal(true);
-                    }}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-                  >
-                    Add Household
-                  </button>
-                </div>
-
-                {loading ? (
-                  <div className="text-center py-8">Loading...</div>
-                ) : (
-                  <div className="space-y-4">
-                    {households.map((household) => (
-                      <div key={household.id} className="border rounded-lg p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-semibold">
-                              {household.address}
-                            </h3>
-                            <p className="text-sm text-gray-500">
-                              {household.street && `${household.street}, `}
-                              {household.block && `Block ${household.block}`}
-                              {household.block && household.lot && " - "}
-                              {household.lot && `Lot ${household.lot}`}
-                            </p>
-                            {household.owner_email && (
-                              <p className="text-sm text-gray-600">
-                                Owner: {household.owner_email}
-                              </p>
-                            )}
-                          </div>
-                          <div className="space-x-2">
-                            <button
-                              onClick={() => {
-                                setEditingHousehold(household);
-                                setShowHouseholdModal(true);
-                              }}
-                              className="text-primary-600 hover:text-primary-900 text-sm"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleDeleteHousehold(household.id)
-                              }
-                              className="text-red-600 hover:text-red-900 text-sm"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                        {household.residents &&
-                          household.residents.length > 0 && (
-                            <div className="mt-3 pt-3 border-t">
-                              <p className="text-sm text-gray-600 mb-2">
-                                Residents:
-                              </p>
-                              <div className="flex flex-wrap gap-2">
-                                {household.residents.map((resident) => (
-                                  <span
-                                    key={resident.id}
-                                    className={`px-2 py-1 text-xs rounded ${
-                                      resident.is_primary
-                                        ? "bg-primary-100 text-primary-800"
-                                        : "bg-gray-100 text-gray-800"
-                                    }`}
-                                  >
-                                    {resident.first_name} {resident.last_name}
-                                    {resident.is_primary && " (Primary)"}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
             {activeTab === "lots" && (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
@@ -946,22 +782,6 @@ export function AdminPanelPage() {
               }}
             />
           )}
-
-          {/* Household Modal */}
-          {showHouseholdModal && (
-            <HouseholdModal
-              household={editingHousehold}
-              onSave={
-                editingHousehold
-                  ? (data) => handleUpdateHousehold(editingHousehold.id, data)
-                  : handleCreateHousehold
-              }
-              onClose={() => {
-                setShowHouseholdModal(false);
-                setEditingHousehold(null);
-              }}
-            />
-          )}
         </div>
       </div>
     </div>
@@ -1074,276 +894,6 @@ function UserModal({
               className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
             >
               {user ? "Update" : "Create"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function HouseholdModal({
-  household,
-  onSave,
-  onClose,
-}: {
-  household: AdminHousehold | null;
-  onSave: (data: any) => void;
-  onClose: () => void;
-}) {
-  const [street, setStreet] = useState(household?.street || "");
-  const [block, setBlock] = useState(household?.block || "");
-  const [lot, setLot] = useState(household?.lot || "");
-
-  // Generate address from street, block, lot
-  const generatedAddress = `${street || ""}${street ? ", " : ""}Block ${block || "?"}, Lot ${lot || "?"}`;
-  const [latitude, setLatitude] = useState(
-    household?.latitude?.toString() || "",
-  );
-  const [longitude, setLongitude] = useState(
-    household?.longitude?.toString() || "",
-  );
-  const [mapMarkerX, setMapMarkerX] = useState(
-    household?.map_marker_x?.toString() || "",
-  );
-  const [mapMarkerY, setMapMarkerY] = useState(
-    household?.map_marker_y?.toString() || "",
-  );
-  const [ownerEmail, setOwnerEmail] = useState(household?.owner_email || "");
-  const [residents, setResidents] = useState(
-    household?.residents.map((r) => ({
-      first_name: r.first_name,
-      last_name: r.last_name,
-      is_primary: Boolean(r.is_primary),
-    })) || [],
-  );
-
-  const addResident = () => {
-    setResidents([
-      ...residents,
-      { first_name: "", last_name: "", is_primary: false },
-    ]);
-  };
-
-  const updateResident = (index: number, field: string, value: any) => {
-    const newResidents = [...residents];
-    (newResidents as any)[index][field] = value;
-    setResidents(newResidents);
-  };
-
-  const removeResident = (index: number) => {
-    setResidents(residents.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const data: any = {
-      // address is auto-generated on backend from street, block, lot
-      street: street || undefined,
-      block: block || undefined,
-      lot: lot || undefined,
-      latitude: latitude ? parseFloat(latitude) : undefined,
-      longitude: longitude ? parseFloat(longitude) : undefined,
-      map_marker_x: mapMarkerX ? parseFloat(mapMarkerX) : undefined,
-      map_marker_y: mapMarkerY ? parseFloat(mapMarkerY) : undefined,
-      owner_email: ownerEmail || undefined,
-      residents,
-    };
-    console.log("[HouseholdModal] Submitting household data:", data);
-    onSave(data);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-card rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-semibold mb-4">
-          {household ? "Edit Household" : "Create Household"}
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Street
-            </label>
-            <input
-              type="text"
-              value={street}
-              onChange={(e) => setStreet(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              placeholder="e.g., Mahogany Street"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Block
-              </label>
-              <input
-                type="text"
-                value={block}
-                onChange={(e) => setBlock(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Lot
-              </label>
-              <input
-                type="text"
-                value={lot}
-                onChange={(e) => setLot(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-          </div>
-          {/* Read-only preview of auto-generated address */}
-          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-            <label className="block text-xs font-medium text-gray-500 mb-1">
-              Generated Address (auto-generated)
-            </label>
-            <p className="text-sm text-gray-900 font-medium">
-              {generatedAddress}
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Latitude
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={latitude}
-                onChange={(e) => setLatitude(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Longitude
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={longitude}
-                onChange={(e) => setLongitude(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Map Marker X
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={mapMarkerX}
-                onChange={(e) => setMapMarkerX(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Map Marker Y
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={mapMarkerY}
-                onChange={(e) => setMapMarkerY(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Owner Email
-            </label>
-            <input
-              type="email"
-              value={ownerEmail}
-              onChange={(e) => setOwnerEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
-
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Residents
-              </label>
-              <button
-                type="button"
-                onClick={addResident}
-                className="text-sm text-primary-600 hover:text-primary-700"
-              >
-                + Add Resident
-              </button>
-            </div>
-            <div className="space-y-2">
-              {residents.map((resident, index) => (
-                <div
-                  key={index}
-                  className="flex items-center space-x-2 p-2 bg-gray-50 rounded"
-                >
-                  <input
-                    type="text"
-                    placeholder="First name"
-                    value={resident.first_name}
-                    onChange={(e) =>
-                      updateResident(index, "first_name", e.target.value)
-                    }
-                    className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
-                    required
-                  />
-                  <input
-                    type="text"
-                    placeholder="Last name"
-                    value={resident.last_name}
-                    onChange={(e) =>
-                      updateResident(index, "last_name", e.target.value)
-                    }
-                    className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
-                    required
-                  />
-                  <label className="flex items-center text-sm">
-                    <input
-                      type="checkbox"
-                      checked={resident.is_primary}
-                      onChange={(e) =>
-                        updateResident(index, "is_primary", e.target.checked)
-                      }
-                      className="mr-1"
-                    />
-                    Primary
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => removeResident(index)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 dark:border-border rounded-lg hover:bg-gray-50 dark:hover:bg-muted"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-            >
-              {household ? "Update" : "Create"}
             </button>
           </div>
         </form>
