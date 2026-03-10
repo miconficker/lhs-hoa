@@ -336,17 +336,20 @@ householdsRouter.put('/:id', async (c) => {
     return c.json({ error: 'Invalid JSON' }, 400);
   }
 
-  // Verify user owns this household
+  // Verify user owns this household via lot_members
+  const { canAccessHousehold } = await import('../lib/lot-access');
+  const access = await canAccessHousehold(authUser.userId, id, c.env.DB);
+
+  if (!access.hasAccess) {
+    return c.json({ error: 'Forbidden - you do not have access to this household' }, 403);
+  }
+
   const household = await c.env.DB.prepare(
-    'SELECT id, owner_id, block, lot FROM households WHERE id = ?'
+    'SELECT id, block, lot FROM households WHERE id = ?'
   ).bind(id).first();
 
   if (!household) {
     return c.json({ error: 'Household not found' }, 404);
-  }
-
-  if (household.owner_id !== authUser.userId) {
-    return c.json({ error: 'Forbidden - you can only update your own household' }, 403);
   }
 
   // Update street and regenerate address

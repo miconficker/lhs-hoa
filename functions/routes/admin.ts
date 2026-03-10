@@ -1218,6 +1218,8 @@ adminRouter.put('/lots/batch/owner', async (c) => {
 /**
  * POST /api/admin/households/merge
  * Merge multiple lots into one household group
+ *
+ * Updated to use lot_members table instead of deprecated owner_id
  */
 adminRouter.post('/households/merge', async (c) => {
   const authUser = await requireAdmin(c, c.env);
@@ -1240,23 +1242,39 @@ adminRouter.post('/households/merge', async (c) => {
     const allLotIds = [primary_lot_id, ...lot_ids_to_merge];
     const placeholders = allLotIds.map(() => '?').join(',');
     const lots = await c.env.DB.prepare(
-      `SELECT id, owner_id, block, lot, address FROM households WHERE id IN (${placeholders})`
+      `SELECT h.id, h.block, h.lot, h.address FROM households h WHERE h.id IN (${placeholders})`
     ).bind(...allLotIds).all();
 
     if (lots.results.length !== allLotIds.length) {
       return c.json({ error: 'One or more lots not found' }, 404);
     }
 
-    // Validate all lots have same owner
-    const primaryLot = lots.results.find((l: any) => l.id === primary_lot_id);
-    if (!primaryLot) {
-      return c.json({ error: 'Primary lot not found' }, 404);
+    // Validate all lots have the same primary_owner via lot_members
+    // Get primary owners for all lots
+    const ownerQuery = await c.env.DB.prepare(`
+      SELECT lm.household_id, lm.user_id, u.email
+      FROM lot_members lm
+      JOIN users u ON lm.user_id = u.id
+      WHERE lm.household_id IN (${placeholders})
+        AND lm.member_type = 'primary_owner'
+        AND lm.verified = 1
+    `).bind(...allLotIds).all();
+
+    if (ownerQuery.results.length === 0) {
+      return c.json({ error: 'None of the lots have a verified primary owner' }, 400);
     }
 
-    const ownerId = primaryLot.owner_id;
-    const hasDifferentOwner = lots.results.some((l: any) => l.owner_id !== ownerId);
-    if (hasDifferentOwner) {
-      return c.json({ error: 'All lots must have the same owner' }, 400);
+    // Check all lots have the same primary owner
+    const uniqueOwners = new Set(ownerQuery.results.map((r: any) => r.user_id));
+    if (uniqueOwners.size > 1) {
+      return c.json({ error: 'All lots must have the same verified primary owner' }, 400);
+    }
+
+    // Ensure all lots have an owner (not just some)
+    const lotsWithOwners = new Set(ownerQuery.results.map((r: any) => r.household_id));
+    const missingOwner = allLotIds.find((id: string) => !lotsWithOwners.has(id));
+    if (missingOwner) {
+      return c.json({ error: `Lot ${missingOwner} does not have a verified primary owner` }, 400);
     }
 
     // Generate group ID
@@ -1277,6 +1295,8 @@ adminRouter.post('/households/merge', async (c) => {
     return c.json({
       household_group_id,
       merged_count: allLotIds.length,
+      owner_id: Array.from(uniqueOwners)[0],
+      owner_email: ownerQuery.results[0].email,
       lots: lots.results.map((l: any) => ({ lot_id: l.id, address: l.address }))
     });
   } catch (error) {

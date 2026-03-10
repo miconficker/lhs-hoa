@@ -114,9 +114,11 @@ passManagementRouter.get('/employees', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    // Get user's household(s)
+    // Get user's household(s) via lot_members
     const households = await c.env.DB.prepare(`
-      SELECT id, address FROM households WHERE owner_id = ?
+      SELECT h.id, h.address FROM households h
+      JOIN lot_members lm ON lm.household_id = h.id
+      WHERE lm.user_id = ? AND lm.member_type = 'primary_owner' AND lm.verified = 1
     `).bind(authUser.userId).all();
 
     const householdIds = (households.results || []).map((h: any) => h.id);
@@ -175,9 +177,11 @@ passManagementRouter.post('/employees', async (c) => {
       return c.json({ error: photoValidation.error }, 400);
     }
 
-    // Verify ownership
+    // Verify ownership via lot_members
     const household = await c.env.DB.prepare(`
-      SELECT id FROM households WHERE id = ? AND owner_id = ?
+      SELECT h.id FROM households h
+      JOIN lot_members lm ON lm.household_id = h.id
+      WHERE h.id = ? AND lm.user_id = ? AND lm.member_type = 'primary_owner' AND lm.verified = 1
     `).bind(household_id as string, authUser.userId).first();
 
     if (!household) {
@@ -259,11 +263,12 @@ passManagementRouter.put('/employees/:id', async (c) => {
       }, 400);
     }
 
-    // Verify ownership
+    // Verify ownership via lot_members
     const employee = await c.env.DB.prepare(`
       SELECT he.* FROM household_employees he
       JOIN households h ON he.household_id = h.id
-      WHERE he.id = ? AND h.owner_id = ?
+      JOIN lot_members lm ON lm.household_id = h.id
+      WHERE he.id = ? AND lm.user_id = ? AND lm.member_type = 'primary_owner' AND lm.verified = 1
     `).bind(id, authUser.userId).first();
 
     if (!employee) {
@@ -334,11 +339,12 @@ passManagementRouter.delete('/employees/:id', async (c) => {
 
     const id = c.req.param('id');
 
-    // Verify ownership
+    // Verify ownership via lot_members
     const employee = await c.env.DB.prepare(`
       SELECT he.* FROM household_employees he
       JOIN households h ON he.household_id = h.id
-      WHERE he.id = ? AND h.owner_id = ?
+      JOIN lot_members lm ON lm.household_id = h.id
+      WHERE he.id = ? AND lm.user_id = ? AND lm.member_type = 'primary_owner' AND lm.verified = 1
     `).bind(id, authUser.userId).first();
 
     if (!employee) {
@@ -377,7 +383,9 @@ passManagementRouter.get('/vehicles', async (c) => {
     }
 
     const households = await c.env.DB.prepare(`
-      SELECT id, address FROM households WHERE owner_id = ?
+      SELECT h.id, h.address FROM households h
+      JOIN lot_members lm ON lm.household_id = h.id
+      WHERE lm.user_id = ? AND lm.member_type = 'primary_owner' AND lm.verified = 1
     `).bind(authUser.userId).all();
 
     const householdIds = (households.results || []).map((h: any) => h.id);
@@ -450,9 +458,11 @@ passManagementRouter.post('/vehicles', async (c) => {
       }, 400);
     }
 
-    // Verify ownership
+    // Verify ownership via lot_members
     const household = await c.env.DB.prepare(`
-      SELECT id FROM households WHERE id = ? AND owner_id = ?
+      SELECT h.id FROM households h
+      JOIN lot_members lm ON lm.household_id = h.id
+      WHERE h.id = ? AND lm.user_id = ? AND lm.member_type = 'primary_owner' AND lm.verified = 1
     `).bind(household_id, authUser.userId).first();
 
     if (!household) {
@@ -544,11 +554,12 @@ passManagementRouter.put('/vehicles/:id', async (c) => {
       }, 400);
     }
 
-    // Verify ownership
+    // Verify ownership via lot_members
     const vehicle = await c.env.DB.prepare(`
       SELECT vr.* FROM vehicle_registrations vr
       JOIN households h ON vr.household_id = h.id
-      WHERE vr.id = ? AND h.owner_id = ?
+      JOIN lot_members lm ON lm.household_id = h.id
+      WHERE vr.id = ? AND lm.user_id = ? AND lm.member_type = 'primary_owner' AND lm.verified = 1
     `).bind(id, authUser.userId).first();
 
     if (!vehicle) {
@@ -610,11 +621,12 @@ passManagementRouter.delete('/vehicles/:id', async (c) => {
 
     const id = c.req.param('id');
 
-    // Verify ownership
+    // Verify ownership via lot_members
     const vehicle = await c.env.DB.prepare(`
       SELECT vr.* FROM vehicle_registrations vr
       JOIN households h ON vr.household_id = h.id
-      WHERE vr.id = ? AND h.owner_id = ?
+      JOIN lot_members lm ON lm.household_id = h.id
+      WHERE vr.id = ? AND lm.user_id = ? AND lm.member_type = 'primary_owner' AND lm.verified = 1
     `).bind(id, authUser.userId).first();
 
     if (!vehicle) {
@@ -690,9 +702,11 @@ passManagementRouter.post('/vehicles/:id/request-rfid-replacement', async (c) =>
       return c.json({ error: 'Reason is required' }, 400);
     }
 
-    // Get user's households
+    // Get user's households via lot_members
     const households = await c.env.DB.prepare(`
-      SELECT id FROM households WHERE owner_id = ?
+      SELECT h.id FROM households h
+      JOIN lot_members lm ON lm.household_id = h.id
+      WHERE lm.user_id = ? AND lm.member_type = 'primary_owner' AND lm.verified = 1
     `).bind(authUser.userId).all();
     const householdIds = (households.results || []).map((h: any) => h.id);
 
@@ -752,9 +766,11 @@ passManagementRouter.post('/vehicles/:id/request-sticker-renewal', async (c) => 
 
     const id = c.req.param('id');
 
-    // Get user's households
+    // Get user's households via lot_members
     const households = await c.env.DB.prepare(`
-      SELECT id FROM households WHERE owner_id = ?
+      SELECT h.id FROM households h
+      JOIN lot_members lm ON lm.household_id = h.id
+      WHERE lm.user_id = ? AND lm.member_type = 'primary_owner' AND lm.verified = 1
     `).bind(authUser.userId).all();
     const householdIds = (households.results || []).map((h: any) => h.id);
 
@@ -825,9 +841,11 @@ passManagementRouter.get('/rfid-replacement-requests', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    // Get user's households
+    // Get user's households via lot_members
     const households = await c.env.DB.prepare(`
-      SELECT id FROM households WHERE owner_id = ?
+      SELECT h.id FROM households h
+      JOIN lot_members lm ON lm.household_id = h.id
+      WHERE lm.user_id = ? AND lm.member_type = 'primary_owner' AND lm.verified = 1
     `).bind(authUser.userId).all();
     const householdIds = (households.results || []).map((h: any) => h.id);
 
