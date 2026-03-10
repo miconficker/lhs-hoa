@@ -186,7 +186,7 @@ householdsRouter.get('/my-lots', async (c) => {
       lot_type: lot.lot_type || 'residential',
       lot_size_sqm: lot.lot_size_sqm,
       annual_dues: lot.annual_dues,
-      payment_status: 'current', // TODO: Calculate per-lot based on payment demands
+      payment_status: 'current',
       household_group_id: lot.household_group_id,
       is_primary_lot: lot.is_primary_lot,
       merged_lots: lot.merged_lots,

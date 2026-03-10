@@ -525,12 +525,15 @@ reservationsRouter.put('/:id', async (c) => {
     return c.json({ error: 'Reservation not found' }, 404);
   }
 
-  // Check permission - admin/staff can update any, users can only cancel their own
+  // Check permission - admin/staff can update any, users can only cancel their own household's reservations
   if (authUser.role !== 'admin' && authUser.role !== 'staff') {
-    // For cancellation, allow users to cancel their own reservations
+    // For cancellation, verify user belongs to the household
     if (body.status === 'cancelled') {
-      // TODO: Verify user belongs to the household
-      // For now, allow
+      const { canAccessHousehold } = await import('../lib/lot-access');
+      const access = await canAccessHousehold(authUser.id, existing.household_id as string, c.env.DB);
+      if (!access.hasAccess) {
+        return c.json({ error: 'Forbidden - you do not belong to this household' }, 403);
+      }
     } else {
       return c.json({ error: 'Forbidden' }, 403);
     }

@@ -109,6 +109,65 @@ npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0001_schema.sql --l
 
 - **Late fee configuration**: Fully configurable via UI at Admin Panel → Payments → Settings (see `LateFeeConfig.tsx`)
 
+## Development Standards
+
+### Process Safety Rules
+
+You run in a resource-constrained environment. The following are **strictly forbidden**:
+
+- **No Docker**: `docker build`, `docker run`, `docker compose up`, `docker pull/push/exec`, `podman build/run`. You MAY write Dockerfiles and compose configs.
+- **No servers**: `npm run dev`, `npm start`, `next dev`, `vite`, `flask run`, `uvicorn`, `rails server`, `nodemon`, or any process that listens on a port.
+
+**Instead**: Write code and config files. Run only targeted tests (single file). Use lightweight commands (lint, type-check single files). If you need a build or server, message the user.
+
+### Architecture Compliance
+
+If an `ARCHITECTURE.md` file exists in the working directory, you MUST read it before starting any task. It is the source of truth for:
+
+- Project structure and module boundaries
+- Component organization patterns
+- Data models and API contracts
+- Technical decisions and trade-offs
+
+**Rules**:
+- Follow the architecture; do not contradict documented decisions
+- Check before creating new files/directories - verify placement
+- Flag conflicts: if a task conflicts with ARCHITECTURE.md, do not proceed silently
+- Keep it updated: if architecture changes, update ARCHITECTURE.md
+
+### Pre-Completion Verification
+
+Before marking any task complete or claiming code works:
+
+1. **Dependencies**: If `package.json` changed, run `npm install` (or project's package manager)
+2. **Lint**: Run the project's linter and fix all errors/warnings (`npm run lint`)
+3. **Type-check**: Run TypeScript type checking if applicable (`rtk tsc`)
+4. **Build**: Run `npm run build` to verify no compilation errors
+5. **Test**: Run targeted tests for modified code
+
+Only after all checks pass should you consider work complete.
+
+### Code Review Standards
+
+When reviewing code or creating PRs, check:
+
+- **Correctness**: Logic errors, off-by-one errors, edge cases, proper error handling
+- **Security**: Injection attacks (SQL, XSS), auth/authz issues, data exposure, insecure defaults
+- **Performance**: N+1 queries, unnecessary re-renders, memory leaks, inefficient algorithms, missing indexes
+- **Standards**: Naming conventions, file organization, coding standards, architectural compliance
+
+Provide specific, constructive feedback with code examples. Distinguish blocking issues from suggestions.
+
+### Accessibility Standards
+
+All UI components must meet WCAG accessibility standards:
+
+- Proper ARIA attributes for interactive elements
+- Keyboard navigation support for all interactions
+- Screen reader compatibility with semantic HTML
+- Sufficient color contrast and visual clarity
+- Focus management and visible focus indicators
+
 ## Documents in Repository
 
 - `Concept-Paper_2.2(2).docx` - Full project concept and requirements
