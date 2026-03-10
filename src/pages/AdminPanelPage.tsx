@@ -16,6 +16,7 @@ import { Sidebar } from "@/components/admin/Sidebar";
 import { Menu } from "lucide-react";
 import AdminReservationsPage from "./admin/reservations/index";
 import { AdminLotsPage } from "./AdminLotsPage";
+import { LotsManagementPage } from "@/components/admin/lots/LotsManagementPage";
 import { DuesConfigPage } from "./DuesConfigPage";
 import { InPersonPaymentsPage } from "./InPersonPaymentsPage";
 import { CommonAreasPage } from "./CommonAreasPage";
@@ -674,6 +675,18 @@ export function AdminPanelPage() {
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <div className="flex-1 lg:ml-64">
           <AdminLotsPage />
+        </div>
+      </div>
+    );
+  }
+
+  // Handle lot-members section
+  if (pathInfo.section === "lot-members") {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 lg:ml-64 p-6">
+          <LotsManagementPage />
         </div>
       </div>
     );

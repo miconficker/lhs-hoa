@@ -48,6 +48,7 @@ const navItems: NavItem[] = [
     icon: Home,
     children: [
       { title: "Lots", href: "/admin/lots", icon: Home },
+      { title: "Lot Members", href: "/admin/lot-members", icon: Home },
       { title: "Common Areas", href: "/admin/common-areas", icon: Home },
     ],
   },

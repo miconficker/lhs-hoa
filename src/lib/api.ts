@@ -1682,6 +1682,76 @@ export const api = {
         ),
     },
   },
+  lotMembers: {
+    getMyMemberships: () =>
+      apiGet<{
+        lots: Array<{
+          household_id: string;
+          block: string;
+          lot: string;
+          address: string;
+          lot_type: string;
+          verified: boolean;
+        }>;
+        voteCount: number;
+        totalVotes: number;
+      }>("/lot-members/my"),
+    getHouseholdMembers: (id: string) =>
+      apiGet<{
+        householdId: string;
+        members: Array<{
+          user_id: string;
+          first_name: string;
+          last_name: string;
+          email: string;
+          member_type: string;
+          can_vote: boolean;
+          verified: boolean;
+        }>;
+      }>(`/lot-members/household/${id}`),
+    assignMember: (input: {
+      household_id: string;
+      user_id: string;
+      member_type: "primary_owner" | "secondary";
+      notes?: string;
+    }) =>
+      apiRequest<{
+        id: string;
+        household_id: string;
+        user_id: string;
+        member_type: string;
+        can_vote: boolean;
+        verified: boolean;
+      }>("/admin/lot-members", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    verifyMember: (id: string, notes?: string) =>
+      apiRequest<{
+        id: string;
+        verified: boolean;
+        can_vote: boolean;
+        verified_at: string;
+      }>(`/admin/lot-members/${id}/verify`, {
+        method: "PUT",
+        body: JSON.stringify({ notes: notes || "" }),
+      }),
+    removeMember: (id: string) =>
+      apiRequest<{ success: boolean }>(`/admin/lot-members/${id}`, {
+        method: "DELETE",
+      }),
+    getUnassignedLots: () =>
+      apiGet<{
+        lots: Array<{
+          id: string;
+          block: string;
+          lot: string;
+          address: string;
+          lot_type: string;
+          lot_status: string;
+        }>;
+      }>("/admin/lot-members/lots/unassigned"),
+  },
   messages: {
     // Get all threads for current user
     getThreads: (limit = 20, offset = 0) =>
