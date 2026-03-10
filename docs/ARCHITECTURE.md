@@ -1584,10 +1584,23 @@ jobs:
 
 ## Document Metadata
 
-**Last Updated**: 2026-03-08
-**Version**: 1.2.0
+**Last Updated**: 2026-03-11
+**Version**: 1.3.0
 **Status**: Production System (Audit Complete)
 **Maintained By**: Development Team
+
+**Recent Updates (v1.3.0)**:
+- Added resident-facing household member management to My Lots page
+  - Created `src/components/my-lots/HouseholdMembersPanel.tsx` for member display/management
+  - Created `src/components/my-lots/AddMemberDialog.tsx` for adding household members
+  - Updated `MyLotsPage.tsx` with expandable rows for inline member management
+- Removed obsolete Households tab from Admin Panel Page
+  - Address management moved to AdminLotsPage (map-based)
+  - Member management moved to LotsManagementPage (admin) or My Lots (resident)
+- Updated lot_members table documentation as source of truth for ownership
+  - Deprecated `households.owner_id` column (use lot_members instead)
+  - Added lot_members API endpoints documentation
+- Updated project structure to include `src/components/my-lots/` and `src/components/admin/lots/`
 
 **Recent Updates (v1.2.0)**:
 - Added `messages.ts` route to functions directory (was missing, causing 404s)
