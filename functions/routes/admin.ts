@@ -59,6 +59,41 @@ adminRouter.get('/users', async (c) => {
   return c.json({ users: users.results });
 });
 
+// Search users by email (fuzzy match)
+adminRouter.get('/users/search', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const query = c.req.query('q');
+  if (!query || query.length < 2) {
+    return c.json({ users: [] });
+  }
+
+  const users = await c.env.DB.prepare(`
+    SELECT id, email, first_name, last_name, role
+    FROM users
+    WHERE email LIKE ? OR first_name LIKE ? OR last_name LIKE ?
+    ORDER BY
+      CASE
+        WHEN email LIKE ? THEN 1
+        WHEN first_name LIKE ? THEN 2
+        ELSE 3
+      END,
+      email
+    LIMIT 10
+  `).bind(
+    `%${query}%`,
+    `%${query}%`,
+    `%${query}%`,
+    `${query}%`,
+    `${query}%`
+  ).all();
+
+  return c.json({ users: users.results });
+});
+
 // Create new user
 const createUserSchema = z.object({
   email: z.string().email(),

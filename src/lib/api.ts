@@ -980,6 +980,16 @@ export const api = {
   admin: {
     // Users
     listUsers: () => apiRequest<AdminUsersResponse>("/admin/users"),
+    searchUsers: (query: string) =>
+      apiRequest<{
+        users: Array<{
+          id: string;
+          email: string;
+          first_name?: string;
+          last_name?: string;
+          role: string;
+        }>;
+      }>(`/admin/users/search?q=${encodeURIComponent(query)}`),
     createUser: (input: CreateAdminUserInput) =>
       apiRequest<AdminUserResponse>("/admin/users", {
         method: "POST",

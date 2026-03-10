@@ -13,17 +13,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Search,
-  Home,
-  UserCheck,
-  Pencil,
-  ChevronRight,
-  Users,
-} from "lucide-react";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Search, Home, UserCheck, Pencil, Users, X } from "lucide-react";
 import type { UnassignedLot, LotMemberDetail } from "./types";
 import type { LotOwnership } from "@/types";
 import { AssignMemberDialog } from "./AssignMemberDialog";
-import { LotMembersList } from "./LotMembersList";
 import { EditLotDialog } from "./EditLotDialog";
 
 export function LotsManagementPage() {
@@ -35,6 +34,7 @@ export function LotsManagementPage() {
   const [members, setMembers] = useState<LotMemberDetail[]>([]);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -129,6 +129,7 @@ export function LotsManagementPage() {
 
   const handleLotClick = async (lot: LotOwnership | UnassignedLot) => {
     setSelectedLot(lot);
+    setSheetOpen(true);
     // Load members for this household
     if ("lot_id" in lot) {
       await loadMembers(lot.lot_id);
@@ -177,19 +178,11 @@ export function LotsManagementPage() {
   const renderLotCard = (lot: LotOwnership | UnassignedLot) => {
     const info = getLotDisplayInfo(lot);
     const hasOwnerId = "owner_user_id" in lot && lot.owner_user_id;
-    const isSelected =
-      selectedLot && getLotDisplayInfo(selectedLot).id === info.id;
-    const memberCount = members.length > 0 && isSelected ? members.length : 0;
 
     return (
       <Card
         key={info.id}
-        className={`cursor-pointer transition-all ${
-          isSelected
-            ? "ring-2 ring-primary-600 bg-primary-50/50"
-            : "hover:bg-accent/50 hover:shadow-md"
-        }`}
-        onClick={() => handleLotClick(lot)}
+        className="hover:bg-accent/50 hover:shadow-md transition-all"
       >
         <CardContent className="pt-6">
           <div className="flex items-start justify-between mb-3">
@@ -203,12 +196,6 @@ export function LotsManagementPage() {
                     {info.lotLabel}
                   </Badge>
                 )}
-                {isSelected && memberCount > 0 && (
-                  <Badge variant="default" className="text-xs">
-                    <Users className="h-3 w-3 mr-1" />
-                    {memberCount}
-                  </Badge>
-                )}
               </div>
               <p className="text-sm text-muted-foreground">{info.address}</p>
               {info.hasOwner && (
@@ -220,14 +207,7 @@ export function LotsManagementPage() {
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <Home className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-              <ChevronRight
-                className={`h-5 w-5 text-muted-foreground transition-transform ${
-                  isSelected ? "rotate-90 text-primary-600" : ""
-                }`}
-              />
-            </div>
+            <Home className="h-5 w-5 text-muted-foreground flex-shrink-0" />
           </div>
           <div className="flex gap-2 mb-3">
             <Badge variant="outline">{info.lotType}</Badge>
@@ -262,6 +242,15 @@ export function LotsManagementPage() {
                 </Button>
               </>
             )}
+            <Button
+              size="sm"
+              variant={hasOwnerId ? "outline" : "default"}
+              className="flex-1"
+              onClick={() => handleLotClick(lot)}
+            >
+              <Users className="h-3 w-3 mr-1" />
+              {hasOwnerId ? "View Members" : "Manage"}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -374,43 +363,136 @@ export function LotsManagementPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Members List and Assign Dialog */}
-      {selectedLot && (
-        <>
-          <LotMembersList
-            members={members}
-            lotInfo={getLotDisplayInfo(selectedLot)}
-            onClearSelection={() => setSelectedLot(null)}
-            onRefresh={() => {
-              loadData();
-              if (selectedLot) {
-                const lotId =
-                  "lot_id" in selectedLot ? selectedLot.lot_id : selectedLot.id;
-                loadMembers(lotId);
-              }
-            }}
-          />
-          {"lot_id" in selectedLot && (
+      {/* Members Sheet - slides in from right */}
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-md overflow-y-auto"
+        >
+          {selectedLot && (
             <>
-              <AssignMemberDialog
-                open={assignDialogOpen}
-                onOpenChange={setAssignDialogOpen}
-                householdId={selectedLot.lot_id}
-                onSuccess={() => {
-                  loadData();
-                  if (selectedLot) loadMembers(selectedLot.lot_id);
-                }}
-              />
-              <EditLotDialog
-                open={editDialogOpen}
-                onOpenChange={setEditDialogOpen}
-                lot={selectedLot as LotOwnership}
-                onSuccess={() => {
-                  loadData();
-                }}
-              />
+              <SheetHeader>
+                <SheetTitle>Household Members</SheetTitle>
+                <SheetDescription>
+                  {getLotDisplayInfo(selectedLot).address} • Block{" "}
+                  {getLotDisplayInfo(selectedLot).block}, Lot{" "}
+                  {getLotDisplayInfo(selectedLot).lot}
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="mt-6 space-y-4">
+                {/* Members List */}
+                <div className="space-y-3">
+                  {members.length === 0 ? (
+                    <div className="text-center py-8 border rounded-lg bg-muted/30">
+                      <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">
+                        No members assigned
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Use the button below to assign household members
+                      </p>
+                    </div>
+                  ) : (
+                    members.map((member) => (
+                      <div
+                        key={member.id}
+                        className="flex items-center justify-between p-3 border rounded-lg bg-card"
+                      >
+                        <div className="flex items-center gap-3">
+                          {member.verified ? (
+                            <div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center">
+                              <span className="text-green-600 text-xs">✓</span>
+                            </div>
+                          ) : (
+                            <div className="h-5 w-5 rounded-full bg-yellow-100 flex items-center justify-center">
+                              <span className="text-yellow-600 text-xs">!</span>
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-medium text-sm">
+                              {member.first_name} {member.last_name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {member.email}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={
+                              member.member_type === "primary_owner"
+                                ? "default"
+                                : "secondary"
+                            }
+                            className="text-xs"
+                          >
+                            {member.member_type === "primary_owner"
+                              ? "Primary"
+                              : "Secondary"}
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0"
+                            onClick={async () => {
+                              if (!confirm("Remove this member?")) return;
+                              try {
+                                await api.lotMembers.removeMember(member.id);
+                                const lotId =
+                                  "lot_id" in selectedLot
+                                    ? selectedLot.lot_id
+                                    : selectedLot.id;
+                                await loadMembers(lotId);
+                              } catch {
+                                alert("Failed to remove member");
+                              }
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Add Member Button */}
+                {"lot_id" in selectedLot && (
+                  <Button
+                    className="w-full"
+                    onClick={() => setAssignDialogOpen(true)}
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Add Household Member
+                  </Button>
+                )}
+              </div>
             </>
           )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Dialogs */}
+      {selectedLot && "lot_id" in selectedLot && (
+        <>
+          <AssignMemberDialog
+            open={assignDialogOpen}
+            onOpenChange={setAssignDialogOpen}
+            householdId={selectedLot.lot_id}
+            onSuccess={async () => {
+              await loadData();
+              await loadMembers(selectedLot.lot_id);
+            }}
+          />
+          <EditLotDialog
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            lot={selectedLot as LotOwnership}
+            onSuccess={() => {
+              loadData();
+            }}
+          />
         </>
       )}
     </div>

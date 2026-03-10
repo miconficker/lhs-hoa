@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,14 @@ interface AssignMemberDialogProps {
   onSuccess: () => void;
 }
 
+interface SuggestedUser {
+  id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  role: string;
+}
+
 export function AssignMemberDialog({
   open,
   onOpenChange,
@@ -32,6 +40,40 @@ export function AssignMemberDialog({
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<SuggestedUser[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Fetch suggestions when email changes
+  useEffect(() => {
+    if (userEmail.length >= 2) {
+      const fetchSuggestions = async () => {
+        try {
+          const resp = await api.admin.searchUsers(userEmail);
+          if (resp.data?.users) {
+            setSuggestions(resp.data.users);
+            setShowSuggestions(true);
+          }
+        } catch {
+          setSuggestions([]);
+        }
+      };
+      fetchSuggestions();
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [userEmail]);
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      setUserEmail("");
+      setNotes("");
+      setError(null);
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,16 +106,52 @@ export function AssignMemberDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
+            <div className="grid gap-2 relative">
               <Label htmlFor="user_email">User Email</Label>
               <Input
                 id="user_email"
                 type="email"
                 value={userEmail}
                 onChange={(e) => setUserEmail(e.target.value)}
+                onFocus={() => setShowSuggestions(suggestions.length > 0)}
+                onBlur={() => {
+                  // Delay hiding to allow click on suggestion
+                  setTimeout(() => setShowSuggestions(false), 200);
+                }}
                 placeholder="user@example.com"
                 required
+                autoComplete="off"
               />
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  {suggestions.map((user) => (
+                    <button
+                      key={user.id}
+                      type="button"
+                      className="w-full px-3 py-2 text-left hover:bg-accent flex items-center gap-2"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setUserEmail(user.email);
+                        setShowSuggestions(false);
+                      }}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">
+                          {user.email}
+                        </div>
+                        {(user.first_name || user.last_name) && (
+                          <div className="text-xs text-muted-foreground">
+                            {user.first_name} {user.last_name}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                        {user.role}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="grid gap-2">
               <Label>Member Type</Label>
