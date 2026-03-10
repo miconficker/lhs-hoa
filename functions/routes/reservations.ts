@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { getUserFromRequest } from '../lib/auth';
+import { canAccessHousehold } from '../lib/lot-access';
 
 type Env = {
   DB: D1Database;
@@ -49,14 +50,27 @@ reservationsRouter.get('/', async (c) => {
       query += ' AND household_id = ?';
       params.push(householdId);
     } else if (isOwnRequests) {
-      // Regular users can only see their own
-      // For now, return empty - should be enhanced with user-household relation
-      return c.json({ reservations: [] });
+      // Check if user can access this household
+      const hasAccess = await canAccessHousehold(authUser.userId, householdId, c.env.DB);
+      if (!hasAccess) {
+        return c.json({ error: 'Access denied' }, 403);
+      }
+      query += ' AND household_id = ?';
+      params.push(householdId);
     }
   } else if (isOwnRequests) {
-    // If not admin/staff and no household filter, return empty
-    // Users should use the /my endpoint
-    return c.json({ reservations: [] });
+    // If not admin/staff and no household filter, get user's accessible households
+    const accessibleHouseholds = await c.env.DB.prepare(
+      `SELECT DISTINCT household_id FROM lot_members WHERE user_id = ? AND verified = 1`
+    ).bind(authUser.userId).all();
+
+    if (accessibleHouseholds.results.length === 0) {
+      return c.json({ reservations: [] });
+    }
+
+    const householdIds = accessibleHouseholds.results.map((h: any) => h.household_id);
+    query += ` AND household_id IN (${householdIds.map(() => '?').join(',')})`;
+    params.push(...householdIds);
   }
 
   if (amenityType) {
@@ -251,9 +265,11 @@ reservationsRouter.get('/my/:householdId', async (c) => {
   const householdId = c.req.param('householdId');
 
   // Check permission - users can only view their own household's reservations
-  // For now, allow access - should be enhanced with user-household relation
   if (authUser.role !== 'admin' && authUser.role !== 'staff') {
-    // TODO: Verify user belongs to this household
+    const hasAccess = await canAccessHousehold(authUser.userId, householdId, c.env.DB);
+    if (!hasAccess) {
+      return c.json({ error: 'Access denied' }, 403);
+    }
   }
 
   // Exclude cancelled reservations for regular users
@@ -290,8 +306,10 @@ reservationsRouter.get('/:id', async (c) => {
 
   // Check permission
   if (authUser.role !== 'admin' && authUser.role !== 'staff') {
-    // TODO: Check if user belongs to the household
-    // For now, allow access
+    const hasAccess = await canAccessHousehold(authUser.userId, reservation.household_id, c.env.DB);
+    if (!hasAccess) {
+      return c.json({ error: 'Access denied' }, 403);
+    }
   }
 
   return c.json({ reservation });
@@ -312,6 +330,14 @@ reservationsRouter.post('/', async (c) => {
   }
 
   const { household_id, amenity_type, date, slot, purpose } = result.data;
+
+  // Check if user can access this household
+  if (authUser.role !== 'admin' && authUser.role !== 'staff') {
+    const hasAccess = await canAccessHousehold(authUser.userId, household_id, c.env.DB);
+    if (!hasAccess) {
+      return c.json({ error: 'Access denied to this household' }, 403);
+    }
+  }
 
   // Check for existing reservation by same household (including cancelled ones)
   const existingHouseholdReservation = await c.env.DB.prepare(
@@ -378,12 +404,16 @@ reservationsRouter.post('/', async (c) => {
     }, 409);
   }
 
-  // Get household owner to check for board member status
-  const household = await c.env.DB.prepare(
-    'SELECT owner_id FROM households WHERE id = ?'
+  // Get household primary owner to check for board member status
+  const primaryMember = await c.env.DB.prepare(
+    `SELECT user_id FROM lot_members
+     WHERE household_id = ?
+       AND member_type = 'primary_owner'
+       AND verified = 1
+     LIMIT 1`
   ).bind(household_id).first();
 
-  const ownerUserId = household?.owner_id as string | undefined;
+  const ownerUserId = primaryMember?.user_id as string | undefined;
 
   // Check if user is an active board member
   let isFreeBooking = false;
@@ -409,7 +439,7 @@ reservationsRouter.post('/', async (c) => {
       const freeBookingsCount = await c.env.DB.prepare(`
         SELECT COUNT(*) as count FROM reservations
         WHERE household_id IN (
-          SELECT id FROM households WHERE owner_id = ?
+          SELECT household_id FROM lot_members WHERE user_id = ? AND member_type = 'primary_owner' AND verified = 1
         )
         AND is_free_booking = 1
         AND date >= ? AND date <= ?

@@ -206,9 +206,14 @@ pollsRouter.post('/:id/vote', async (c) => {
 
   // PROXY VOTING: Count all lots owned by this user (excluding community/utility)
   const lotsCount = await c.env.DB.prepare(
-    `SELECT COUNT(*) as count FROM households
-     WHERE owner_id = ?
-       AND lot_type IN ('residential', 'resort', 'commercial')`
+    `SELECT COUNT(*) as count
+     FROM lot_members lm
+     JOIN households h ON lm.household_id = h.id
+     WHERE lm.user_id = ?
+       AND lm.member_type = 'primary_owner'
+       AND lm.can_vote = 1
+       AND lm.verified = 1
+       AND h.lot_type IN ('residential', 'resort', 'commercial')`
   ).bind(authUser.userId).first();
 
   const lotCount = lotsCount ? (lotsCount.count as number) : 1;
@@ -362,9 +367,14 @@ pollsRouter.post('/:id/record-vote', async (c) => {
 
     // Count lots owned by this user for proxy voting (excluding community/utility)
     const lotsCount = await c.env.DB.prepare(
-      `SELECT COUNT(*) as count FROM households
-       WHERE owner_id = ?
-         AND lot_type IN ('residential', 'resort', 'commercial')`
+      `SELECT COUNT(*) as count
+       FROM lot_members lm
+       JOIN households h ON lm.household_id = h.id
+       WHERE lm.user_id = ?
+         AND lm.member_type = 'primary_owner'
+         AND lm.can_vote = 1
+         AND lm.verified = 1
+         AND h.lot_type IN ('residential', 'resort', 'commercial')`
     ).bind(user_id).first();
 
     const lotCount = lotsCount ? (lotsCount.count as number) : 1;

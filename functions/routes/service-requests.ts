@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { getUserFromRequest } from '../lib/auth';
+import { canAccessHousehold } from '../lib/lot-access';
 
 type Env = {
   DB: D1Database;
@@ -51,12 +52,28 @@ serviceRequestsRouter.get('/', async (c) => {
     params.push(category);
   }
   if (householdId && (isOwnRequests || authUser.role === 'admin' || authUser.role === 'staff')) {
+    // Check if user can access this household
+    if (isOwnRequests) {
+      const hasAccess = await canAccessHousehold(authUser.userId, householdId, c.env.DB);
+      if (!hasAccess) {
+        return c.json({ error: 'Access denied' }, 403);
+      }
+    }
     query += ' AND household_id = ?';
     params.push(householdId);
   } else if (isOwnRequests) {
-    // If not admin/staff, must filter by user's household
-    // For now, we'll return empty - this should be enhanced with user-household relation
-    return c.json({ requests: [] });
+    // If not admin/staff and no household specified, get user's accessible households
+    const accessibleHouseholds = await c.env.DB.prepare(
+      `SELECT DISTINCT household_id FROM lot_members WHERE user_id = ? AND verified = 1`
+    ).bind(authUser.userId).all();
+
+    if (accessibleHouseholds.results.length === 0) {
+      return c.json({ requests: [] });
+    }
+
+    const householdIds = accessibleHouseholds.results.map((h: any) => h.household_id);
+    query += ` AND household_id IN (${householdIds.map(() => '?').join(',')})`;
+    params.push(...householdIds);
   }
 
   query += ' ORDER BY created_at DESC';
@@ -85,8 +102,10 @@ serviceRequestsRouter.get('/:id', async (c) => {
 
   // Check permission
   if (authUser.role !== 'admin' && authUser.role !== 'staff') {
-    // Should check if user belongs to the household
-    // For now, allow access
+    const hasAccess = await canAccessHousehold(authUser.userId, request.household_id, c.env.DB);
+    if (!hasAccess) {
+      return c.json({ error: 'Access denied' }, 403);
+    }
   }
 
   return c.json({ request });
