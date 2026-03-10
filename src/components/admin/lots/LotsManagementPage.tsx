@@ -72,7 +72,8 @@ export function LotsManagementPage() {
         (resp.data?.members || []).map(
           (m): LotMemberDetail => ({
             ...m,
-            id: m.user_id,
+            id: m.id, // Use lot_members.id for delete operations
+            user_id: m.user_id, // Keep user_id separate
             member_type: m.member_type as "primary_owner" | "secondary",
           }),
         ),

@@ -135,9 +135,9 @@ export async function getUserVoteCount(userId: string, db: D1Database): Promise<
 export async function getHouseholdMembers(
   householdId: string,
   db: D1Database
-): Promise<Array<{ user_id: string; first_name: string; last_name: string; email: string; member_type: string; can_vote: boolean; verified: boolean }>> {
+): Promise<Array<{ id: string; user_id: string; first_name: string; last_name: string; email: string; member_type: string; can_vote: boolean; verified: boolean }>> {
   const stmt = db.prepare(`
-    SELECT u.id as user_id, u.first_name, u.last_name, u.email,
+    SELECT lm.id, u.id as user_id, u.first_name, u.last_name, u.email,
            lm.member_type, lm.can_vote, lm.verified
       FROM lot_members lm
       JOIN users u ON lm.user_id = u.id

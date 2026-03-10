@@ -123,7 +123,7 @@ export function AssignMemberDialog({
                 autoComplete="off"
               />
               {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="absolute z-[100] w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-y-auto">
                   {suggestions.map((user) => (
                     <button
                       key={user.id}
