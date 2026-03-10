@@ -122,8 +122,17 @@ lhs-hoa/
 ├── src/                          # Frontend Source
 │   ├── components/
 │   │   ├── ui/                   # shadcn/ui base components
+│   │   ├── admin/                # Admin-specific components
+│   │   │   └── lots/             # Lot management components
+│   │   │       ├── LotsManagementPage.tsx
+│   │   │       ├── AssignMemberDialog.tsx
+│   │   │       ├── EditLotDialog.tsx
+│   │   │       └── types.ts
 │   │   ├── auth/                 # Authentication components
 │   │   ├── layout/               # Layout components (Header, Sidebar, Nav)
+│   │   ├── my-lots/              # My Lots page components (resident-facing)
+│   │   │   ├── HouseholdMembersPanel.tsx
+│   │   │   └── AddMemberDialog.tsx
 │   │   ├── theme/                # Theme provider & toggle
 │   │   ├── search/               # Command palette
 │   │   ├── charts/               # Recharts wrappers
@@ -385,9 +394,14 @@ Dynamic map data generation:
 app.get('/api/data/lots.geojson', async (c) => {
   // Merge database lot ownership with static GeoJSON geometries
   const lots = await c.env.DB.prepare(`
-    SELECT h.id, h.block, h.lot, h.owner_id, u.email
+    SELECT h.id, h.block, h.lot,
+           lm.user_id as owner_user_id,
+           u.email as owner_email
     FROM households h
-    LEFT JOIN users u ON h.owner_id = u.id
+    LEFT JOIN lot_members lm ON lm.household_id = h.id
+      AND lm.member_type = 'primary_owner'
+      AND lm.verified = 1
+    LEFT JOIN users u ON lm.user_id = u.id
   `).all();
 
   // Combine with GeoJSON from /data/lots.geojson
@@ -431,19 +445,68 @@ CREATE TABLE households (
   longitude REAL,
   map_marker_x REAL,
   map_marker_y REAL,
-  owner_id TEXT REFERENCES users(id),
+  owner_id TEXT REFERENCES users(id),     -- DEPRECATED: Use lot_members for ownership
   lot_status TEXT DEFAULT 'vacant_lot',
   lot_type TEXT DEFAULT 'residential',
   lot_size_sqm REAL,
   lot_label TEXT,
   lot_description TEXT,
-  household_group_id TEXT,         -- For merged lots
-  is_primary_lot BOOLEAN DEFAULT 1,
+  household_group_id TEXT,               -- For merged lots (still active)
+  is_primary_lot BOOLEAN DEFAULT 1,      -- For merged lots (still active)
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
 **Address Format**: Auto-generated as `{street}, Block {block}, Lot {lot}` (e.g., "Mahogany Street, Block 15, Lot 12")
+
+**Ownership Model**:
+- `owner_id` column is **deprecated** - kept for backward compatibility only
+- Use `lot_members` table (see below) for all ownership and access control logic
+- `household_group_id` and `is_primary_lot` are **still active** for merged lots functionality
+
+#### `lot_members` (Ownership & Access Control)
+```sql
+CREATE TABLE lot_members (
+  id            TEXT     PRIMARY KEY,
+  household_id  TEXT     NOT NULL REFERENCES households(id),
+  user_id       TEXT     NOT NULL REFERENCES users(id),
+  member_type   TEXT     NOT NULL CHECK(member_type IN ('primary_owner','secondary')),
+  can_vote      BOOLEAN  NOT NULL DEFAULT 0,
+  verified      BOOLEAN  NOT NULL DEFAULT 0,
+  verified_at   DATETIME,
+  verified_by   TEXT     REFERENCES users(id),
+  notes         TEXT,
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(household_id, user_id)
+);
+
+CREATE INDEX idx_lot_members_household ON lot_members(household_id);
+CREATE INDEX idx_lot_members_user       ON lot_members(user_id);
+CREATE INDEX idx_lot_members_verified   ON lot_members(verified, member_type);
+```
+
+**Purpose**: This is the **source of truth** for:
+- Who owns which lots (households)
+- Who has access to which households
+- Who can vote (for HOA elections)
+- Primary owners vs secondary members
+
+**Member Types**:
+- `primary_owner`: The lot owner with full rights
+- `secondary`: Family members, helpers, etc. with limited rights
+
+**Access Control Pattern**:
+```sql
+-- Check if user can access a household
+SELECT * FROM lot_members
+WHERE user_id = ? AND household_id = ?
+  AND member_type = 'primary_owner' AND verified = 1;
+
+-- Get user's lots
+SELECT h.* FROM households h
+JOIN lot_members lm ON lm.household_id = h.id
+WHERE lm.user_id = ? AND lm.member_type = 'primary_owner' AND lm.verified = 1;
+```
 
 #### `service_requests`
 ```sql
@@ -948,19 +1011,29 @@ POST   /api/payments/initiate          # Upload proof
 GET    /api/payments/my-pending/verifications
 ```
 
+#### Lot Members (Household Management)
+```
+GET    /api/lot-members/my                    # Get current user's lot memberships
+GET    /api/lot-members/household/:id         # Get household members
+POST   /api/admin/lot-members                 # Assign member to household
+PUT    /api/admin/lot-members/:id/verify      # Verify household member
+DELETE /api/admin/lot-members/:id             # Remove household member
+GET    /api/admin/lot-members/lots/unassigned # Get lots without members
+GET    /api/admin/lot-members/pending          # Get pending (unverified) members
+```
+
 #### Admin (Role-Protected)
 ```
 GET    /api/admin/users
 POST   /api/admin/users
-GET    /api/admin/households
-POST   /api/admin/households/import
 GET    /api/admin/lots/ownership
-PUT    /api/admin/lots/:id/owner
 POST   /api/admin/payments/in-person
 PUT    /api/admin/payments/:id/verify
 GET    /api/admin/payment-demands
 POST   /api/admin/payment-demands/create
 ```
+
+**Note**: The `/api/admin/households` endpoints are deprecated. Use lot_members API for household management.
 
 ---
 
@@ -1011,6 +1084,78 @@ Based on **Radix UI** primitives with Tailwind styling:
 - `Badge` - Status badges
 - `Skeleton` - Loading skeletons
 - `Sheet` - Side sheets
+
+### My Lots Components (Resident-Facing)
+
+**Purpose**: Allow primary owners to manage household members directly from the My Lots page.
+
+**Components**:
+- **`HouseholdMembersPanel`** (`src/components/my-lots/HouseholdMembersPanel.tsx`)
+  - Displays list of household members for a given lot
+  - Shows verification status (green checkmark for verified, yellow alert for pending)
+  - Shows member type (Primary Owner vs Secondary Member)
+  - Allows primary owners to remove members
+  - Includes callback for data refresh after changes
+
+- **`AddMemberDialog`** (`src/components/my-lots/AddMemberDialog.tsx`)
+  - Modal dialog for adding new household members
+  - Email input with fuzzy search suggestions from existing users
+  - Radio buttons for member type selection (Primary Owner vs Secondary)
+  - Optional notes field for recording relationship context
+  - Uses `api.lotMembers.assignMember()` endpoint
+
+**Usage in MyLotsPage**:
+```typescript
+// My Lots page uses expandable rows
+{lots.map((lot) => (
+  <React.Fragment key={lot.lot_id}>
+    {/* Main lot row with "Members" button */}
+    <tr>
+      ...
+      <button onClick={() => toggleLotExpanded(lot.lot_id)}>
+        <Users /> View Members
+      </button>
+    </tr>
+    {/* Expandable member management row */}
+    {expandedLots.has(lot.lot_id) && (
+      <tr>
+        <td colSpan={9}>
+          <HouseholdMembersPanel
+            householdId={lot.lot_id}
+            lotAddress={lot.address}
+            isPrimaryOwner={true}
+            onMemberChange={handleMemberAdded}
+          />
+          <AddMemberDialog
+            open={showAddMemberDialog}
+            onOpenChange={setShowAddMemberDialog}
+            householdId={lot.lot_id}
+            onSuccess={handleMemberAdded}
+          />
+        </td>
+      </tr>
+    )}
+  </React.Fragment>
+))}
+```
+
+### Admin Lot Management Components
+
+**Purpose**: Allow admins to manage lot ownership and household members.
+
+**Components**:
+- **`LotsManagementPage`** (`src/components/admin/lots/LotsManagementPage.tsx`)
+  - Admin interface for managing all lots
+  - Tabs: Unassigned, Assigned, All Lots
+  - Lot cards with Edit, Assign Owner, View Members actions
+  - Sliding sheet for household member management
+  - Uses `api.lotMembers.*` endpoints for member operations
+
+- **`AssignMemberDialog`** (`src/components/admin/lots/AssignMemberDialog.tsx`)
+  - Admin version of member assignment dialog
+  - Email search with user suggestions
+  - Member type and notes fields
+  - Supports both existing users and new member invitations
 
 ### Utility Functions
 
@@ -1169,13 +1314,15 @@ npm run build      # TypeScript compilation + Vite build
    - ✅ Safe: `.bind(param1, param2)`
    - ❌ Unsafe: String interpolation in queries
 
-4. **Household Access Control**:
+4. **Household Access Control** (use `lot_members` table):
    ```sql
-   -- Check owner
-   SELECT id FROM households WHERE id = ? AND owner_id = ?
-   -- Check resident
-   SELECT id FROM residents WHERE household_id = ? AND user_id = ?
+   -- Check if user can access household (verified primary owner)
+   SELECT h.id FROM households h
+   JOIN lot_members lm ON lm.household_id = h.id
+   WHERE h.id = ? AND lm.user_id = ?
+     AND lm.member_type = 'primary_owner' AND lm.verified = 1
    ```
+   Or use the `canAccessHousehold` helper from `functions/lib/lot-access.ts`
 
 5. **Common Areas (HOA-owned)**:
    - `owner_user_id = 'developer-owner'`
