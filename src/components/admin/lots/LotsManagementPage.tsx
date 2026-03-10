@@ -12,11 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Home, UserCheck } from "lucide-react";
+import { Search, Home, UserCheck, Pencil } from "lucide-react";
 import type { UnassignedLot, LotMemberDetail } from "./types";
 import type { LotOwnership } from "@/types";
 import { AssignMemberDialog } from "./AssignMemberDialog";
 import { LotMembersList } from "./LotMembersList";
+import { EditLotDialog } from "./EditLotDialog";
 
 export function LotsManagementPage() {
   const [allLots, setAllLots] = useState<LotOwnership[]>([]);
@@ -26,6 +27,7 @@ export function LotsManagementPage() {
   >(null);
   const [members, setMembers] = useState<LotMemberDetail[]>([]);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -205,19 +207,36 @@ export function LotsManagementPage() {
             <Badge variant="outline">{info.lotType}</Badge>
             <Badge variant="secondary">{info.lotStatus}</Badge>
           </div>
-          {showAssignButton && (
-            <Button
-              className="w-full"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedLot(lot);
-                setAssignDialogOpen(true);
-              }}
-            >
-              Assign Owner
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {"lot_id" in lot && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedLot(lot);
+                  setEditDialogOpen(true);
+                }}
+              >
+                <Pencil className="h-3 w-3 mr-1" />
+                Edit
+              </Button>
+            )}
+            {showAssignButton && (
+              <Button
+                className="flex-1"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedLot(lot);
+                  setAssignDialogOpen(true);
+                }}
+              >
+                Assign Owner
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     );
@@ -344,15 +363,25 @@ export function LotsManagementPage() {
             }}
           />
           {"lot_id" in selectedLot && (
-            <AssignMemberDialog
-              open={assignDialogOpen}
-              onOpenChange={setAssignDialogOpen}
-              householdId={selectedLot.lot_id}
-              onSuccess={() => {
-                loadData();
-                if (selectedLot) loadMembers(selectedLot.lot_id);
-              }}
-            />
+            <>
+              <AssignMemberDialog
+                open={assignDialogOpen}
+                onOpenChange={setAssignDialogOpen}
+                householdId={selectedLot.lot_id}
+                onSuccess={() => {
+                  loadData();
+                  if (selectedLot) loadMembers(selectedLot.lot_id);
+                }}
+              />
+              <EditLotDialog
+                open={editDialogOpen}
+                onOpenChange={setEditDialogOpen}
+                lot={selectedLot as LotOwnership}
+                onSuccess={() => {
+                  loadData();
+                }}
+              />
+            </>
           )}
         </>
       )}

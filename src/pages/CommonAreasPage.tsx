@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { Trees, Building2, Droplets } from "lucide-react";
+import { Trees, Building2, Droplets, Pencil } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { logger } from "@/lib/logger";
+import { Button } from "@/components/ui/button";
+import { EditLotDialog } from "@/components/admin/lots/EditLotDialog";
 
 interface CommunityLot {
   lot_id: string;
@@ -18,6 +20,8 @@ export function CommonAreasPage() {
   const { user } = useAuth();
   const [lots, setLots] = useState<CommunityLot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingLot, setEditingLot] = useState<any>(null);
 
   useEffect(() => {
     loadCommonLots();
@@ -120,6 +124,9 @@ export function CommonAreasPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                   Description
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-card divide-y divide-border">
@@ -164,11 +171,24 @@ export function CommonAreasPage() {
                       </span>
                     )}
                   </td>
+                  <td className="px-6 py-4 text-sm">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setEditingLot(lot);
+                        setEditDialogOpen(true);
+                      }}
+                    >
+                      <Pencil className="h-3 w-3 mr-1" />
+                      Edit
+                    </Button>
+                  </td>
                 </tr>
               ))}
               {lots.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center">
+                  <td colSpan={5} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center">
                       <Trees className="w-12 h-12 text-muted-foreground mb-3" />
                       <p className="text-sm text-muted-foreground">
@@ -203,6 +223,16 @@ export function CommonAreasPage() {
           </div>
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <EditLotDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        lot={editingLot}
+        onSuccess={() => {
+          loadCommonLots();
+        }}
+      />
     </div>
   );
 }
