@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import {
   Users,
@@ -74,7 +73,6 @@ interface VehicleForm {
 }
 
 export function PassesPage() {
-  const { user } = useAuth();
   const [employees, setEmployees] = useState<HouseholdEmployee[]>([]);
   const [vehicles, setVehicles] = useState<VehicleRegistration[]>([]);
   const [fees, setFees] = useState<PassFee[]>([]);
@@ -114,14 +112,11 @@ export function PassesPage() {
     setLoading(true);
     setError("");
 
-    // Load user's households first
-    const houseResult = await api.households.list();
-    if (houseResult.data) {
-      const userHouseholds = houseResult.data.households.filter(
-        (h: any) => h.owner_id === user?.id,
-      );
-      if (userHouseholds.length > 0 && !selectedHouseholdId) {
-        setSelectedHouseholdId(userHouseholds[0].id);
+    // Load user's household from lot_members
+    if (!selectedHouseholdId) {
+      const membershipsResult = await api.lotMembers.getMyMemberships();
+      if (membershipsResult.data && membershipsResult.data.lots.length > 0) {
+        setSelectedHouseholdId(membershipsResult.data.lots[0].household_id);
       }
     }
 

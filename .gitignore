@@ -59,3 +59,5 @@ maestro.yaml
 *storybook.log
 storybook-static
 CLAUDE.md
+
+backups/*

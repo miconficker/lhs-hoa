@@ -617,14 +617,17 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
   ): Promise<string | null> => {
     try {
       const hoa_token = localStorage.getItem("hoa_token");
-      const response = await fetch(`/api/admin/households?owner_id=${userId}`, {
-        headers: { Authorization: `Bearer ${hoa_token}` },
-      });
+      // Use lot_members API to find household for user
+      const response = await fetch(
+        `/api/admin/lot-members/user/${userId}/household`,
+        {
+          headers: { Authorization: `Bearer ${hoa_token}` },
+        },
+      );
 
       if (response.ok) {
         const data = await response.json();
-        const household = data.households?.[0];
-        return household?.id || null;
+        return data.household_id || null;
       }
       return null;
     } catch {
@@ -1247,36 +1250,50 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
                     value={householdSearch}
                     onChange={(e) => {
                       setHouseholdSearch(e.target.value);
-                      setBookingForm((prev) => ({ ...prev, household_id: undefined }));
+                      setBookingForm((prev) => ({
+                        ...prev,
+                        household_id: undefined,
+                      }));
                     }}
                     autoComplete="off"
                   />
                   {bookingForm.household_id && (
                     <p className="text-xs text-green-600">
-                      ✓ Selected: {households.find(h => h.id === bookingForm.household_id)?.address}
+                      ✓ Selected:{" "}
+                      {
+                        households.find(
+                          (h) => h.id === bookingForm.household_id,
+                        )?.address
+                      }
                     </p>
                   )}
-                  {householdSuggestions.length > 0 && !bookingForm.household_id && (
-                    <div className="overflow-y-auto absolute z-50 mt-1 w-full max-h-48 rounded-md border shadow-md bg-popover">
-                      {householdSuggestions.map((h) => (
-                        <button
-                          key={h.id}
-                          type="button"
-                          className="px-3 py-2 w-full text-sm text-left cursor-pointer hover:bg-accent hover:text-accent-foreground"
-                          onClick={() => {
-                            setBookingForm((prev) => ({ ...prev, household_id: h.id }));
-                            setHouseholdSearch(h.address);
-                            setHouseholdSuggestions([]);
-                          }}
-                        >
-                          <span className="font-medium">{h.address}</span>
-                          {h.lot_label && (
-                            <span className="ml-2 text-xs text-muted-foreground">{h.lot_label}</span>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  {householdSuggestions.length > 0 &&
+                    !bookingForm.household_id && (
+                      <div className="overflow-y-auto absolute z-50 mt-1 w-full max-h-48 rounded-md border shadow-md bg-popover">
+                        {householdSuggestions.map((h) => (
+                          <button
+                            key={h.id}
+                            type="button"
+                            className="px-3 py-2 w-full text-sm text-left cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                            onClick={() => {
+                              setBookingForm((prev) => ({
+                                ...prev,
+                                household_id: h.id,
+                              }));
+                              setHouseholdSearch(h.address);
+                              setHouseholdSuggestions([]);
+                            }}
+                          >
+                            <span className="font-medium">{h.address}</span>
+                            {h.lot_label && (
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                {h.lot_label}
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                 </div>
               )}
 
@@ -1289,37 +1306,53 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
                     value={boardMemberSearch}
                     onChange={(e) => {
                       setBoardMemberSearch(e.target.value);
-                      setBookingForm((prev) => ({ ...prev, user_id: undefined }));
+                      setBookingForm((prev) => ({
+                        ...prev,
+                        user_id: undefined,
+                      }));
                     }}
                     autoComplete="off"
                   />
                   {bookingForm.user_id && (
                     <p className="text-xs text-green-600">
-                      ✓ Selected: {
-                        boardMembers.find(bm => bm.user_id === bookingForm.user_id)?.user_name ||
-                        boardMembers.find(bm => bm.user_id === bookingForm.user_id)?.user_email
-                      }
+                      ✓ Selected:{" "}
+                      {boardMembers.find(
+                        (bm) => bm.user_id === bookingForm.user_id,
+                      )?.user_name ||
+                        boardMembers.find(
+                          (bm) => bm.user_id === bookingForm.user_id,
+                        )?.user_email}
                     </p>
                   )}
-                  {boardMemberSuggestions.length > 0 && !bookingForm.user_id && (
-                    <div className="overflow-y-auto absolute z-50 mt-1 w-full max-h-48 rounded-md border shadow-md bg-popover">
-                      {boardMemberSuggestions.map((bm) => (
-                        <button
-                          key={bm.user_id}
-                          type="button"
-                          className="px-3 py-2 w-full text-sm text-left cursor-pointer hover:bg-accent hover:text-accent-foreground"
-                          onClick={() => {
-                            setBookingForm((prev) => ({ ...prev, user_id: bm.user_id }));
-                            setBoardMemberSearch(bm.user_name || bm.user_email);
-                            setBoardMemberSuggestions([]);
-                          }}
-                        >
-                          <span className="font-medium">{bm.user_name || "(no name)"}</span>
-                          <span className="ml-2 text-xs text-muted-foreground">{bm.user_email}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  {boardMemberSuggestions.length > 0 &&
+                    !bookingForm.user_id && (
+                      <div className="overflow-y-auto absolute z-50 mt-1 w-full max-h-48 rounded-md border shadow-md bg-popover">
+                        {boardMemberSuggestions.map((bm) => (
+                          <button
+                            key={bm.user_id}
+                            type="button"
+                            className="px-3 py-2 w-full text-sm text-left cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                            onClick={() => {
+                              setBookingForm((prev) => ({
+                                ...prev,
+                                user_id: bm.user_id,
+                              }));
+                              setBoardMemberSearch(
+                                bm.user_name || bm.user_email,
+                              );
+                              setBoardMemberSuggestions([]);
+                            }}
+                          >
+                            <span className="font-medium">
+                              {bm.user_name || "(no name)"}
+                            </span>
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {bm.user_email}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                 </div>
               )}
 

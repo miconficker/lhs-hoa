@@ -207,4 +207,23 @@ adminLotMembersRouter.get('/lots/unassigned', async (c) => {
   return c.json({ lots: result.results || [] });
 });
 
+// GET /api/admin/lot-members/user/:userId/household - Get household for a user
+adminLotMembersRouter.get('/user/:userId/household', async (c) => {
+  const userId = c.req.param('userId');
+
+  const member = await c.env.DB.prepare(`
+    SELECT household_id
+      FROM lot_members
+     WHERE user_id = ?
+       AND verified = 1
+     LIMIT 1
+  `).bind(userId).first<{ household_id: string }>();
+
+  if (!member) {
+    return c.json({ error: 'No verified household found for user' }, 404);
+  }
+
+  return c.json({ household_id: member.household_id });
+});
+
 export { lotMembersRouter, adminLotMembersRouter };

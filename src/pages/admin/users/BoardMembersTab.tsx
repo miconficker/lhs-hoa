@@ -435,7 +435,8 @@ export function BoardMembersTab({
                       </Badge>
                     )}
                     <Badge variant="secondary">
-                      {member.free_bookings_remaining || 0} free booking remaining
+                      {member.free_bookings_remaining || 0} free booking
+                      remaining
                     </Badge>
                     {(member.bookings_this_year || 0) > 0 && (
                       <Badge

@@ -87,23 +87,19 @@ export function ReservationsPage() {
   async function loadUserHousehold() {
     if (!user) return;
 
-    // Get user's household
-    const houseResult = await api.households.list();
-    if (houseResult.data) {
-      const userHouseholds = houseResult.data.households.filter(
-        (h: any) => h.owner_id === user.id,
+    // Get user's household from lot_members
+    const membershipsResult = await api.lotMembers.getMyMemberships();
+    if (membershipsResult.data && membershipsResult.data.lots.length > 0) {
+      const firstLot = membershipsResult.data.lots[0];
+      setUserHouseholdId(firstLot.household_id);
+      setBookingForm((prev) => ({
+        ...prev,
+        household_id: firstLot.household_id,
+      }));
+    } else {
+      setError(
+        "You don't have a household assigned. Please contact the admin.",
       );
-      if (userHouseholds.length > 0) {
-        setUserHouseholdId(userHouseholds[0].id);
-        setBookingForm((prev) => ({
-          ...prev,
-          household_id: userHouseholds[0].id,
-        }));
-      } else {
-        setError(
-          "You don't have a household assigned. Please contact the admin.",
-        );
-      }
     }
   }
 

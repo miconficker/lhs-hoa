@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
 import { MainLayout } from "./components/layout/MainLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
@@ -73,9 +73,9 @@ const HelpPage = lazy(() =>
 // Loading component for lazy-loaded pages
 function PageLoader() {
   return (
-    <div className="flex items-center justify-center h-screen bg-background">
+    <div className="flex justify-center items-center h-screen bg-background">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+        <div className="mx-auto mb-4 w-12 h-12 rounded-full border-b-2 animate-spin border-primary"></div>
         <p className="text-muted-foreground">Loading...</p>
       </div>
     </div>
@@ -105,14 +105,7 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route
-              index
-              element={
-                <div className="text-gray-600">
-                  Welcome! Select an option from the sidebar.
-                </div>
-              }
-            />
+            <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="map" element={<MapPage />} />
             <Route path="service-requests" element={<ServiceRequestsPage />} />

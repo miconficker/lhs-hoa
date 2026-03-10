@@ -63,15 +63,10 @@ export function ServiceRequestsPage() {
   async function loadUserHousehold() {
     if (!user) return;
 
-    // Get user's household
-    const houseResult = await api.households.list();
-    if (houseResult.data) {
-      const userHouseholds = houseResult.data.households.filter(
-        (h: any) => h.owner_id === user.id,
-      );
-      if (userHouseholds.length > 0) {
-        setUserHouseholdId(userHouseholds[0].id);
-      }
+    // Get user's household from lot_members
+    const membershipsResult = await api.lotMembers.getMyMemberships();
+    if (membershipsResult.data && membershipsResult.data.lots.length > 0) {
+      setUserHouseholdId(membershipsResult.data.lots[0].household_id);
     }
   }
 
