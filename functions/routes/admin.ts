@@ -1479,6 +1479,421 @@ adminRouter.put('/reservations/:id/status', async (c) => {
 });
 
 // =============================================================================
+// ADMIN: Board Members Management
+// =============================================================================
+
+/**
+ * Helper function to check if user is an active board member
+ */
+async function isUserActiveBoardMember(userId: string, env: Env): Promise<boolean> {
+  const now = new Date().toISOString();
+  const boardMember = await env.DB.prepare(`
+    SELECT id FROM board_members
+    WHERE user_id = ?
+      AND term_start <= ?
+      AND term_end >= ?
+      AND resigned_at IS NULL
+  `).bind(userId, now, now).first();
+
+  return !!boardMember;
+}
+
+/**
+ * Helper function to count board member bookings in current calendar year
+ */
+async function getBoardMemberBookingCount(userId: string, env: Env): Promise<number> {
+  const currentYear = new Date().getFullYear();
+  const yearStart = `${currentYear}-01-01`;
+  const yearEnd = `${currentYear}-12-31`;
+
+  const result = await env.DB.prepare(`
+    SELECT COUNT(*) as count FROM reservations
+    WHERE household_id IN (
+      SELECT id FROM households WHERE owner_id = ?
+    )
+    AND date >= ?
+    AND date <= ?
+    AND is_free_booking = 1
+  `).bind(userId, yearStart, yearEnd).first();
+
+  return (result?.count as number) || 0;
+}
+
+/**
+ * GET /api/admin/board-members
+ * Get all board members (admin only)
+ */
+adminRouter.get('/board-members', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const currentYear = new Date().getFullYear();
+    const yearStart = `${currentYear}-01-01`;
+    const yearEnd = `${currentYear}-12-31`;
+
+    const boardMembers = await c.env.DB.prepare(`
+      SELECT
+        bm.id,
+        bm.user_id,
+        u.email as user_email,
+        u.first_name || ' ' || u.last_name as user_name,
+        bm.position,
+        bm.term_start,
+        bm.term_end,
+        bm.resigned_at,
+        bm.resignation_reason,
+        bm.notes,
+        bm.created_at,
+        COUNT(DISTINCT r.id) as bookings_this_year,
+        COALESCE((
+          SELECT CAST(setting_value AS INTEGER) FROM system_settings
+          WHERE setting_key = 'board_member_free_bookings'
+        ), 1) - COUNT(DISTINCT r.id) as free_bookings_remaining
+      FROM board_members bm
+      LEFT JOIN users u ON bm.user_id = u.id
+      LEFT JOIN reservations r ON bm.user_id = (
+        SELECT h.owner_id FROM households h WHERE h.id = r.household_id
+      ) AND r.is_free_booking = 1 AND r.date >= ? AND r.date <= ?
+      GROUP BY bm.id
+      ORDER BY bm.term_start DESC, u.email
+    `).bind(yearStart, yearEnd).all();
+
+    return c.json({ board_members: boardMembers.results || [] });
+  } catch (error) {
+    console.error('Error fetching board members:', error);
+    return c.json({ error: 'Failed to fetch board members' }, 500);
+  }
+});
+
+/**
+ * POST /api/admin/board-members
+ * Create new board member (admin only)
+ */
+adminRouter.post('/board-members', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const body = await c.req.json();
+  const { user_id, position, term_start, term_end, notes } = body;
+
+  if (!user_id) {
+    return c.json({ error: 'user_id is required' }, 400);
+  }
+
+  try {
+    // Verify user exists
+    const user = await c.env.DB.prepare('SELECT id, email FROM users WHERE id = ?').bind(user_id).first();
+    if (!user) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+
+    // If term dates not provided, auto-calculate from election settings
+    let finalTermStart = term_start;
+    let finalTermEnd = term_end;
+
+    if (!term_start || !term_end) {
+      const electionSettings = await c.env.DB.prepare(`
+        SELECT setting_key, setting_value FROM system_settings
+        WHERE setting_key IN ('last_election_date', 'election_cycle_years')
+      `).all();
+
+      const lastElection = electionSettings.results?.find((r: any) => r.setting_key === 'last_election_date')?.setting_value || '2025-12-00';
+      const cycleYears = parseInt(electionSettings.results?.find((r: any) => r.setting_key === 'election_cycle_years')?.setting_value || '2');
+
+      // Parse last election date to get year/month
+      const [year, month] = lastElection.split('-').map(Number);
+      const electionYear = month === 12 ? year + 1 : year;
+      const electionMonth = month === 12 ? 1 : month + 1;
+
+      if (!finalTermStart) {
+        finalTermStart = `${electionYear}-${String(electionMonth).padStart(2, '0')}-01`;
+      }
+      if (!finalTermEnd) {
+        const endYear = electionYear + cycleYears;
+        finalTermEnd = `${endYear}-${String(electionMonth).padStart(2, '0')}-01`;
+      }
+    }
+
+    // Check if user is already an active board member
+    const existing = await c.env.DB.prepare(`
+      SELECT id FROM board_members
+      WHERE user_id = ? AND resigned_at IS NULL
+    `).bind(user_id).first();
+
+    if (existing) {
+      return c.json({ error: 'User is already an active board member' }, 409);
+    }
+
+    const id = generateId();
+
+    await c.env.DB.prepare(`
+      INSERT INTO board_members (id, user_id, position, term_start, term_end, notes, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(id, user_id, position || null, finalTermStart, finalTermEnd, notes || null, authUser.userId).run();
+
+    const boardMember = await c.env.DB.prepare(`
+      SELECT
+        bm.*,
+        u.email as user_email,
+        u.first_name || ' ' || u.last_name as user_name
+      FROM board_members bm
+      LEFT JOIN users u ON bm.user_id = u.id
+      WHERE bm.id = ?
+    `).bind(id).first();
+
+    return c.json({ board_member: boardMember }, 201);
+  } catch (error) {
+    console.error('Error creating board member:', error);
+    return c.json({ error: 'Failed to create board member' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/board-members/:id
+ * Update board member (admin only)
+ */
+adminRouter.put('/board-members/:id', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const id = c.req.param('id');
+  const body = await c.req.json();
+  const { position, term_start, term_end, resigned_at, resignation_reason, notes } = body;
+
+  try {
+    // Check if board member exists
+    const existing = await c.env.DB.prepare('SELECT id FROM board_members WHERE id = ?').bind(id).first();
+    if (!existing) {
+      return c.json({ error: 'Board member not found' }, 404);
+    }
+
+    // Build update query dynamically
+    const updates: string[] = [];
+    const values: any[] = [];
+
+    if (position !== undefined) {
+      updates.push('position = ?');
+      values.push(position || null);
+    }
+    if (term_start !== undefined) {
+      updates.push('term_start = ?');
+      values.push(term_start);
+    }
+    if (term_end !== undefined) {
+      updates.push('term_end = ?');
+      values.push(term_end);
+    }
+    if (resigned_at !== undefined) {
+      updates.push('resigned_at = ?');
+      values.push(resigned_at || null);
+    }
+    if (resignation_reason !== undefined) {
+      updates.push('resignation_reason = ?');
+      values.push(resignation_reason || null);
+    }
+    if (notes !== undefined) {
+      updates.push('notes = ?');
+      values.push(notes || null);
+    }
+
+    if (updates.length === 0) {
+      return c.json({ error: 'No fields to update' }, 400);
+    }
+
+    values.push(id);
+    await c.env.DB.prepare(
+      `UPDATE board_members SET ${updates.join(', ')} WHERE id = ?`
+    ).bind(...values).run();
+
+    const boardMember = await c.env.DB.prepare(`
+      SELECT
+        bm.*,
+        u.email as user_email,
+        u.first_name || ' ' || u.last_name as user_name
+      FROM board_members bm
+      LEFT JOIN users u ON bm.user_id = u.id
+      WHERE bm.id = ?
+    `).bind(id).first();
+
+    return c.json({ board_member: boardMember });
+  } catch (error) {
+    console.error('Error updating board member:', error);
+    return c.json({ error: 'Failed to update board member' }, 500);
+  }
+});
+
+/**
+ * DELETE /api/admin/board-members/:id
+ * Delete board member (admin only)
+ */
+adminRouter.delete('/board-members/:id', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const id = c.req.param('id');
+
+  try {
+    await c.env.DB.prepare('DELETE FROM board_members WHERE id = ?').bind(id).run();
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting board member:', error);
+    return c.json({ error: 'Failed to delete board member' }, 500);
+  }
+});
+
+/**
+ * GET /api/admin/reservations/unified
+ * Get unified view of all bookings (residents, external, board members)
+ */
+adminRouter.get('/reservations/unified', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    // Get all reservations with board member info
+    const reservations = await c.env.DB.prepare(`
+      SELECT
+        r.id,
+        r.household_id,
+        r.amenity_type,
+        r.date,
+        r.slot,
+        r.status,
+        r.purpose,
+        r.amount,
+        r.amount_paid,
+        r.payment_status,
+        r.is_free_booking,
+        h.address as household_address,
+        h.owner_id,
+        u.email as user_email,
+        u.first_name || ' ' || u.last_name as user_name,
+        bm.id as board_member_id,
+        bm.resigned_at as board_resigned_at
+      FROM reservations r
+      LEFT JOIN households h ON r.household_id = h.id
+      LEFT JOIN users u ON h.owner_id = u.id
+      LEFT JOIN board_members bm ON u.id = bm.user_id
+        AND bm.term_start <= r.date
+        AND bm.term_end >= r.date
+        AND bm.resigned_at IS NULL
+    `).all();
+
+    // Get all external rentals
+    const externalRentals = await c.env.DB.prepare(`
+      SELECT
+        id,
+        amenity_type,
+        date,
+        slot,
+        renter_name,
+        renter_contact,
+        amount,
+        amount_paid,
+        payment_status,
+        'external' as booking_type
+      FROM external_rentals
+    `).all();
+
+    // Transform into unified format
+    const now = new Date().toISOString();
+    const currentYear = new Date().getFullYear();
+    const yearStart = `${currentYear}-01-01`;
+    const yearEnd = `${currentYear}-12-31`;
+
+    const getFreeBookingCount = async (userId: string) => {
+      const result = await c.env.DB.prepare(`
+        SELECT COUNT(*) as count FROM reservations
+        WHERE household_id IN (
+          SELECT id FROM households WHERE owner_id = ?
+        )
+        AND is_free_booking = 1
+        AND date >= ? AND date <= ?
+      `).bind(userId, yearStart, yearEnd).first();
+      return (result?.count as number) || 0;
+    };
+
+    const freeBookingsPerYear = parseInt((await c.env.DB.prepare(`
+      SELECT setting_value FROM system_settings WHERE setting_key = 'board_member_free_bookings'
+    `).first())?.setting_value as string || '1');
+
+    const unified: any[] = [];
+
+    // Process resident reservations
+    for (const r of (reservations.results || [])) {
+      const isBoardMember = !!r.board_member_id;
+      const isActiveBoardMember = isBoardMember && !r.board_resigned_at;
+
+      let customer_type: 'resident' | 'board_free' | 'board_paid' = 'resident';
+      if (isActiveBoardMember) {
+        const freeCount = await getFreeBookingCount(r.owner_id);
+        if (r.is_free_booking || freeCount < freeBookingsPerYear) {
+          customer_type = 'board_free';
+        } else {
+          customer_type = 'board_paid';
+        }
+      }
+
+      unified.push({
+        id: r.id,
+        customer_type,
+        amenity_type: r.amenity_type,
+        date: r.date,
+        slot: r.slot,
+        status: r.status,
+        amount: r.amount || 0,
+        amount_paid: r.amount_paid || 0,
+        payment_status: r.payment_status,
+        is_free_booking: !!r.is_free_booking,
+        household_id: r.household_id,
+        household_address: r.household_address,
+        user_id: r.owner_id,
+        user_email: r.user_email,
+        user_name: r.user_name,
+        purpose: r.purpose,
+      });
+    }
+
+    // Process external rentals
+    for (const er of (externalRentals.results || [])) {
+      unified.push({
+        id: er.id,
+        customer_type: 'external' as const,
+        amenity_type: er.amenity_type,
+        date: er.date,
+        slot: er.slot,
+        status: 'confirmed' as const, // External rentals are always confirmed
+        amount: er.amount,
+        amount_paid: er.amount_paid,
+        payment_status: er.payment_status,
+        is_free_booking: false,
+        renter_name: er.renter_name,
+        renter_contact: er.renter_contact,
+      });
+    }
+
+    // Sort by date descending
+    unified.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    return c.json({ reservations: unified });
+  } catch (error) {
+    console.error('Error fetching unified reservations:', error);
+    return c.json({ error: 'Failed to fetch unified reservations' }, 500);
+  }
+});
+
+// =============================================================================
 // ADMIN: Dues Rates Management
 // =============================================================================
 
@@ -3497,5 +3912,194 @@ adminRouter.put('/pass-management/rfid-replacement-requests/:id/reject', async (
   } catch (error) {
     console.error('Error rejecting replacement request:', error);
     return c.json({ error: 'Failed to reject replacement request' }, 500);
+  }
+});
+
+/**
+ * GET /api/admin/settings/pricing
+ * Get amenity pricing settings (admin only)
+ */
+adminRouter.get('/settings/pricing', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const amenityTypes = ['clubhouse', 'pool', 'basketball-court', 'tennis-court'];
+    const slots = ['AM', 'PM', 'FULL_DAY'];
+
+    const pricing: any[] = [];
+
+    for (const amenity of amenityTypes) {
+      for (const slot of slots) {
+        const residentKey = `amenity_pricing_${amenity}_${slot}_resident`;
+        const externalKey = `amenity_pricing_${amenity}_${slot}_external`;
+
+        const residentSetting = await c.env.DB.prepare(`
+          SELECT setting_value FROM system_settings WHERE setting_key = ?
+        `).bind(residentKey).first() as any;
+
+        const externalSetting = await c.env.DB.prepare(`
+          SELECT setting_value FROM system_settings WHERE setting_key = ?
+        `).bind(externalKey).first() as any;
+
+        pricing.push({
+          amenity,
+          slot,
+          residentRate: parseFloat(residentSetting?.setting_value || '0'),
+          externalRate: parseFloat(externalSetting?.setting_value || '0'),
+        });
+      }
+    }
+
+    return c.json({ pricing });
+  } catch (error) {
+    console.error('Error loading pricing settings:', error);
+    return c.json({ error: 'Failed to load pricing settings' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/settings/pricing
+ * Update amenity pricing settings (admin only)
+ */
+adminRouter.put('/settings/pricing', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const { pricing } = await c.req.json();
+
+    if (!Array.isArray(pricing)) {
+      return c.json({ error: 'Invalid pricing data' }, 400);
+    }
+
+    for (const item of pricing) {
+      const { amenity, slot, residentRate, externalRate } = item;
+
+      if (!amenity || !slot || typeof residentRate !== 'number' || typeof externalRate !== 'number') {
+        continue;
+      }
+
+      const residentKey = `amenity_pricing_${amenity}_${slot}_resident`;
+      const externalKey = `amenity_pricing_${amenity}_${slot}_external`;
+
+      // Update or insert resident rate
+      await c.env.DB.prepare(`
+        INSERT INTO system_settings (id, setting_key, setting_value, category, description, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(setting_key) DO UPDATE SET
+          setting_value = excluded.setting_value,
+          description = excluded.description,
+          updated_at = excluded.updated_at
+      `).bind(
+        `pricing-${amenity}-${slot}-resident`,
+        residentKey,
+        residentRate.toString(),
+        'pricing',
+        `Resident rate for ${amenity} ${slot}`,
+        new Date().toISOString()
+      ).run();
+
+      // Update or insert external rate
+      await c.env.DB.prepare(`
+        INSERT INTO system_settings (id, setting_key, setting_value, category, description, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(setting_key) DO UPDATE SET
+          setting_value = excluded.setting_value,
+          description = excluded.description,
+          updated_at = excluded.updated_at
+      `).bind(
+        `pricing-${amenity}-${slot}-external`,
+        externalKey,
+        externalRate.toString(),
+        'pricing',
+        `External rate for ${amenity} ${slot}`,
+        new Date().toISOString()
+      ).run();
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Error saving pricing settings:', error);
+    return c.json({ error: 'Failed to save pricing settings' }, 500);
+  }
+});
+
+/**
+ * POST /api/admin/reservations/:id/payment
+ * Record a payment for a reservation (admin only)
+ */
+adminRouter.post('/reservations/:id/payment', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const { id } = c.req.param();
+
+  try {
+    const { amount, payment_method, receipt_number } = await c.req.json();
+
+    if (typeof amount !== 'number' || amount <= 0) {
+      return c.json({ error: 'Invalid payment amount' }, 400);
+    }
+
+    // Get current reservation
+    const reservation = await c.env.DB.prepare(`
+      SELECT id, amount, amount_paid, payment_status
+      FROM reservations
+      WHERE id = ?
+    `).bind(id).first() as any;
+
+    if (!reservation) {
+      return c.json({ error: 'Reservation not found' }, 404);
+    }
+
+    const currentAmountPaid = parseFloat(reservation.amount_paid || '0');
+    const totalAmount = parseFloat(reservation.amount || '0');
+    const newAmountPaid = currentAmountPaid + amount;
+
+    // Determine new payment status
+    let newPaymentStatus = 'unpaid';
+    if (totalAmount > 0) {
+      if (newAmountPaid >= totalAmount) {
+        newPaymentStatus = 'paid';
+      } else if (newAmountPaid > 0) {
+        newPaymentStatus = 'partial';
+      }
+    } else {
+      newPaymentStatus = 'paid';
+    }
+
+    // Update reservation
+    await c.env.DB.prepare(`
+      UPDATE reservations
+      SET amount_paid = ?,
+          payment_status = ?,
+          payment_method = COALESCE(?, payment_method),
+          receipt_number = COALESCE(?, receipt_number),
+          updated_at = ?
+      WHERE id = ?
+    `).bind(
+      newAmountPaid.toString(),
+      newPaymentStatus,
+      payment_method || null,
+      receipt_number || null,
+      new Date().toISOString(),
+      id
+    ).run();
+
+    return c.json({
+      success: true,
+      amount_paid: newAmountPaid,
+      payment_status: newPaymentStatus
+    });
+  } catch (error) {
+    console.error('Error recording payment:', error);
+    return c.json({ error: 'Failed to record payment' }, 500);
   }
 });

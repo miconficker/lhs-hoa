@@ -69,6 +69,7 @@ import type {
   CreateTimeBlockInput,
   CreateExternalRentalInput,
   RecordPaymentInput,
+  UserRole,
 } from "@/types";
 
 import { logger } from "@/lib/logger";
@@ -416,7 +417,7 @@ export interface CreateDocumentInput {
 export interface AdminUser {
   id: string;
   email: string;
-  role: string;
+  role: UserRole;
   phone?: string;
   created_at: string;
   household_count?: number;

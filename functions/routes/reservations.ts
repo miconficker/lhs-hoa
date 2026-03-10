@@ -256,11 +256,17 @@ reservationsRouter.get('/my/:householdId', async (c) => {
     // TODO: Verify user belongs to this household
   }
 
-  const reservations = await c.env.DB.prepare(
-    `SELECT * FROM reservations
-     WHERE household_id = ?
-     ORDER BY date DESC, created_at DESC`
-  ).bind(householdId).all();
+  // Exclude cancelled reservations for regular users
+  // Admin/staff can see all reservations including cancelled ones
+  const excludeCancelled = authUser.role !== 'admin' && authUser.role !== 'staff';
+
+  let query = `SELECT * FROM reservations WHERE household_id = ?`;
+  if (excludeCancelled) {
+    query += ` AND status != 'cancelled'`;
+  }
+  query += ` ORDER BY date DESC, created_at DESC`;
+
+  const reservations = await c.env.DB.prepare(query).bind(householdId).all();
 
   return c.json({ reservations: reservations.results });
 });
@@ -372,13 +378,82 @@ reservationsRouter.post('/', async (c) => {
     }, 409);
   }
 
+  // Get household owner to check for board member status
+  const household = await c.env.DB.prepare(
+    'SELECT owner_id FROM households WHERE id = ?'
+  ).bind(household_id).first();
+
+  const ownerUserId = household?.owner_id as string | undefined;
+
+  // Check if user is an active board member
+  let isFreeBooking = false;
+  let amount = 0;
+  let amountPaid = 0;
+
+  if (ownerUserId) {
+    const now = new Date().toISOString();
+    const boardMember = await c.env.DB.prepare(`
+      SELECT id FROM board_members
+      WHERE user_id = ?
+        AND term_start <= ?
+        AND term_end >= ?
+        AND resigned_at IS NULL
+    `).bind(ownerUserId, now, now).first();
+
+    if (boardMember) {
+      // Count free bookings this calendar year
+      const currentYear = new Date().getFullYear();
+      const yearStart = `${currentYear}-01-01`;
+      const yearEnd = `${currentYear}-12-31`;
+
+      const freeBookingsCount = await c.env.DB.prepare(`
+        SELECT COUNT(*) as count FROM reservations
+        WHERE household_id IN (
+          SELECT id FROM households WHERE owner_id = ?
+        )
+        AND is_free_booking = 1
+        AND date >= ? AND date <= ?
+      `).bind(ownerUserId, yearStart, yearEnd).first();
+
+      const count = (freeBookingsCount?.count as number) || 0;
+
+      // Get free booking limit from settings
+      const freeBookingLimitSetting = await c.env.DB.prepare(`
+        SELECT setting_value FROM system_settings WHERE setting_key = 'board_member_free_bookings'
+      `).first();
+      const freeBookingLimit = parseInt((freeBookingLimitSetting?.setting_value as string) || '1');
+
+      if (count < freeBookingLimit) {
+        isFreeBooking = true;
+        amount = 0;
+        amountPaid = 0;
+      } else {
+        // Use resident pricing
+        const pricingKey = `amenity_pricing_${amenity_type}_${slot}_resident`;
+        const pricingSetting = await c.env.DB.prepare(`
+          SELECT setting_value FROM system_settings WHERE setting_key = ?
+        `).bind(pricingKey).first();
+        amount = parseFloat((pricingSetting?.setting_value as string) || '0');
+        amountPaid = 0;
+      }
+    } else {
+      // Use resident pricing for non-board members
+      const pricingKey = `amenity_pricing_${amenity_type}_${slot}_resident`;
+      const pricingSetting = await c.env.DB.prepare(`
+        SELECT setting_value FROM system_settings WHERE setting_key = ?
+      `).bind(pricingKey).first();
+      amount = parseFloat((pricingSetting?.setting_value as string) || '0');
+      amountPaid = 0;
+    }
+  }
+
   const id = generateId();
 
   try {
     await c.env.DB.prepare(
-      `INSERT INTO reservations (id, household_id, amenity_type, date, slot, purpose, status)
-       VALUES (?, ?, ?, ?, ?, ?, 'pending')`
-    ).bind(id, household_id, amenity_type, date, slot, purpose || null).run();
+      `INSERT INTO reservations (id, household_id, amenity_type, date, slot, purpose, status, amount, amount_paid, is_free_booking)
+       VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`
+    ).bind(id, household_id, amenity_type, date, slot, purpose || null, amount, amountPaid, isFreeBooking ? 1 : 0).run();
   } catch (error: any) {
     // Handle UNIQUE constraint violation (shouldn't happen after our checks, but just in case)
     if (error.message?.includes('UNIQUE constraint failed')) {

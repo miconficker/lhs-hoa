@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { api, AnnouncementsResponse } from "@/lib/api";
+import { api, AnnouncementsResponse, CreateAnnouncementInput } from "@/lib/api";
 import { format } from "date-fns";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import type { AnnouncementCategory } from "@/types";
+import { toast } from "sonner";
 
 const categoryColors: Record<AnnouncementCategory, string> = {
   event: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300",
@@ -27,6 +28,15 @@ export function AnnouncementsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [formData, setFormData] = useState({
+    title: "",
+    content: "",
+    category: "info" as AnnouncementCategory,
+    expires_at: "",
+    is_pinned: false,
+  });
 
   const isAdmin = user?.role === "admin" || user?.role === "staff";
 
@@ -48,6 +58,58 @@ export function AnnouncementsPage() {
 
     setLoading(false);
   }
+
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      content: "",
+      category: "info",
+      expires_at: "",
+      is_pinned: false,
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.title.trim() || !formData.content.trim()) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const input: CreateAnnouncementInput = {
+      title: formData.title.trim(),
+      content: formData.content.trim(),
+      category: formData.category,
+      is_pinned: formData.is_pinned,
+    };
+
+    if (formData.expires_at) {
+      input.expires_at = new Date(formData.expires_at).toISOString();
+    }
+
+    const result = await api.announcements.create(input);
+
+    setIsSubmitting(false);
+
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success("Announcement created successfully");
+      resetForm();
+      setShowCreateForm(false);
+      loadAnnouncements();
+    }
+  };
+
+  const updateField = (
+    field: keyof typeof formData,
+    value: string | boolean,
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   if (loading) {
     return (
@@ -86,13 +148,15 @@ export function AnnouncementsPage() {
       {showCreateForm && isAdmin && (
         <div className="bg-card rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold mb-4">Create Announcement</h2>
-          <form className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-card-foreground mb-1">
                 Title
               </label>
               <input
                 type="text"
+                value={formData.title}
+                onChange={(e) => updateField("title", e.target.value)}
                 className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 placeholder="Announcement title"
               />
@@ -103,6 +167,8 @@ export function AnnouncementsPage() {
               </label>
               <textarea
                 rows={4}
+                value={formData.content}
+                onChange={(e) => updateField("content", e.target.value)}
                 className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 placeholder="Announcement content"
               />
@@ -112,7 +178,11 @@ export function AnnouncementsPage() {
                 <label className="block text-sm font-medium text-card-foreground mb-1">
                   Category
                 </label>
-                <select className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500">
+                <select
+                  value={formData.category}
+                  onChange={(e) => updateField("category", e.target.value)}
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                >
                   <option value="info">Info</option>
                   <option value="urgent">Urgent</option>
                   <option value="event">Event</option>
@@ -125,6 +195,8 @@ export function AnnouncementsPage() {
                 </label>
                 <input
                   type="datetime-local"
+                  value={formData.expires_at}
+                  onChange={(e) => updateField("expires_at", e.target.value)}
                   className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
@@ -133,6 +205,8 @@ export function AnnouncementsPage() {
               <input
                 type="checkbox"
                 id="pinned"
+                checked={formData.is_pinned}
+                onChange={(e) => updateField("is_pinned", e.target.checked)}
                 className="rounded border-border"
               />
               <label htmlFor="pinned" className="text-sm text-card-foreground">
@@ -142,16 +216,20 @@ export function AnnouncementsPage() {
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => setShowCreateForm(false)}
+                onClick={() => {
+                  setShowCreateForm(false);
+                  resetForm();
+                }}
                 className="px-4 py-2 border border-border rounded-lg hover:bg-muted"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
               >
-                Create
+                {isSubmitting ? "Creating..." : "Create"}
               </button>
             </div>
           </form>

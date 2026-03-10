@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { api, type AdminUser, type AdminHousehold } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import type { LotOwnership, LotStatus, LotType, User } from "@/types";
+import type { LotOwnership, LotStatus, LotType, User, UserRole } from "@/types";
 import { PaymentVerificationQueue } from "@/components/PaymentVerificationQueue";
 import { LateFeeConfig } from "@/components/LateFeeConfig";
 import { PaymentExport } from "@/components/PaymentExport";
@@ -25,6 +25,7 @@ import { AnnouncementsPage } from "./AnnouncementsPage";
 import { NotificationsPage } from "./NotificationsPage";
 import { MessagesPage } from "./MessagesPage";
 import { PaymentsPage } from "./PaymentsPage";
+import { UsersSection } from "./admin/users/index";
 
 type Tab = "users" | "households" | "lots" | "import" | "payments" | "settings";
 
@@ -582,16 +583,6 @@ export function AdminPanelPage() {
     loadUsers();
   };
 
-  const handleDeleteUser = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
-    const response = await api.admin.deleteUser(id);
-    if (response.error) {
-      alert(response.error);
-      return;
-    }
-    loadUsers();
-  };
-
   const handleCreateHousehold = async (data: any) => {
     const response = await api.admin.createHousehold(data);
     if (response.error) {
@@ -986,97 +977,7 @@ export function AdminPanelPage() {
 
           {/* Content */}
           <div className="bg-white dark:bg-card rounded-lg shadow p-6">
-            {activeTab === "users" && (
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold">User Management</h2>
-                  <button
-                    onClick={() => {
-                      setEditingUser(null);
-                      setShowUserModal(true);
-                    }}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-                  >
-                    Add User
-                  </button>
-                </div>
-
-                {loading ? (
-                  <div className="text-center py-8">Loading...</div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-muted">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Email
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Role
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Phone
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Households
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white dark:bg-card divide-y divide-gray-200 dark:divide-gray-700">
-                        {users.map((user) => (
-                          <tr key={user.id}>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {user.email}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span
-                                className={`px-2 py-1 text-xs rounded-full ${
-                                  user.role === "admin"
-                                    ? "bg-purple-100 text-purple-800"
-                                    : user.role === "staff"
-                                      ? "bg-blue-100 text-blue-800"
-                                      : user.role === "resident"
-                                        ? "bg-green-100 text-green-800"
-                                        : "bg-gray-100 text-gray-800"
-                                }`}
-                              >
-                                {user.role}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {user.phone || "-"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {user.household_count || 0}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                              <button
-                                onClick={() => {
-                                  setEditingUser(user);
-                                  setShowUserModal(true);
-                                }}
-                                className="text-primary-600 hover:text-primary-900"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleDeleteUser(user.id)}
-                                className="text-red-600 hover:text-red-900"
-                              >
-                                Delete
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            )}
+            {activeTab === "users" && <UsersSection />}
 
             {activeTab === "households" && (
               <div>
@@ -1551,7 +1452,7 @@ function UserModal({
             </label>
             <select
               value={role}
-              onChange={(e) => setRole(e.target.value)}
+              onChange={(e) => setRole(e.target.value as UserRole)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="admin">Admin</option>

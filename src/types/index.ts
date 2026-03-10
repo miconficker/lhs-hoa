@@ -140,6 +140,11 @@ export type AmenityType =
   | "tennis-court";
 export type ReservationSlot = "AM" | "PM" | "FULL_DAY";
 export type ReservationStatus = "pending" | "confirmed" | "cancelled";
+export type ReservationPaymentStatus =
+  | "unpaid"
+  | "partial"
+  | "paid"
+  | "overdue";
 
 export interface Reservation {
   id: string;
@@ -150,6 +155,13 @@ export interface Reservation {
   status: ReservationStatus;
   purpose?: string;
   created_at: string;
+  // Payment fields
+  amount?: number;
+  amount_paid?: number;
+  payment_status?: ReservationPaymentStatus;
+  payment_method?: string;
+  receipt_number?: string;
+  payment_due_date?: string;
 }
 
 export interface ReservationWithHousehold extends Reservation {
@@ -226,6 +238,71 @@ export interface RecordPaymentInput {
   amount: number;
   payment_method?: string;
   receipt_number?: string;
+}
+
+// =============================================================================
+// Board Members
+// =============================================================================
+
+export interface BoardMember {
+  id: string;
+  user_id: string;
+  user_email: string;
+  user_name: string;
+  position?: string;
+  term_start: string;
+  term_end: string;
+  resigned_at?: string;
+  resignation_reason?: string;
+  notes?: string;
+  bookings_this_year?: number;
+  free_bookings_remaining?: number;
+}
+
+export type CustomerType =
+  | "resident"
+  | "external"
+  | "board_free"
+  | "board_paid";
+
+export interface UnifiedReservation {
+  id: string;
+  customer_type: CustomerType;
+  amenity_type: AmenityType;
+  date: string;
+  slot: ReservationSlot;
+  status: ReservationStatus;
+  amount: number;
+  amount_paid: number;
+  payment_status?: ReservationPaymentStatus;
+  is_free_booking?: boolean;
+  // Resident fields
+  household_id?: string;
+  household_address?: string;
+  // External fields
+  renter_name?: string;
+  renter_contact?: string;
+  // Board member fields
+  user_id?: string;
+  user_email?: string;
+  user_name?: string;
+}
+
+export interface CreateBoardMemberInput {
+  user_id: string;
+  position?: string;
+  term_start?: string;
+  term_end?: string;
+  notes?: string;
+}
+
+export interface UpdateBoardMemberInput {
+  position?: string;
+  term_start?: string;
+  term_end?: string;
+  resigned_at?: string;
+  resignation_reason?: string;
+  notes?: string;
 }
 
 // Announcements & Events

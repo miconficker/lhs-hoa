@@ -33,7 +33,12 @@ const navItems: NavItem[] = [
     href: "/admin/users",
     icon: Users,
     children: [
-      { title: "Residents", href: "/admin/residents", icon: Users },
+      { title: "Users", href: "/admin/users", icon: Users },
+      {
+        title: "Board Members",
+        href: "/admin/users?tab=board-members",
+        icon: Users,
+      },
       { title: "Pre-Approved", href: "/admin/pre-approved", icon: Users },
     ],
   },
@@ -51,10 +56,9 @@ const navItems: NavItem[] = [
     href: "/admin/reservations",
     icon: Calendar,
     children: [
-      { title: "Overview", href: "/admin/reservations", icon: Calendar },
       {
-        title: "Bookings",
-        href: "/admin/reservations/bookings",
+        title: "All Bookings",
+        href: "/admin/reservations/all-bookings",
         icon: Calendar,
       },
       {
@@ -62,11 +66,7 @@ const navItems: NavItem[] = [
         href: "/admin/reservations/time-blocks",
         icon: Calendar,
       },
-      {
-        title: "External Rentals",
-        href: "/admin/reservations/external-rentals",
-        icon: Calendar,
-      },
+      { title: "Pricing", href: "/admin/reservations/pricing", icon: Calendar },
     ],
   },
   {

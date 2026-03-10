@@ -1,6 +1,16 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Calendar, Clock, Home, Check, X, Filter } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Home,
+  Check,
+  X,
+  Filter,
+  Receipt,
+  DollarSign,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -12,11 +22,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type {
   ReservationWithHousehold,
   ReservationStatus,
   AmenityType,
   ReservationSlot,
+  ReservationPaymentStatus,
 } from "@/types";
 
 interface BookingsTabProps {
@@ -58,6 +77,35 @@ const slotLabels: Record<ReservationSlot, string> = {
   FULL_DAY: "Full Day (8AM - 5PM)",
 };
 
+const paymentStatusLabels: Record<ReservationPaymentStatus, string> = {
+  unpaid: "Unpaid",
+  partial: "Partial",
+  paid: "Paid",
+  overdue: "Overdue",
+};
+
+const paymentStatusBadgeVariant: Record<
+  ReservationPaymentStatus,
+  "default" | "secondary" | "destructive" | "outline"
+> = {
+  unpaid: "secondary",
+  partial: "outline",
+  paid: "default",
+  overdue: "destructive",
+};
+
+interface PaymentFormData {
+  amount: string;
+  payment_method: string;
+  receipt_number: string;
+}
+
+const emptyPaymentForm: PaymentFormData = {
+  amount: "",
+  payment_method: "",
+  receipt_number: "",
+};
+
 export function BookingsTab({ amenityTypes }: BookingsTabProps) {
   const [reservations, setReservations] = useState<ReservationWithHousehold[]>(
     [],
@@ -68,6 +116,14 @@ export function BookingsTab({ amenityTypes }: BookingsTabProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [paymentReservation, setPaymentReservation] =
+    useState<ReservationWithHousehold | null>(null);
+  const [paymentForm, setPaymentForm] =
+    useState<PaymentFormData>(emptyPaymentForm);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [reservationToDelete, setReservationToDelete] =
+    useState<ReservationWithHousehold | null>(null);
   const [filters, setFilters] = useState<FilterState>({
     status: "all",
     amenity: "all",
@@ -156,7 +212,7 @@ export function BookingsTab({ amenityTypes }: BookingsTabProps) {
       const response = await fetch(
         `/api/admin/reservations/${reservationId}/status`,
         {
-          method: "PATCH",
+          method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${hoa_token}`,
@@ -191,6 +247,69 @@ export function BookingsTab({ amenityTypes }: BookingsTabProps) {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
+  const openPaymentDialog = (reservation: ReservationWithHousehold) => {
+    setPaymentReservation(reservation);
+    const remainingBalance =
+      (reservation.amount || 0) - (reservation.amount_paid || 0);
+    setPaymentForm({
+      amount: remainingBalance > 0 ? remainingBalance.toString() : "",
+      payment_method: reservation.payment_method || "",
+      receipt_number: reservation.receipt_number || "",
+    });
+    setIsPaymentDialogOpen(true);
+  };
+
+  const closePaymentDialog = () => {
+    setIsPaymentDialogOpen(false);
+    setPaymentReservation(null);
+    setPaymentForm(emptyPaymentForm);
+  };
+
+  const handlePaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!paymentReservation) return;
+
+    if (!paymentForm.amount || isNaN(parseFloat(paymentForm.amount))) {
+      toast.error("Please enter a valid payment amount");
+      return;
+    }
+
+    try {
+      setIsProcessing(paymentReservation.id);
+      const hoa_token = localStorage.getItem("hoa_token");
+
+      const response = await fetch(
+        `/api/admin/reservations/${paymentReservation.id}/payment`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${hoa_token}`,
+          },
+          body: JSON.stringify({
+            amount: parseFloat(paymentForm.amount),
+            payment_method: paymentForm.payment_method || undefined,
+            receipt_number: paymentForm.receipt_number || undefined,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to record payment");
+      }
+
+      await loadReservations();
+      closePaymentDialog();
+      toast.success("Payment recorded successfully");
+    } catch (error) {
+      console.error("Error recording payment:", error);
+      toast.error("Failed to record payment");
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
   const clearFilters = () => {
     setFilters({
       status: "all",
@@ -198,6 +317,48 @@ export function BookingsTab({ amenityTypes }: BookingsTabProps) {
       slot: "all",
       search: "",
     });
+  };
+
+  const openDeleteDialog = (reservation: ReservationWithHousehold) => {
+    setReservationToDelete(reservation);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const closeDeleteDialog = () => {
+    setIsDeleteDialogOpen(false);
+    setReservationToDelete(null);
+  };
+
+  const handleDeleteReservation = async () => {
+    if (!reservationToDelete) return;
+
+    try {
+      setIsProcessing(reservationToDelete.id);
+      const hoa_token = localStorage.getItem("hoa_token");
+
+      const response = await fetch(
+        `/api/admin/reservations/${reservationToDelete.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${hoa_token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete reservation");
+      }
+
+      await loadReservations();
+      closeDeleteDialog();
+      toast.success("Reservation deleted successfully");
+    } catch (error) {
+      console.error("Error deleting reservation:", error);
+      toast.error("Failed to delete reservation");
+    } finally {
+      setIsProcessing(null);
+    }
   };
 
   const activeFilterCount = Object.values(filters).filter(
@@ -325,7 +486,7 @@ export function BookingsTab({ amenityTypes }: BookingsTabProps) {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="rounded-lg border bg-card p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -351,12 +512,32 @@ export function BookingsTab({ amenityTypes }: BookingsTabProps) {
         <div className="rounded-lg border bg-card p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">Cancelled</p>
+              <p className="text-sm text-muted-foreground">Revenue</p>
               <p className="text-2xl font-bold">
-                {reservations.filter((r) => r.status === "cancelled").length}
+                ₱
+                {reservations
+                  .reduce((sum, r) => sum + (r.amount_paid || 0), 0)
+                  .toFixed(0)}
               </p>
             </div>
-            <X className="h-8 w-8 text-red-500 opacity-50" />
+            <DollarSign className="h-8 w-8 text-green-500 opacity-50" />
+          </div>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Outstanding</p>
+              <p className="text-2xl font-bold">
+                ₱
+                {reservations
+                  .reduce(
+                    (sum, r) => sum + ((r.amount || 0) - (r.amount_paid || 0)),
+                    0,
+                  )
+                  .toFixed(0)}
+              </p>
+            </div>
+            <DollarSign className="h-8 w-8 text-red-500 opacity-50" />
           </div>
         </div>
       </div>
@@ -399,6 +580,9 @@ export function BookingsTab({ amenityTypes }: BookingsTabProps) {
                   </th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
                     Purpose
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                    Amount
                   </th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
                     Status
@@ -454,12 +638,76 @@ export function BookingsTab({ amenityTypes }: BookingsTabProps) {
                       </span>
                     </td>
                     <td className="px-4 py-3">
+                      <div>
+                        {(reservation.amount || 0) > 0 ? (
+                          <>
+                            <p className="text-sm font-medium">
+                              ₱{(reservation.amount || 0).toFixed(0)}
+                            </p>
+                            {reservation.amount_paid &&
+                              reservation.amount_paid > 0 && (
+                                <>
+                                  <p className="text-xs text-muted-foreground">
+                                    Paid: ₱{reservation.amount_paid.toFixed(0)}
+                                  </p>
+                                  {(reservation.amount || 0) -
+                                    reservation.amount_paid >
+                                    0 && (
+                                    <p className="text-xs text-destructive">
+                                      Balance: ₱
+                                      {(
+                                        (reservation.amount || 0) -
+                                        reservation.amount_paid
+                                      ).toFixed(0)}
+                                    </p>
+                                  )}
+                                </>
+                              )}
+                            {reservation.payment_status && (
+                              <Badge
+                                variant={
+                                  paymentStatusBadgeVariant[
+                                    reservation.payment_status
+                                  ]
+                                }
+                                className="mt-1"
+                              >
+                                {
+                                  paymentStatusLabels[
+                                    reservation.payment_status
+                                  ]
+                                }
+                              </Badge>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">
+                            -
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
                       <Badge variant={statusBadgeVariant[reservation.status]}>
                         {statusLabels[reservation.status]}
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
+                        {reservation.status === "confirmed" &&
+                          (reservation.amount || 0) > 0 &&
+                          (!reservation.payment_status ||
+                            reservation.payment_status === "unpaid" ||
+                            reservation.payment_status === "partial") && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => openPaymentDialog(reservation)}
+                              title="Record payment"
+                            >
+                              <Receipt className="h-4 w-4 text-green-500" />
+                            </Button>
+                          )}
                         {reservation.status === "pending" && (
                           <>
                             <Button
@@ -492,6 +740,16 @@ export function BookingsTab({ amenityTypes }: BookingsTabProps) {
                             </Button>
                           </>
                         )}
+                        {reservation.status === "cancelled" && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openDeleteDialog(reservation)}
+                            title="Delete reservation"
+                          >
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -501,6 +759,187 @@ export function BookingsTab({ amenityTypes }: BookingsTabProps) {
           </div>
         </div>
       )}
+
+      {/* Payment Dialog */}
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+            <DialogDescription>
+              {paymentReservation && (
+                <>
+                  Record payment for{" "}
+                  {paymentReservation.household_address || "Resident"} -{" "}
+                  {amenityLabels[paymentReservation.amenity_type]} on{" "}
+                  {new Date(paymentReservation.date).toLocaleDateString()}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handlePaymentSubmit}>
+            <div className="space-y-4 py-4">
+              {paymentReservation && (
+                <div className="rounded-lg bg-muted/50 p-3 space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Total Amount:</span>
+                    <span className="font-medium">
+                      ₱{(paymentReservation.amount || 0).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      Previously Paid:
+                    </span>
+                    <span className="font-medium">
+                      ₱{(paymentReservation.amount_paid || 0).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold">
+                    <span>Balance Due:</span>
+                    <span className="text-destructive">
+                      ₱
+                      {(
+                        (paymentReservation.amount || 0) -
+                        (paymentReservation.amount_paid || 0)
+                      ).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="payment_amount">Payment Amount (₱) *</Label>
+                <Input
+                  id="payment_amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={paymentForm.amount}
+                  onChange={(e) =>
+                    setPaymentForm((prev) => ({
+                      ...prev,
+                      amount: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="payment_method">Payment Method</Label>
+                <Input
+                  id="payment_method"
+                  placeholder="e.g., Cash, GCash, Bank Transfer"
+                  value={paymentForm.payment_method}
+                  onChange={(e) =>
+                    setPaymentForm((prev) => ({
+                      ...prev,
+                      payment_method: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="receipt_number">Receipt Number</Label>
+                <Input
+                  id="receipt_number"
+                  placeholder="Official receipt number..."
+                  value={paymentForm.receipt_number}
+                  onChange={(e) =>
+                    setPaymentForm((prev) => ({
+                      ...prev,
+                      receipt_number: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closePaymentDialog}
+                disabled={isProcessing === paymentReservation?.id}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isProcessing === paymentReservation?.id}
+              >
+                {isProcessing === paymentReservation?.id
+                  ? "Recording..."
+                  : "Record Payment"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Reservation?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete this reservation? This
+              action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          {reservationToDelete && (
+            <div className="rounded-lg bg-muted/50 p-3 space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Date:</span>
+                <span className="font-medium">
+                  {new Date(reservationToDelete.date).toLocaleDateString()}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Amenity:</span>
+                <span className="font-medium">
+                  {amenityLabels[reservationToDelete.amenity_type]}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Slot:</span>
+                <span className="font-medium">
+                  {slotLabels[reservationToDelete.slot]}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Household:</span>
+                <span className="font-medium">
+                  {reservationToDelete.household_address || "Unknown"}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={closeDeleteDialog}
+              disabled={isProcessing === reservationToDelete?.id}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteReservation}
+              disabled={isProcessing === reservationToDelete?.id}
+            >
+              {isProcessing === reservationToDelete?.id
+                ? "Deleting..."
+                : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

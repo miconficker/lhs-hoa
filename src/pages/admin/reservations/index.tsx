@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookingsTab } from "./BookingsTab";
+import { UnifiedBookingsTab } from "./UnifiedBookingsTab";
 import { TimeBlocksTab } from "./TimeBlocksTab";
-import { ExternalRentalsTab } from "./ExternalRentalsTab";
+import { PricingTab } from "./PricingTab";
 import type { AmenityType } from "@/types";
 
 const amenityTypes: AmenityType[] = [
@@ -14,23 +14,28 @@ const amenityTypes: AmenityType[] = [
 ];
 
 export default function AdminReservationsPage() {
-  const { tab = "overview" } = useParams<{ tab?: string }>();
+  const { tab = "all-bookings" } = useParams<{ tab?: string }>();
 
   // Map URL param to tab value
   const getTabValue = () => {
     switch (tab) {
-      case "bookings":
-        return "bookings";
+      case "all-bookings":
+        return "all-bookings";
       case "time-blocks":
         return "time-blocks";
-      case "external-rentals":
-        return "external-rentals";
+      case "pricing":
+        return "pricing";
       default:
-        return "bookings";
+        return "all-bookings";
     }
   };
 
   const [activeTab, setActiveTab] = useState(getTabValue());
+
+  // Sync activeTab with URL param
+  useEffect(() => {
+    setActiveTab(getTabValue());
+  }, [tab]);
 
   return (
     <div className="container mx-auto py-6 px-4 max-w-7xl">
@@ -39,7 +44,7 @@ export default function AdminReservationsPage() {
           Reservations Management
         </h1>
         <p className="text-muted-foreground">
-          Manage resident bookings, time blocks, and external rentals
+          Manage bookings, time blocks, and pricing
         </p>
       </div>
 
@@ -49,7 +54,7 @@ export default function AdminReservationsPage() {
         className="space-y-6"
       >
         <TabsList className="grid w-full grid-cols-3 lg:w-auto">
-          <TabsTrigger value="bookings" className="flex items-center gap-2">
+          <TabsTrigger value="all-bookings" className="flex items-center gap-2">
             <svg
               className="h-4 w-4"
               fill="none"
@@ -64,7 +69,7 @@ export default function AdminReservationsPage() {
                 d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
               />
             </svg>
-            Bookings
+            All Bookings
           </TabsTrigger>
           <TabsTrigger value="time-blocks" className="flex items-center gap-2">
             <svg
@@ -83,10 +88,7 @@ export default function AdminReservationsPage() {
             </svg>
             Time Blocks
           </TabsTrigger>
-          <TabsTrigger
-            value="external-rentals"
-            className="flex items-center gap-2"
-          >
+          <TabsTrigger value="pricing" className="flex items-center gap-2">
             <svg
               className="h-4 w-4"
               fill="none"
@@ -101,20 +103,20 @@ export default function AdminReservationsPage() {
                 d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            External Rentals
+            Pricing
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="bookings" className="space-y-6">
-          <BookingsTab amenityTypes={amenityTypes} />
+        <TabsContent value="all-bookings" className="space-y-6">
+          <UnifiedBookingsTab amenityTypes={amenityTypes} />
         </TabsContent>
 
         <TabsContent value="time-blocks" className="space-y-6">
           <TimeBlocksTab amenityTypes={amenityTypes} />
         </TabsContent>
 
-        <TabsContent value="external-rentals" className="space-y-6">
-          <ExternalRentalsTab amenityTypes={amenityTypes} />
+        <TabsContent value="pricing" className="space-y-6">
+          <PricingTab />
         </TabsContent>
       </Tabs>
     </div>

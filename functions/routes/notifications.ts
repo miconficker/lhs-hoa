@@ -233,9 +233,9 @@ notificationsRouter.post("/admin/send", async (c) => {
   } else if (target === "delinquent") {
     // Get users with unpaid dues
     const users = await c.env.DB.prepare(
-      `SELECT DISTINCT owner_user_id as id
+      `SELECT DISTINCT owner_id as id
        FROM households
-       WHERE owner_user_id IS NOT NULL
+       WHERE owner_id IS NOT NULL
        AND id IN (
          SELECT DISTINCT household_id
          FROM payment_demands
