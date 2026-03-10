@@ -26,6 +26,8 @@ import {
 interface UserFormData {
   email: string;
   password: string;
+  first_name: string;
+  last_name: string;
   role: UserRole;
   phone: string;
 }
@@ -33,6 +35,8 @@ interface UserFormData {
 const emptyForm: UserFormData = {
   email: "",
   password: "",
+  first_name: "",
+  last_name: "",
   role: "resident",
   phone: "",
 };
@@ -77,6 +81,8 @@ export function UsersTab() {
     setFormData({
       email: user.email,
       password: "",
+      first_name: user.first_name || "",
+      last_name: user.last_name || "",
       role: user.role,
       phone: user.phone || "",
     });
@@ -92,7 +98,7 @@ export function UsersTab() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const { email, password, role, phone } = formData;
+    const { email, password, first_name, last_name, role, phone } = formData;
 
     if (!email || (!editingUser && !password)) {
       toast.error("Please fill in all required fields");
@@ -104,6 +110,8 @@ export function UsersTab() {
 
       if (editingUser) {
         const response = await api.admin.updateUser(editingUser.id, {
+          first_name: first_name || undefined,
+          last_name: last_name || undefined,
           role,
           phone: phone || undefined,
         });
@@ -115,6 +123,8 @@ export function UsersTab() {
         const response = await api.admin.createUser({
           email,
           password,
+          first_name: first_name || undefined,
+          last_name: last_name || undefined,
           role,
           phone: phone || undefined,
         });
@@ -269,7 +279,11 @@ export function UsersTab() {
                       <span className="text-sm">{user.email}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-muted-foreground">-</span>
+                      <span className="text-sm">
+                        {user.first_name || user.last_name
+                          ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
+                          : "-"}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <Badge
@@ -340,6 +354,39 @@ export function UsersTab() {
                   }
                   disabled={!!editingUser}
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="first_name">First Name</Label>
+                  <Input
+                    id="first_name"
+                    type="text"
+                    placeholder="Juan"
+                    value={formData.first_name}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        first_name: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="last_name">Last Name</Label>
+                  <Input
+                    id="last_name"
+                    type="text"
+                    placeholder="Dela Cruz"
+                    value={formData.last_name}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        last_name: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
               </div>
 
               {!editingUser && (

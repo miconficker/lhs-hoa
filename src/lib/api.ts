@@ -417,6 +417,8 @@ export interface CreateDocumentInput {
 export interface AdminUser {
   id: string;
   email: string;
+  first_name?: string;
+  last_name?: string;
   role: UserRole;
   phone?: string;
   created_at: string;
@@ -435,6 +437,8 @@ export interface AdminUserResponse {
 export interface CreateAdminUserInput {
   email: string;
   password: string;
+  first_name?: string;
+  last_name?: string;
   role: "admin" | "resident" | "staff" | "guest";
   phone?: string;
 }
@@ -442,6 +446,8 @@ export interface CreateAdminUserInput {
 export interface UpdateAdminUserInput {
   email?: string;
   password?: string;
+  first_name?: string;
+  last_name?: string;
   role?: "admin" | "resident" | "staff" | "guest";
   phone?: string;
 }

@@ -44,8 +44,9 @@
         "lot_number": "01",
         "block_number": "01",
         "area_sqm": 1606.8989687142894,
-        "status": "vacant_lot",
-        "owner_user_id": "developer-owner",
+        "status": "built",
+        "owner_user_id": null,
+        "lot_type": "community",
         "lot_size_sqm": null
       }
     },

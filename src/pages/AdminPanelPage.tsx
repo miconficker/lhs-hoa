@@ -2,18 +2,12 @@ import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { api, type AdminUser, type AdminHousehold } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import type { LotOwnership, LotStatus, LotType, User, UserRole } from "@/types";
+import type { UserRole } from "@/types";
 import { PaymentVerificationQueue } from "@/components/PaymentVerificationQueue";
 import { LateFeeConfig } from "@/components/LateFeeConfig";
 import { PaymentExport } from "@/components/PaymentExport";
-import { logger } from "@/lib/logger";
-import { TableWithSelection } from "@/components/admin/TableWithSelection";
-import { BulkActionToolbar } from "@/components/admin/BulkActionToolbar";
-import { AssignOwnerDialog } from "@/components/admin/AssignOwnerDialog";
-import { BulkConfirmationDialog } from "@/components/admin/BulkConfirmationDialog";
-import { toast } from "sonner";
 import { Sidebar } from "@/components/admin/Sidebar";
-import { Menu } from "lucide-react";
+import { Menu, Info } from "lucide-react";
 import AdminReservationsPage from "./admin/reservations/index";
 import { AdminLotsPage } from "./AdminLotsPage";
 import { LotsManagementPage } from "@/components/admin/lots/LotsManagementPage";
@@ -29,424 +23,6 @@ import { PaymentsPage } from "./PaymentsPage";
 import { UsersSection } from "./admin/users/index";
 
 type Tab = "users" | "households" | "lots" | "import" | "payments" | "settings";
-
-interface AdminLotsTabProps {
-  lots: LotOwnership[];
-  homeowners: User[];
-  onRefresh: () => void;
-}
-
-function AdminLotsTab({ lots, homeowners, onRefresh }: AdminLotsTabProps) {
-  const [filterOwner, setFilterOwner] = useState<string>("");
-  const [filterStatus, setFilterStatus] = useState<string>("");
-  const [filterBlock, setFilterBlock] = useState<string>("");
-  const [editingLot, setEditingLot] = useState<LotOwnership | null>(null);
-
-  // Bulk operations state
-  const [selectedLotIds, setSelectedLotIds] = useState<string[]>([]);
-  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
-  const [selectedOwnerId, setSelectedOwnerId] = useState("");
-  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  const filteredLots = lots.filter((lot) => {
-    if (filterOwner && lot.owner_user_id !== filterOwner) return false;
-    if (filterStatus && lot.lot_status !== filterStatus) return false;
-    if (filterBlock && lot.block_number !== filterBlock) return false;
-    return true;
-  });
-
-  async function handleSave() {
-    if (!editingLot) return;
-
-    try {
-      await Promise.all([
-        api.admin.assignLotOwner(editingLot.lot_id, editingLot.owner_user_id),
-        api.admin.updateLotStatus(editingLot.lot_id, editingLot.lot_status),
-        editingLot.lot_type &&
-          api.admin.updateLotType(editingLot.lot_id, editingLot.lot_type),
-        editingLot.lot_size_sqm !== undefined &&
-          api.admin.updateLotSize(editingLot.lot_id, editingLot.lot_size_sqm),
-        editingLot.street !== undefined &&
-          api.admin.updateLotStreet(editingLot.lot_id, editingLot.street),
-      ]);
-
-      setEditingLot(null);
-      onRefresh();
-    } catch (error) {
-      logger.error("Error saving lot", error, { component: "AdminPanelPage" });
-      alert("Failed to save");
-    }
-  }
-
-  async function handleAssignOwner() {
-    if (selectedLotIds.length === 0) {
-      toast.error("Please select at least one lot");
-      return;
-    }
-
-    if (!selectedOwnerId) {
-      toast.error("Please select an owner");
-      return;
-    }
-
-    setIsProcessing(true);
-    try {
-      await api.admin.batchAssignOwner(selectedLotIds, selectedOwnerId);
-      toast.success(
-        `Successfully assigned owner to ${selectedLotIds.length} lot${selectedLotIds.length > 1 ? "s" : ""}`,
-      );
-      onRefresh();
-      setSelectedLotIds([]);
-    } catch (error) {
-      logger.error("Error assigning owner", error, {
-        component: "AdminPanelPage",
-      });
-      toast.error("Failed to assign owner. Please try again.");
-    } finally {
-      setIsProcessing(false);
-      setIsConfirmDialogOpen(false);
-    }
-  }
-
-  const blocks = Array.from(
-    new Set(lots.map((l) => l.block_number).filter(Boolean)),
-  ).sort((a, b) => parseInt(a || "0") - parseInt(b || "0"));
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-4 items-center">
-        <select
-          value={filterBlock}
-          onChange={(e) => setFilterBlock(e.target.value)}
-          className="px-3 py-2 border rounded-lg text-sm"
-        >
-          <option value="">All Blocks</option>
-          {blocks.map((b) => (
-            <option key={b} value={b}>
-              Block {b}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-3 py-2 border rounded-lg text-sm"
-        >
-          <option value="">All Statuses</option>
-          <option value="built">Built</option>
-          <option value="vacant_lot">Vacant Lot</option>
-          <option value="under_construction">Under Construction</option>
-        </select>
-
-        <select
-          value={filterOwner}
-          onChange={(e) => setFilterOwner(e.target.value)}
-          className="px-3 py-2 border rounded-lg text-sm"
-        >
-          <option value="">All Owners</option>
-          {homeowners.map((h) => (
-            <option key={h.id} value={h.id}>
-              {h.email}
-            </option>
-          ))}
-        </select>
-
-        <span className="text-sm text-gray-600">
-          Showing {filteredLots.length} of {lots.length} lots
-        </span>
-      </div>
-
-      {selectedLotIds.length > 0 && (
-        <BulkActionToolbar
-          selectedCount={selectedLotIds.length}
-          onClear={() => setSelectedLotIds([])}
-          actions={[
-            {
-              label: "Assign Owner",
-              onClick: () => setIsAssignDialogOpen(true),
-            },
-          ]}
-        />
-      )}
-
-      <TableWithSelection
-        data={filteredLots}
-        idField="lot_id"
-        onSelectionChange={setSelectedLotIds}
-      >
-        {({
-          selectedIds,
-          handleCheckboxChange,
-          handleSelectAll,
-          isAllSelected,
-        }) => (
-          <div className="bg-white dark:bg-card rounded-lg shadow overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-muted">
-                <tr>
-                  <th className="px-6 py-3 text-left w-12">
-                    <input
-                      type="checkbox"
-                      checked={isAllSelected}
-                      ref={(input) => {
-                        if (input) {
-                          input.indeterminate =
-                            !isAllSelected && selectedIds.size > 0;
-                        }
-                      }}
-                      onChange={(e) => handleSelectAll(e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                      aria-label="Select all visible lots"
-                    />
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Block
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Lot
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Owner
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Size (m²)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-card divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredLots.map((lot) => (
-                  <tr key={lot.lot_id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(lot.lot_id)}
-                        onChange={(e) =>
-                          handleCheckboxChange(lot.lot_id, e.target.checked)
-                        }
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                        aria-label={`Select ${lot.lot_id}`}
-                      />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {lot.block_number || "—"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {lot.lot_number || "—"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          lot.lot_status === "built"
-                            ? "bg-green-100 text-green-700"
-                            : lot.lot_status === "under_construction"
-                              ? "bg-orange-100 text-orange-700"
-                              : "bg-gray-100 text-gray-700"
-                        }`}
-                      >
-                        {lot.lot_status === "built"
-                          ? "Built"
-                          : lot.lot_status === "under_construction"
-                            ? "Under Construction"
-                            : "Vacant Lot"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {lot.owner_name || "Unknown"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {lot.lot_size_sqm || "—"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <button
-                        onClick={() => setEditingLot(lot)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        Edit
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </TableWithSelection>
-
-      {editingLot && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-card rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Edit Lot - {editingLot.block_number}, {editingLot.lot_number}
-            </h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
-                  Owner
-                </label>
-                <select
-                  value={editingLot.owner_user_id}
-                  onChange={(e) =>
-                    setEditingLot({
-                      ...editingLot,
-                      owner_user_id: e.target.value,
-                    })
-                  }
-                  className="w-full px-3 py-2 border dark:border-border rounded-lg"
-                >
-                  {homeowners.map((h) => (
-                    <option key={h.id} value={h.id}>
-                      {h.email}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
-                  Street
-                </label>
-                <input
-                  type="text"
-                  value={editingLot.street || ""}
-                  onChange={(e) =>
-                    setEditingLot({
-                      ...editingLot,
-                      street: e.target.value,
-                    })
-                  }
-                  className="w-full px-3 py-2 border dark:border-border rounded-lg"
-                  placeholder="e.g., Mahogany Street"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
-                  Status
-                </label>
-                <select
-                  value={editingLot.lot_status}
-                  onChange={(e) =>
-                    setEditingLot({
-                      ...editingLot,
-                      lot_status: e.target.value as LotStatus,
-                    })
-                  }
-                  className="w-full px-3 py-2 border dark:border-border rounded-lg"
-                >
-                  <option value="built">Built</option>
-                  <option value="vacant_lot">Vacant Lot</option>
-                  <option value="under_construction">Under Construction</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
-                  Lot Type
-                </label>
-                <select
-                  value={editingLot.lot_type || "residential"}
-                  onChange={(e) =>
-                    setEditingLot({
-                      ...editingLot,
-                      lot_type: e.target.value as LotType,
-                    })
-                  }
-                  className="w-full px-3 py-2 border dark:border-border rounded-lg"
-                >
-                  <option value="residential">Residential</option>
-                  <option value="resort">Resort</option>
-                  <option value="commercial">Commercial</option>
-                  <option value="community">Community</option>
-                  <option value="utility">Utility</option>
-                  <option value="open_space">Open Space</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
-                  Size (m²)
-                </label>
-                <input
-                  type="number"
-                  value={editingLot.lot_size_sqm || ""}
-                  onChange={(e) =>
-                    setEditingLot({
-                      ...editingLot,
-                      lot_size_sqm: e.target.value
-                        ? parseFloat(e.target.value)
-                        : undefined,
-                    })
-                  }
-                  className="w-full px-3 py-2 border dark:border-border rounded-lg"
-                  min="0"
-                  step="0.01"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <button
-                  onClick={handleSave}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={() => setEditingLot(null)}
-                  className="px-4 py-2 border dark:border-border rounded-lg hover:bg-gray-50 dark:hover:bg-muted"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isAssignDialogOpen && (
-        <AssignOwnerDialog
-          homeowners={homeowners}
-          lotCount={selectedLotIds.length}
-          onConfirm={(ownerId) => {
-            setSelectedOwnerId(ownerId);
-            setIsAssignDialogOpen(false);
-            setIsConfirmDialogOpen(true);
-          }}
-          onCancel={() => setIsAssignDialogOpen(false)}
-        />
-      )}
-
-      {isConfirmDialogOpen && (
-        <BulkConfirmationDialog
-          operationType="Assign Owner"
-          itemCount={selectedLotIds.length}
-          details={
-            homeowners.find((h) => h.id === selectedOwnerId)?.email || "Unknown"
-          }
-          onConfirm={handleAssignOwner}
-          onCancel={() => setIsConfirmDialogOpen(false)}
-        />
-      )}
-
-      {isProcessing && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-card rounded-lg p-6 flex items-center gap-3">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-            <span className="text-sm">Assigning owner...</span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function AdminPanelPage() {
   const { user } = useAuth();
@@ -482,10 +58,6 @@ export function AdminPanelPage() {
   const [editingHousehold, setEditingHousehold] =
     useState<AdminHousehold | null>(null);
 
-  // Lots state
-  const [lots, setLots] = useState<LotOwnership[]>([]);
-  const [homeowners, setHomeowners] = useState<User[]>([]);
-
   // Import state
   const [importData, setImportData] = useState("");
   const [importResult, setImportResult] = useState<{
@@ -508,33 +80,15 @@ export function AdminPanelPage() {
   useEffect(() => {
     if (activeTab === "users") loadUsers();
     if (activeTab === "households") loadHouseholds();
-    if (activeTab === "lots") loadLots();
     if (activeTab === "settings") loadStats();
   }, [activeTab]);
 
-  const loadLots = async () => {
-    setLoading(true);
-    try {
-      const [lotsResult, homeownersResult] = await Promise.all([
-        api.admin.getLotsWithOwnership(),
-        api.admin.getHomeowners(),
-      ]);
-
-      if (lotsResult.data) {
-        setLots(lotsResult.data.lots);
-      }
-
-      if (homeownersResult.data) {
-        setHomeowners(homeownersResult.data.homeowners);
-      }
-    } catch (error) {
-      logger.error("Error loading lots", error, {
-        component: "AdminPanelPage",
-      });
-    } finally {
-      setLoading(false);
+  // Redirect to new Lots page if old tab is selected
+  useEffect(() => {
+    if (activeTab === "lots") {
+      window.location.href = "/admin/lots";
     }
-  };
+  }, [activeTab]);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -994,6 +548,27 @@ export function AdminPanelPage() {
 
             {activeTab === "households" && (
               <div>
+                <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-4 rounded-lg mb-6">
+                  <div className="flex items-start gap-3">
+                    <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h3 className="font-semibold text-blue-900 dark:text-blue-100">
+                        Household Address Management
+                      </h3>
+                      <p className="text-sm text-blue-700 dark:text-blue-300">
+                        Use this page to manage household addresses and lot
+                        metadata. For owner/member assignment, use{" "}
+                        <a
+                          href="/admin/lot-members"
+                          className="underline font-semibold"
+                        >
+                          Lot Members
+                        </a>
+                        .
+                      </p>
+                    </div>
+                  </div>
+                </div>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-semibold">
                     Household Management
@@ -1083,11 +658,12 @@ export function AdminPanelPage() {
             )}
 
             {activeTab === "lots" && (
-              <AdminLotsTab
-                lots={lots}
-                homeowners={homeowners}
-                onRefresh={loadLots}
-              />
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
+                <p className="text-muted-foreground">
+                  Redirecting to Lots management...
+                </p>
+              </div>
             )}
 
             {activeTab === "import" && (

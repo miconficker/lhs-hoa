@@ -16,8 +16,8 @@ export type LotType =
 export interface User {
   id: string;
   email: string;
-  first_name: string | null;
-  last_name: string | null;
+  first_name?: string;
+  last_name?: string;
   role: UserRole;
   phone?: string;
   created_at: string;

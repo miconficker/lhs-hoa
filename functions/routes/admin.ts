@@ -63,6 +63,8 @@ adminRouter.get('/users', async (c) => {
 const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
   role: z.enum(['admin', 'resident', 'staff', 'guest']),
   phone: z.string().optional(),
 });
@@ -80,7 +82,7 @@ adminRouter.post('/users', async (c) => {
     return c.json({ error: 'Invalid input', details: result.error.flatten() }, 400);
   }
 
-  const { email, password, role, phone } = result.data;
+  const { email, password, first_name, last_name, role, phone } = result.data;
 
   // Check if user exists
   const existing = await c.env.DB.prepare(
@@ -96,12 +98,12 @@ adminRouter.post('/users', async (c) => {
   const passwordHash = await hashPassword(password);
 
   await c.env.DB.prepare(
-    'INSERT INTO users (id, email, password_hash, role, phone) VALUES (?, ?, ?, ?, ?)'
-  ).bind(userId, email, passwordHash, role, phone || null).run();
+    'INSERT INTO users (id, email, password_hash, first_name, last_name, role, phone) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).bind(userId, email, passwordHash, first_name || null, last_name || null, role, phone || null).run();
 
   // Get created user
   const user = await c.env.DB.prepare(
-    'SELECT id, email, role, phone, created_at FROM users WHERE id = ?'
+    'SELECT id, email, first_name, last_name, role, phone, created_at FROM users WHERE id = ?'
   ).bind(userId).first() as any;
 
   return c.json({ user }, 201);
@@ -111,6 +113,8 @@ adminRouter.post('/users', async (c) => {
 const updateUserSchema = z.object({
   email: z.string().email().optional(),
   password: z.string().min(6).optional(),
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
   role: z.enum(['admin', 'resident', 'staff', 'guest']).optional(),
   phone: z.string().optional(),
 });
@@ -129,7 +133,7 @@ adminRouter.put('/users/:id', async (c) => {
     return c.json({ error: 'Invalid input', details: result.error.flatten() }, 400);
   }
 
-  const { email, password, role, phone } = result.data;
+  const { email, password, first_name, last_name, role, phone } = result.data;
 
   // Check if user exists
   const existing = await c.env.DB.prepare(
@@ -160,6 +164,16 @@ adminRouter.put('/users/:id', async (c) => {
     const passwordHash = await hashPassword(password);
     updates.push('password_hash = ?');
     values.push(passwordHash);
+  }
+
+  if (first_name !== undefined) {
+    updates.push('first_name = ?');
+    values.push(first_name || null);
+  }
+
+  if (last_name !== undefined) {
+    updates.push('last_name = ?');
+    values.push(last_name || null);
   }
 
   if (role) {
