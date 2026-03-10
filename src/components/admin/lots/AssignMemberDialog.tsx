@@ -41,7 +41,7 @@ export function AssignMemberDialog({
     try {
       await api.lotMembers.assignMember({
         household_id: householdId,
-        user_id: userEmail,
+        email: userEmail,
         member_type: memberType,
         notes,
       });

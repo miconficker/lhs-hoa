@@ -70,9 +70,12 @@ adminLotMembersRouter.use('/*', async (c, next) => {
 // DTOs
 const assignMemberSchema = z.object({
   household_id: z.string(),
-  user_id: z.string(),
+  user_id: z.string().optional(), // Optional if email is provided
+  email: z.string().optional(), // Optional if user_id is provided
   member_type: z.enum(['primary_owner', 'secondary']),
   notes: z.string().optional()
+}).refine(data => data.user_id || data.email, {
+  message: "Either user_id or email must be provided"
 });
 
 const verifyMemberSchema = z.object({
@@ -91,6 +94,23 @@ adminLotMembersRouter.post('/', async (c) => {
 
   const data = result.data;
 
+  // Look up user by email if email is provided instead of user_id
+  let userId = data.user_id;
+  if (!userId && data.email) {
+    const user = await c.env.DB.prepare(
+      'SELECT id FROM users WHERE email = ?'
+    ).bind(data.email).first<{ id: string }>();
+
+    if (!user) {
+      return c.json({ error: 'User not found with that email' }, 404);
+    }
+    userId = user.id;
+  }
+
+  if (!userId) {
+    return c.json({ error: 'Either user_id or email must be provided' }, 400);
+  }
+
   // Verify lot is assignable
   const household = await c.env.DB.prepare(
     'SELECT lot_type FROM households WHERE id = ?'
@@ -107,7 +127,7 @@ adminLotMembersRouter.post('/', async (c) => {
   // Check for duplicate
   const duplicate = await c.env.DB.prepare(
     'SELECT id FROM lot_members WHERE household_id = ? AND user_id = ?'
-  ).bind(data.household_id, data.user_id).first<{ id: string }>();
+  ).bind(data.household_id, userId).first<{ id: string }>();
 
   if (duplicate) {
     return c.json({ error: 'User already assigned to this household' }, 400);
@@ -131,12 +151,12 @@ adminLotMembersRouter.post('/', async (c) => {
   await c.env.DB.prepare(
     `INSERT INTO lot_members (id, household_id, user_id, member_type, can_vote, verified, notes)
      VALUES (?, ?, ?, ?, ?, 0, ?)`
-  ).bind(id, data.household_id, data.user_id, data.member_type, canVote, data.notes || null).run();
+  ).bind(id, data.household_id, userId, data.member_type, canVote, data.notes || null).run();
 
   return c.json({
     id,
     household_id: data.household_id,
-    user_id: data.user_id,
+    user_id: userId,
     member_type: data.member_type,
     can_vote: canVote,
     verified: false

@@ -3,16 +3,27 @@ import { api } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, X } from "lucide-react";
 import type { LotMemberDetail } from "./types";
 import { VerifyMemberDialog } from "./VerifyMemberDialog";
 
 interface LotMembersListProps {
   members: LotMemberDetail[];
   onRefresh: () => void;
+  lotInfo?: {
+    block?: string;
+    lot?: string;
+    address?: string;
+  };
+  onClearSelection?: () => void;
 }
 
-export function LotMembersList({ members, onRefresh }: LotMembersListProps) {
+export function LotMembersList({
+  members,
+  onRefresh,
+  lotInfo,
+  onClearSelection,
+}: LotMembersListProps) {
   const [selectedMember, setSelectedMember] = useState<LotMemberDetail | null>(
     null,
   );
@@ -40,19 +51,42 @@ export function LotMembersList({ members, onRefresh }: LotMembersListProps) {
 
   return (
     <>
-      <Card>
+      <Card className="ring-2 ring-primary-600">
         <CardHeader>
-          <CardTitle>Household Members</CardTitle>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Household Members</CardTitle>
+              {lotInfo && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Block {lotInfo.block}, Lot {lotInfo.lot}
+                  {lotInfo.address && ` — ${lotInfo.address}`}
+                </p>
+              )}
+            </div>
+            {onClearSelection && (
+              <Button size="sm" variant="ghost" onClick={onClearSelection}>
+                <X className="h-4 w-4 mr-1" />
+                Clear
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {members.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No members assigned</p>
+            <div className="text-center py-6">
+              <p className="text-sm text-muted-foreground">
+                No members assigned
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Use the "Add Member" button to assign household members
+              </p>
+            </div>
           ) : (
             <div className="space-y-3">
               {members.map((member) => (
                 <div
                   key={member.id}
-                  className="flex items-center justify-between p-3 border rounded-lg"
+                  className="flex items-center justify-between p-3 border rounded-lg bg-card"
                 >
                   <div className="flex items-center gap-3">
                     {member.verified ? (

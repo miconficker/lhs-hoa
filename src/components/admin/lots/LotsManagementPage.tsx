@@ -12,7 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Home, UserCheck, Pencil } from "lucide-react";
+import {
+  Search,
+  Home,
+  UserCheck,
+  Pencil,
+  ChevronRight,
+  Users,
+} from "lucide-react";
 import type { UnassignedLot, LotMemberDetail } from "./types";
 import type { LotOwnership } from "@/types";
 import { AssignMemberDialog } from "./AssignMemberDialog";
@@ -170,11 +177,18 @@ export function LotsManagementPage() {
   const renderLotCard = (lot: LotOwnership | UnassignedLot) => {
     const info = getLotDisplayInfo(lot);
     const hasOwnerId = "owner_user_id" in lot && lot.owner_user_id;
+    const isSelected =
+      selectedLot && getLotDisplayInfo(selectedLot).id === info.id;
+    const memberCount = members.length > 0 && isSelected ? members.length : 0;
 
     return (
       <Card
         key={info.id}
-        className="cursor-pointer hover:bg-accent/50"
+        className={`cursor-pointer transition-all ${
+          isSelected
+            ? "ring-2 ring-primary-600 bg-primary-50/50"
+            : "hover:bg-accent/50 hover:shadow-md"
+        }`}
         onClick={() => handleLotClick(lot)}
       >
         <CardContent className="pt-6">
@@ -189,6 +203,12 @@ export function LotsManagementPage() {
                     {info.lotLabel}
                   </Badge>
                 )}
+                {isSelected && memberCount > 0 && (
+                  <Badge variant="default" className="text-xs">
+                    <Users className="h-3 w-3 mr-1" />
+                    {memberCount}
+                  </Badge>
+                )}
               </div>
               <p className="text-sm text-muted-foreground">{info.address}</p>
               {info.hasOwner && (
@@ -200,7 +220,14 @@ export function LotsManagementPage() {
                 </div>
               )}
             </div>
-            <Home className="h-5 w-5 text-muted-foreground flex-shrink-0 ml-2" />
+            <div className="flex items-center gap-2">
+              <Home className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+              <ChevronRight
+                className={`h-5 w-5 text-muted-foreground transition-transform ${
+                  isSelected ? "rotate-90 text-primary-600" : ""
+                }`}
+              />
+            </div>
           </div>
           <div className="flex gap-2 mb-3">
             <Badge variant="outline">{info.lotType}</Badge>
@@ -352,6 +379,8 @@ export function LotsManagementPage() {
         <>
           <LotMembersList
             members={members}
+            lotInfo={getLotDisplayInfo(selectedLot)}
+            onClearSelection={() => setSelectedLot(null)}
             onRefresh={() => {
               loadData();
               if (selectedLot) {

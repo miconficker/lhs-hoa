@@ -1717,7 +1717,8 @@ export const api = {
       }>(`/lot-members/household/${id}`),
     assignMember: (input: {
       household_id: string;
-      user_id: string;
+      user_id?: string;
+      email?: string;
       member_type: "primary_owner" | "secondary";
       notes?: string;
     }) =>
