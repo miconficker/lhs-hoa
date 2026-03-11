@@ -249,7 +249,7 @@ export function AppNav({ mode, className }: AppNavProps) {
           </Button>
         </SheetTrigger>
 
-        <SheetContent side="left" className="flex flex-col p-0 w-64">
+        <SheetContent side="left" className="flex flex-col p-0 w-3/4 sm:w-64">
           <SheetHeader className="px-4 py-3 border-b border-border">
             <SheetTitle className="text-sm font-semibold text-left">
               Menu

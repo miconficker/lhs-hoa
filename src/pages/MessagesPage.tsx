@@ -181,7 +181,7 @@ export function MessagesPage() {
                     className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[70%] rounded-lg p-3 ${
+                      className={`max-w-[85%] sm:max-w-[70%] rounded-lg p-3 ${
                         isOwn
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted text-card-foreground"

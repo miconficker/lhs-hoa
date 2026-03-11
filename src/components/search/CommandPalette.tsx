@@ -19,7 +19,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { api, type AdminUser, type AdminHousehold } from "@/lib/api";
+import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 
 interface SearchResult {
@@ -32,16 +32,8 @@ interface SearchResult {
 
 const pages = [
   { id: "dashboard", label: "Dashboard", icon: Home, route: "/dashboard" },
+  { id: "my-lots", label: "My Lots", icon: Home, route: "/my-lots" },
   { id: "map", label: "Map", icon: MapPin, route: "/map" },
-  { id: "my-lots", label: "My Property", icon: Home, route: "/my-lots" },
-  {
-    id: "service-requests",
-    label: "Service Requests",
-    icon: Wrench,
-    route: "/service-requests",
-  },
-  { id: "payments", label: "Payments", icon: CreditCard, route: "/payments" },
-  { id: "documents", label: "Documents", icon: FileText, route: "/documents" },
   {
     id: "announcements",
     label: "Announcements",
@@ -50,27 +42,76 @@ const pages = [
   },
   { id: "events", label: "Events", icon: Calendar, route: "/events" },
   { id: "polls", label: "Polls", icon: FileText, route: "/polls" },
+  { id: "documents", label: "Documents", icon: FileText, route: "/documents" },
+  { id: "help", label: "Help", icon: FileText, route: "/help" },
+  {
+    id: "reservations",
+    label: "Reservations",
+    icon: Calendar,
+    route: "/reservations",
+  },
+  { id: "payments", label: "Payments", icon: CreditCard, route: "/payments" },
+  { id: "passes", label: "Vehicle Passes", icon: Settings, route: "/passes" },
+  {
+    id: "service-requests",
+    label: "Service Requests",
+    icon: Wrench,
+    route: "/service-requests",
+  },
+  { id: "messages", label: "Messages", icon: FileText, route: "/messages" },
+  {
+    id: "notifications",
+    label: "Notifications",
+    icon: FileText,
+    route: "/notifications",
+  },
+  {
+    id: "account",
+    label: "Account Settings",
+    icon: Settings,
+    route: "/account",
+  },
 ];
 
 const adminPages = [
-  { id: "admin", label: "Admin Panel", icon: Settings, route: "/admin" },
+  { id: "admin", label: "Admin Dashboard", icon: Settings, route: "/admin" },
+  // Users & Access
+  {
+    id: "admin-users",
+    label: "Users",
+    icon: Users,
+    route: "/admin/users",
+  },
+  {
+    id: "admin-board-members",
+    label: "Board Members",
+    icon: Users,
+    route: "/admin/users?tab=board-members",
+  },
+  {
+    id: "admin-pre-approved",
+    label: "Pre-Approved Users",
+    icon: Users,
+    route: "/admin/pre-approved",
+  },
+  {
+    id: "admin-member-approvals",
+    label: "Household Approvals",
+    icon: Users,
+    route: "/admin/member-approvals",
+  },
+  // Properties
   {
     id: "admin-lots",
-    label: "Manage Lots",
+    label: "Property Map",
     icon: MapPin,
     route: "/admin/lots",
   },
   {
-    id: "admin-dues",
-    label: "Dues Configuration",
-    icon: Settings,
-    route: "/admin/dues",
-  },
-  {
-    id: "admin-payments",
-    label: "Payment Records",
-    icon: CreditCard,
-    route: "/admin/payments/in-person",
+    id: "admin-lot-members",
+    label: "Lot Management",
+    icon: Home,
+    route: "/admin/lot-members",
   },
   {
     id: "admin-common-areas",
@@ -78,23 +119,75 @@ const adminPages = [
     icon: MapPin,
     route: "/admin/common-areas",
   },
+  // Reservations
   {
-    id: "admin-passes",
+    id: "admin-reservations-all",
+    label: "All Reservations",
+    icon: Calendar,
+    route: "/admin/reservations/all-bookings",
+  },
+  {
+    id: "admin-reservations-blocks",
+    label: "Time Blocks",
+    icon: Calendar,
+    route: "/admin/reservations/time-blocks",
+  },
+  {
+    id: "admin-reservations-pricing",
+    label: "Reservation Pricing",
+    icon: Calendar,
+    route: "/admin/reservations/pricing",
+  },
+  // Communications
+  {
+    id: "admin-announcements",
+    label: "Announcements",
+    icon: FileText,
+    route: "/admin/announcements",
+  },
+  {
+    id: "admin-notifications",
+    label: "Notifications",
+    icon: FileText,
+    route: "/admin/notifications",
+  },
+  {
+    id: "admin-messages",
+    label: "Messages",
+    icon: FileText,
+    route: "/admin/messages",
+  },
+  // Financials
+  {
+    id: "admin-payments",
+    label: "Payment Records",
+    icon: CreditCard,
+    route: "/admin/payments",
+  },
+  {
+    id: "admin-dues-settings",
+    label: "Dues Settings",
+    icon: CreditCard,
+    route: "/admin/dues-settings",
+  },
+  {
+    id: "admin-verification-queue",
+    label: "Verification Queue",
+    icon: CreditCard,
+    route: "/admin/verification-queue",
+  },
+  // System
+  {
+    id: "admin-pass-management",
     label: "Pass Management",
     icon: Settings,
     route: "/admin/pass-management",
   },
   {
-    id: "admin-whitelist",
-    label: "Email Whitelist",
+    id: "admin-settings",
+    label: "System Settings",
     icon: Settings,
-    route: "/admin/whitelist",
-  },
-  {
-    id: "notifications",
-    label: "Notifications",
-    icon: FileText,
-    route: "/notifications",
+    route: "/admin/settings",
   },
 ];
 
@@ -150,10 +243,13 @@ export function CommandPalette() {
       // Search for users, households, and lots if user is admin
       if (user?.role === "admin") {
         try {
-          // Search users
+          // Search users (max 10 results)
           const usersRes = await api.admin.listUsers();
           if (usersRes.data?.users) {
-            usersRes.data.users.forEach((u: AdminUser) => {
+            let userCount = 0;
+            const maxResults = 10;
+            for (const u of usersRes.data.users) {
+              if (userCount >= maxResults) break;
               if (
                 u.email.toLowerCase().includes(query) ||
                 (u.household_addresses &&
@@ -166,14 +262,18 @@ export function CommandPalette() {
                   sublabel: u.household_addresses || u.role,
                   route: `/admin`,
                 });
+                userCount++;
               }
-            });
+            }
           }
 
-          // Search households
+          // Search households (max 10 results)
           const householdsRes = await api.admin.listHouseholds();
           if (householdsRes.data?.households) {
-            householdsRes.data.households.forEach((h: AdminHousehold) => {
+            let householdCount = 0;
+            const maxResults = 10;
+            for (const h of householdsRes.data.households) {
+              if (householdCount >= maxResults) break;
               if (
                 h.address.toLowerCase().includes(query) ||
                 (h.street && h.street.toLowerCase().includes(query)) ||
@@ -187,14 +287,18 @@ export function CommandPalette() {
                   sublabel: `${h.street ? h.street + ", " : ""}Block ${h.block || "N/A"}, Lot ${h.lot || "N/A"}`,
                   route: `/admin`,
                 });
+                householdCount++;
               }
-            });
+            }
           }
 
-          // Search lots
+          // Search lots (max 10 results)
           const lotsRes = await api.admin.getLotsWithOwnership();
           if (lotsRes.data?.lots) {
-            lotsRes.data.lots.forEach((lot: any) => {
+            let lotCount = 0;
+            const maxResults = 10;
+            for (const lot of lotsRes.data.lots) {
+              if (lotCount >= maxResults) break;
               if (
                 lot.lot_number?.toLowerCase().includes(query) ||
                 lot.block_number?.toLowerCase().includes(query) ||
@@ -210,11 +314,13 @@ export function CommandPalette() {
                   sublabel: lot.owner_name || "Unassigned",
                   route: `/admin/lots`,
                 });
+                lotCount++;
               }
-            });
+            }
           }
         } catch (error) {
-          console.error("Search error:", error);
+          // Silently fail - search errors shouldn't expose information to users
+          console.warn("Search functionality temporarily unavailable");
         }
       }
 
@@ -248,7 +354,12 @@ export function CommandPalette() {
         </kbd>
       </button>
 
-      <CommandDialog open={open} onOpenChange={setOpen}>
+      <CommandDialog
+        open={open}
+        onOpenChange={setOpen}
+        overlayClassName="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+        contentClassName="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg"
+      >
         <CommandInput
           placeholder="Type a command or search..."
           value={search}

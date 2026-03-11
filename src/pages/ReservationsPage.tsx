@@ -200,56 +200,58 @@ export function ReservationsPage() {
     today.setHours(0, 0, 0, 0);
 
     return (
-      <div className="grid grid-cols-7 gap-1">
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-          <div
-            key={day}
-            className="text-center text-sm font-medium text-muted-foreground py-2"
-          >
-            {day}
-          </div>
-        ))}
-        {paddingDays.map((_, idx) => (
-          <div key={`padding-${idx}`} className="h-24 bg-muted" />
-        ))}
-        {days.map((day) => {
-          const avail = getAvailabilityForDate(day);
-          const isPast = day < today;
-
-          return (
+      <div className="overflow-x-auto">
+        <div className="min-w-[600px] grid grid-cols-7 gap-1">
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
             <div
-              key={day.toISOString()}
-              className={`h-24 border border-border p-2 cursor-pointer transition-colors ${
-                isPast ? "bg-gray-100 opacity-50" : "hover:bg-blue-50"
-              }`}
-              onClick={() =>
-                !isPast &&
-                setBookingForm({
-                  ...bookingForm,
-                  date: format(day, "yyyy-MM-dd"),
-                })
-              }
+              key={day}
+              className="text-center text-sm font-medium text-muted-foreground py-2"
             >
-              <div className="text-sm font-medium text-card-foreground mb-1">
-                {format(day, "d")}
-              </div>
-              {!isPast && avail && (
-                <div className="space-y-1">
-                  <div
-                    className={`text-xs px-1 py-0.5 rounded ${avail.am_available ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
-                  >
-                    AM: {avail.am_available ? "Available" : "Booked"}
-                  </div>
-                  <div
-                    className={`text-xs px-1 py-0.5 rounded ${avail.pm_available ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
-                  >
-                    PM: {avail.pm_available ? "Available" : "Booked"}
-                  </div>
-                </div>
-              )}
+              {day}
             </div>
-          );
-        })}
+          ))}
+          {paddingDays.map((_, idx) => (
+            <div key={`padding-${idx}`} className="h-20 sm:h-24 bg-muted" />
+          ))}
+          {days.map((day) => {
+            const avail = getAvailabilityForDate(day);
+            const isPast = day < today;
+
+            return (
+              <div
+                key={day.toISOString()}
+                className={`h-20 sm:h-24 border border-border p-1 sm:p-2 cursor-pointer transition-colors ${
+                  isPast ? "bg-gray-100 opacity-50" : "hover:bg-blue-50"
+                }`}
+                onClick={() =>
+                  !isPast &&
+                  setBookingForm({
+                    ...bookingForm,
+                    date: format(day, "yyyy-MM-dd"),
+                  })
+                }
+              >
+                <div className="text-sm font-medium text-card-foreground mb-1">
+                  {format(day, "d")}
+                </div>
+                {!isPast && avail && (
+                  <div className="space-y-1">
+                    <div
+                      className={`text-xs px-1 py-0.5 rounded ${avail.am_available ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                    >
+                      AM: {avail.am_available ? "Available" : "Booked"}
+                    </div>
+                    <div
+                      className={`text-xs px-1 py-0.5 rounded ${avail.pm_available ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                    >
+                      PM: {avail.pm_available ? "Available" : "Booked"}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   }

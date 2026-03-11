@@ -48,7 +48,7 @@ export function Header() {
             {user ? (
               <>
                 <NotificationBell />
-                <span className="text-sm text-muted-foreground hidden lg:inline max-w-[180px] truncate">
+                <span className="text-sm text-muted-foreground hidden md:inline max-w-[120px] md:max-w-[180px] truncate">
                   {user.email}
                 </span>
                 <button
