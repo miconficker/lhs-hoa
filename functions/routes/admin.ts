@@ -2456,6 +2456,144 @@ adminRouter.post('/payments/in-person', async (c) => {
   }
 });
 
+/**
+ * GET /api/admin/payments/verify
+ * Get payment verification queue (admin only)
+ */
+adminRouter.get('/payments/verify', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const status = c.req.query('status') || 'pending';
+    const limit = parseInt(c.req.query('limit') || '50');
+    const offset = parseInt(c.req.query('offset') || '0');
+
+    // Build query with filters
+    let query = `
+      SELECT
+        p.id as id,
+        p.id as payment_id,
+        p.status,
+        p.amount,
+        p.currency,
+        p.method,
+        p.reference_number,
+        p.period,
+        p.file_url,
+        p.file_name,
+        p.rejection_reason,
+        p.created_at,
+        p.payment_category as payment_type,
+        h.id as household_id,
+        h.address as household_address,
+        u.id as user_id,
+        u.email as user_email,
+        u.first_name,
+        u.last_name
+      FROM payments p
+      LEFT JOIN households h ON p.household_id = h.id
+      LEFT JOIN users u ON h.owner_user_id = u.id
+      WHERE p.status = ?
+      ORDER BY p.created_at DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    const payments = await c.env.DB.prepare(query)
+      .bind(status, limit, offset)
+      .all();
+
+    // Get total count
+    const countResult = await c.env.DB.prepare(
+      `SELECT COUNT(*) as count FROM payments WHERE status = ?`
+    ).bind(status).first();
+
+    const total = countResult?.count || 0;
+
+    return c.json({
+      verifications: payments.results || [],
+      total,
+      limit,
+      offset,
+    });
+  } catch (error) {
+    console.error('Error fetching verification queue:', error);
+    return c.json({ error: 'Failed to fetch verification queue' }, 500);
+  }
+});
+
+/**
+ * PUT /api/admin/payments/:paymentId/verify
+ * Approve or reject a payment (admin only)
+ */
+adminRouter.put('/payments/:paymentId/verify', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  try {
+    const paymentId = c.req.param('paymentId');
+    const body = await c.req.json();
+    const { action, rejection_reason } = body;
+
+    if (action !== 'approve' && action !== 'reject') {
+      return c.json({ error: 'Invalid action. Must be "approve" or "reject"' }, 400);
+    }
+
+    // Check payment exists and is pending
+    const payment = await c.env.DB.prepare(
+      `SELECT * FROM payments WHERE id = ?`
+    ).bind(paymentId).first();
+
+    if (!payment) {
+      return c.json({ error: 'Payment not found' }, 404);
+    }
+
+    if (payment.status !== 'pending') {
+      return c.json({ error: 'Payment has already been processed' }, 400);
+    }
+
+    const newStatus = action === 'approve' ? 'completed' : 'rejected';
+
+    // Update payment status
+    await c.env.DB.prepare(
+      `UPDATE payments
+       SET status = ?,
+           rejection_reason = ?,
+           verified_by = ?,
+           verified_at = datetime('now')
+       WHERE id = ?`
+    ).bind(
+      newStatus,
+      action === 'reject' ? (rejection_reason || 'No reason provided') : null,
+      authUser.userId,
+      paymentId
+    ).run();
+
+    // Log audit event
+    await logAuditEvent(c.env.DB, {
+      user_id: authUser.userId,
+      action: `payment_${action}`,
+      resource_type: 'payment',
+      resource_id: paymentId,
+      ip_address: c.req.header('CF-Connecting-IP') || 'unknown',
+      success: true,
+      details: rejection_reason,
+    });
+
+    return c.json({
+      message: `Payment ${action === 'approve' ? 'approved' : 'rejected'} successfully`,
+      status: newStatus,
+    });
+  } catch (error) {
+    console.error('Error verifying payment:', error);
+    return c.json({ error: 'Failed to verify payment' }, 500);
+  }
+});
+
 // =============================================================================
 // ADMIN: Pass Management (/admin/pass-management/*)
 // =============================================================================
