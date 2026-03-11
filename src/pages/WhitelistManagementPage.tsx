@@ -1,8 +1,19 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import type { PreApprovedEmail, UserRole } from "@/types";
+import { useAuth } from "@/hooks/useAuth";
 
 export function WhitelistManagementPage() {
+  const { user } = useAuth();
+
+  // Security: Ensure only admins can access this page
+  if (user?.role !== "admin") {
+    return (
+      <div className="bg-[hsl(var(--status-error-bg))] border border-[hsl(var(--status-error-fg))] text-[hsl(var(--status-error-fg))] p-4 rounded-lg">
+        Access denied. Admin privileges required.
+      </div>
+    );
+  }
   const [entries, setEntries] = useState<PreApprovedEmail[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -94,7 +105,7 @@ export function WhitelistManagementPage() {
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90"
         >
           {showAddForm ? "Cancel" : "Add Email"}
         </button>
@@ -121,7 +132,7 @@ export function WhitelistManagementPage() {
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-input rounded-lg focus:ring-primary focus:border-primary"
                 placeholder="resident@example.com"
               />
             </div>
@@ -132,7 +143,7 @@ export function WhitelistManagementPage() {
               <select
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value as UserRole)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 py-2 border border-input rounded-lg focus:ring-primary focus:border-primary"
               >
                 <option value="resident">Resident</option>
                 <option value="admin">Admin</option>
@@ -151,7 +162,7 @@ export function WhitelistManagementPage() {
               <button
                 type="button"
                 onClick={() => setShowAddForm(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-muted"
+                className="px-4 py-2 border border-input rounded-lg hover:bg-muted"
               >
                 Cancel
               </button>
@@ -162,111 +173,115 @@ export function WhitelistManagementPage() {
 
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-border">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                  Email
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                  Role
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                  Invited
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                  Accepted
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {loading ? (
+          <div className="min-w-[600px]">
+            <table className="w-full">
+              <thead className="bg-muted border-b border-border">
                 <tr>
-                  <td
-                    colSpan={6}
-                    className="px-6 py-4 text-center text-muted-foreground"
-                  >
-                    Loading...
-                  </td>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Email
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Role
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Invited
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Accepted
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+                    Actions
+                  </th>
                 </tr>
-              ) : entries.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-6 py-4 text-center text-muted-foreground"
-                  >
-                    No emails in whitelist. Add one to get started.
-                  </td>
-                </tr>
-              ) : (
-                entries.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-muted">
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-card-foreground">
-                        {entry.email}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getRoleBadgeColor(
-                          entry.role,
-                        )}`}
-                      >
-                        {entry.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      {entry.is_active ? (
-                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                          Active
-                        </span>
-                      ) : (
-                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-                          Inactive
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-muted-foreground">
-                        {formatDate(entry.invited_at)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {entry.accepted_at ? (
-                        <div className="text-sm text-muted-foreground">
-                          {formatDate(entry.accepted_at)}
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-400 italic">
-                          Not yet
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => handleRemove(entry.id)}
-                        className="text-red-600 hover:text-red-800 text-sm font-medium"
-                      >
-                        Remove
-                      </button>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-6 py-4 text-center text-muted-foreground"
+                    >
+                      Loading...
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : entries.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-6 py-4 text-center text-muted-foreground"
+                    >
+                      No emails in whitelist. Add one to get started.
+                    </td>
+                  </tr>
+                ) : (
+                  entries.map((entry) => (
+                    <tr key={entry.id} className="hover:bg-muted">
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-card-foreground">
+                          {entry.email}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getRoleBadgeColor(
+                            entry.role,
+                          )}`}
+                        >
+                          {entry.role}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {entry.is_active ? (
+                          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                            Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+                            Inactive
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-muted-foreground">
+                          {formatDate(entry.invited_at)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {entry.accepted_at ? (
+                          <div className="text-sm text-muted-foreground">
+                            {formatDate(entry.accepted_at)}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400 italic">
+                            Not yet
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={() => handleRemove(entry.id)}
+                          className="text-red-600 hover:text-red-800 text-sm font-medium"
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-blue-900 mb-2">How it works</h4>
-        <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+      <div className="bg-[hsl(var(--status-info-bg))] border border-[hsl(var(--status-info-fg))] rounded-lg p-4">
+        <h4 className="text-sm font-medium text-[hsl(var(--status-info-fg))] mb-2">
+          How it works
+        </h4>
+        <ol className="text-sm text-[hsl(var(--status-info-fg))] space-y-1 list-decimal list-inside">
           <li>Add resident emails to the whitelist above</li>
           <li>Residents click "Sign in with Google" on the login page</li>
           <li>Their email is verified against the whitelist</li>

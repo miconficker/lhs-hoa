@@ -5,6 +5,7 @@ import { UnifiedBookingsTab } from "./UnifiedBookingsTab";
 import { TimeBlocksTab } from "./TimeBlocksTab";
 import { PricingTab } from "./PricingTab";
 import type { AmenityType } from "@/types";
+import { useAuth } from "@/hooks/useAuth";
 
 const amenityTypes: AmenityType[] = [
   "clubhouse",
@@ -14,7 +15,17 @@ const amenityTypes: AmenityType[] = [
 ];
 
 export default function AdminReservationsPage() {
+  const { user } = useAuth();
   const { tab = "all-bookings" } = useParams<{ tab?: string }>();
+
+  // Security: Ensure only admins can access this page
+  if (user?.role !== "admin") {
+    return (
+      <div className="bg-[hsl(var(--status-error-bg))] border border-[hsl(var(--status-error-fg))] text-[hsl(var(--status-error-fg))] p-4 rounded-lg">
+        Access denied. Admin privileges required.
+      </div>
+    );
+  }
 
   // Map URL param to tab value
   const getTabValue = () => {

@@ -1397,6 +1397,12 @@ Based on **Radix UI** primitives with Tailwind styling:
 --status-neutral-bg: 220 15% 90%;     --status-neutral-fg: 220 15% 30%;
 ```
 
+**Dark Mode Support**:
+- All user-facing pages now use semantic color classes instead of hardcoded values
+- Chart components dynamically detect theme changes using MutationObserver
+- Consistent color patterns: `bg-background`, `text-muted-foreground`, `border-input`, `bg-primary text-primary-foreground`
+- Status colors use CSS variables for automatic theme adaptation: `bg-[hsl(var(--status-success-bg))]`
+
 **StatusBadge Usage**:
 ```typescript
 <StatusBadge variant="success">Paid</StatusBadge>
@@ -2011,9 +2017,19 @@ jobs:
 ## Document Metadata
 
 **Last Updated**: 2026-03-11
-**Version**: 1.6.0
+**Version**: 1.7.0
 **Status**: Production System (Audit Complete)
 **Maintained By**: Development Team
+
+**Recent Updates (v1.7.0)**:
+- Comprehensive dark mode consistency improvements
+  - Fixed hardcoded colors in MainLayout, LateFeeConfig, and multiple page components
+  - Made chart components (PaymentChart, RequestStatusChart) theme-aware with dynamic theme detection
+  - Replaced hardcoded Tailwind colors with semantic CSS variables throughout user-facing pages
+  - Fixed WhitelistManagementPage, PassesPage, PassManagementPage, DuesConfigPage, CommonAreasPage
+  - Established consistent use of status color variables (hsl(var(--status-*-bg/fg)))
+  - Charts now use MutationObserver to detect theme changes and update colors dynamically
+  - Overall consistency improved between light and dark modes across the application
 
 **Recent Updates (v1.6.0)**:
 - Consolidated architecture documentation

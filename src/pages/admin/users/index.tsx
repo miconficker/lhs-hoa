@@ -3,11 +3,22 @@ import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UsersTab } from "./UsersTab";
 import { BoardMembersTab } from "./BoardMembersTab";
+import { useAuth } from "@/hooks/useAuth";
 
 type UserSubTab = "users" | "board-members";
 
 export function UsersSection() {
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
+
+  // Security: Ensure only admins can access this page
+  if (user?.role !== "admin") {
+    return (
+      <div className="bg-[hsl(var(--status-error-bg))] border border-[hsl(var(--status-error-fg))] text-[hsl(var(--status-error-fg))] p-4 rounded-lg">
+        Access denied. Admin privileges required.
+      </div>
+    );
+  }
   const tabParam = searchParams.get("tab");
   const initialTab = tabParam === "board-members" ? "board-members" : "users";
   const [activeSubTab, setActiveSubTab] = useState<UserSubTab>(initialTab);
