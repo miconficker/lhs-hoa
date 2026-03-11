@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { getUserFromRequest, hashPassword } from '../lib/auth';
+import { checkRateLimit, getClientIp, RATE_LIMITS } from '../lib/rate-limit';
+import { logAuditEvent, AUDIT_ACTIONS, getUserAgent } from '../lib/audit';
 import type { User, UserRole } from '../types';
 import { timeBlocksRouter } from './admin/time-blocks';
 import { externalRentalsRouter } from './admin/external-rentals';
@@ -66,32 +68,75 @@ adminRouter.get('/users/search', async (c) => {
     return c.json({ error: 'Admin access required' }, 403);
   }
 
+  // Check rate limit
+  const clientIp = getClientIp(c.req.raw);
+  const rateLimit = await checkRateLimit(c.env.DB, clientIp, RATE_LIMITS.search);
+  if (!rateLimit.allowed) {
+    await logAuditEvent(c.env.DB, {
+      userId: authUser.userId,
+      userEmail: authUser.userId, // We'd need to fetch email, but using userId for now
+      action: AUDIT_ACTIONS.SEARCH_USERS,
+      ipAddress: clientIp,
+      userAgent: getUserAgent(c.req.raw),
+      success: false,
+      errorMessage: 'Rate limit exceeded',
+      metadata: { query: c.req.query('q') },
+    });
+    return c.json(
+      { error: 'Too many requests. Please try again later.' },
+      429
+    );
+  }
+
   const query = c.req.query('q');
   if (!query || query.length < 2) {
     return c.json({ users: [] });
   }
 
-  const users = await c.env.DB.prepare(`
-    SELECT id, email, first_name, last_name, role
-    FROM users
-    WHERE email LIKE ? OR first_name LIKE ? OR last_name LIKE ?
-    ORDER BY
-      CASE
-        WHEN email LIKE ? THEN 1
-        WHEN first_name LIKE ? THEN 2
-        ELSE 3
-      END,
-      email
-    LIMIT 10
-  `).bind(
-    `%${query}%`,
-    `%${query}%`,
-    `%${query}%`,
-    `${query}%`,
-    `${query}%`
-  ).all();
+  try {
+    const users = await c.env.DB.prepare(`
+      SELECT id, email, first_name, last_name, role
+      FROM users
+      WHERE email LIKE ? OR first_name LIKE ? OR last_name LIKE ?
+      ORDER BY
+        CASE
+          WHEN email LIKE ? THEN 1
+          WHEN first_name LIKE ? THEN 2
+          ELSE 3
+        END,
+        email
+      LIMIT 10
+    `).bind(
+      `%${query}%`,
+      `%${query}%`,
+      `%${query}%`,
+      `${query}%`,
+      `${query}%`
+    ).all();
 
-  return c.json({ users: users.results });
+    await logAuditEvent(c.env.DB, {
+      userId: authUser.userId,
+      action: AUDIT_ACTIONS.SEARCH_USERS,
+      resourceType: 'users',
+      ipAddress: clientIp,
+      userAgent: getUserAgent(c.req.raw),
+      success: true,
+      metadata: { query, resultCount: users.results?.length || 0 },
+    });
+
+    return c.json({ users: users.results });
+  } catch (error) {
+    await logAuditEvent(c.env.DB, {
+      userId: authUser.userId,
+      action: AUDIT_ACTIONS.SEARCH_USERS,
+      ipAddress: clientIp,
+      userAgent: getUserAgent(c.req.raw),
+      success: false,
+      errorMessage: 'Database query failed',
+      metadata: { query },
+    });
+    return c.json({ error: 'Search failed' }, 500);
+  }
 });
 
 // Create new user
@@ -275,7 +320,26 @@ adminRouter.get('/households', async (c) => {
     return c.json({ error: 'Admin access required' }, 403);
   }
 
-  const households = await c.env.DB.prepare(`
+  // Check rate limit
+  const clientIp = getClientIp(c.req.raw);
+  const rateLimit = await checkRateLimit(c.env.DB, clientIp, RATE_LIMITS.admin);
+  if (!rateLimit.allowed) {
+    await logAuditEvent(c.env.DB, {
+      userId: authUser.userId,
+      action: AUDIT_ACTIONS.SEARCH_HOUSEHOLDS,
+      ipAddress: clientIp,
+      userAgent: getUserAgent(c.req.raw),
+      success: false,
+      errorMessage: 'Rate limit exceeded',
+    });
+    return c.json(
+      { error: 'Too many requests. Please try again later.' },
+      429
+    );
+  }
+
+  try {
+    const households = await c.env.DB.prepare(`
     SELECT
       h.id,
       h.address,
@@ -310,7 +374,28 @@ adminRouter.get('/households', async (c) => {
     residents: h.residents ? JSON.parse(`[${h.residents}]`) : [],
   }));
 
+  await logAuditEvent(c.env.DB, {
+    userId: authUser.userId,
+    action: AUDIT_ACTIONS.SEARCH_HOUSEHOLDS,
+    resourceType: 'households',
+    ipAddress: clientIp,
+    userAgent: getUserAgent(c.req.raw),
+    success: true,
+    metadata: { resultCount: householdsWithResidents.length },
+  });
+
   return c.json({ households: householdsWithResidents });
+} catch (error) {
+  await logAuditEvent(c.env.DB, {
+    userId: authUser.userId,
+    action: AUDIT_ACTIONS.SEARCH_HOUSEHOLDS,
+    ipAddress: clientIp,
+    userAgent: getUserAgent(c.req.raw),
+    success: false,
+    errorMessage: 'Database query failed',
+  });
+  return c.json({ error: 'Failed to fetch households' }, 500);
+}
 });
 
 // Create household

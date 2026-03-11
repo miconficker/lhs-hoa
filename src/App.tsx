@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
 import { MainLayout } from "./components/layout/MainLayout";
+import { AdminLayout } from "./pages/admin/AdminLayout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
 import { useAuth } from "./hooks/useAuth";
@@ -50,6 +51,11 @@ const AdminPanelPage = lazy(() =>
 const MemberApprovalsPage = lazy(() =>
   import("./pages/admin/MemberApprovalsPage").then((m) => ({
     default: m.MemberApprovalsPage,
+  })),
+);
+const UsersSection = lazy(() =>
+  import("./pages/admin/users/index").then((m) => ({
+    default: m.UsersSection,
   })),
 );
 const DebugPage = lazy(() =>
@@ -153,7 +159,19 @@ function App() {
               path="admin/reservations/:tab"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
-                  <AdminPanelPage />
+                  <AdminLayout>
+                    <AdminPanelPage />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/users"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminLayout>
+                    <UsersSection />
+                  </AdminLayout>
                 </ProtectedRoute>
               }
             />
@@ -161,7 +179,9 @@ function App() {
               path="admin/member-approvals"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
-                  <MemberApprovalsPage />
+                  <AdminLayout>
+                    <MemberApprovalsPage />
+                  </AdminLayout>
                 </ProtectedRoute>
               }
             />
@@ -169,7 +189,9 @@ function App() {
               path="admin/*"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
-                  <AdminPanelPage />
+                  <AdminLayout>
+                    <AdminPanelPage />
+                  </AdminLayout>
                 </ProtectedRoute>
               }
             />
