@@ -146,8 +146,16 @@ lhs-hoa/
 │   │   ├── content/              # i18n labels & messages
 │   │   └── paymentExport.ts      # CSV export utilities
 │   ├── pages/                    # Page components
+│   │   ├── admin/                # Admin-specific pages
+│   │   │   ├── AdminLayout.tsx   # Admin layout wrapper with persistent sidebar
+│   │   │   ├── users/            # User management pages
+│   │   │   │   ├── index.tsx     # Users section with tabs (users/board-members)
+│   │   │   │   ├── UsersTab.tsx   # Users list and management
+│   │   │   │   └── BoardMembersTab.tsx
+│   │   │   ├── MemberApprovalsPage.tsx
+│   │   │   └── reservations/     # Reservation management
 │   │   ├── LoginPage.tsx
-│   │   ├── DashboardPage.tsx
+│   │   ├── DashboardPage.tsx     # Resident dashboard (user-centric)
 │   │   ├── MapPage.tsx
 │   │   ├── ServiceRequestsPage.tsx
 │   │   ├── ReservationsPage.tsx
@@ -162,13 +170,14 @@ lhs-hoa/
 │   │   ├── MyLotsPage.tsx
 │   │   ├── CommonAreasPage.tsx
 │   │   ├── DebugPage.tsx
-│   │   ├── AdminPanelPage.tsx
+│   │   ├── AdminPanelPage.tsx    # Admin dashboard (stats, charts, quick actions)
 │   │   ├── AdminLotsPage.tsx
 │   │   ├── DuesConfigPage.tsx
 │   │   ├── InPersonPaymentsPage.tsx
 │   │   ├── PassManagementPage.tsx
 │   │   ├── AccountSettingsPage.tsx
-│   │   └── WhitelistManagementPage.tsx
+│   │   ├── WhitelistManagementPage.tsx
+│   │   └── HelpPage.tsx
 │   ├── types/
 │   │   └── index.ts              # Frontend TypeScript types
 │   ├── App.tsx                   # Root component & routing
@@ -231,11 +240,11 @@ The app uses **React Router v6** with nested routes:
 / (public)
 ├── /login (public)
 └── / (protected - MainLayout)
-    ├── /dashboard
+    ├── /dashboard              # Resident dashboard (user-centric)
     ├── /map
     ├── /service-requests
     ├── /reservations
-    ├── /my-lots
+    ├── /my-lots               # Resident's properties with member management
     ├── /passes
     ├── /payments
     ├── /documents
@@ -246,13 +255,27 @@ The app uses **React Router v6** with nested routes:
     ├── /notifications (admin, resident, staff)
     ├── /account
     ├── /debug
-    └── /admin/* (admin-only)
-        ├── /admin/lots
-        ├── /admin/dues
+    ├── /help
+    └── /admin/* (admin-only - AdminLayout)
+        ├── /admin              # Admin dashboard (stats, charts, quick actions)
+        ├── /admin/users        # User management with tabs
+        ├── /admin/lots         # Map-based lot management
+        ├── /admin/lot-members  # Lot membership management
+        ├── /admin/dues         # Dues configuration
+        ├── /admin/payments     # Payment management
         ├── /admin/payments/in-person
-        ├── /admin/common-areas
+        ├── /admin/common-areas # Common area management
         ├── /admin/pass-management
-        └── /admin/whitelist
+        ├── /admin/whitelist    # Email whitelist management
+        ├── /admin/pre-approved
+        ├── /admin/member-approvals
+        ├── /admin/announcements
+        ├── /admin/notifications
+        ├── /admin/messages
+        ├── /admin/dues-settings
+        ├── /admin/verification-queue
+        ├── /admin/settings
+        └── /admin/reservations/:tab
 ```
 
 ### Component Hierarchy
@@ -263,10 +286,13 @@ App
     └── Routes
         ├── LoginPage (unprotected)
         └── ProtectedRoute
-            └── MainLayout
+            └── MainLayout (resident pages)
                 ├── Sidebar
                 ├── Header
                 ├── BottomNav (mobile)
+                └── Page Content
+            └── AdminLayout (admin pages)
+                ├── Sidebar (admin navigation)
                 └── Page Content
 ```
 
@@ -1085,6 +1111,48 @@ Based on **Radix UI** primitives with Tailwind styling:
 - `Skeleton` - Loading skeletons
 - `Sheet` - Side sheets
 
+**Semantic Status Components**:
+- `StatusBadge` - Semantic status badges with variants (success, warning, error, info, neutral)
+- `Callout` - Info/warning/error/success callout boxes with icons and ARIA roles
+- `IconContainer` - Standardized colored icon containers for consistent visual hierarchy
+- `LoadingSpinner` - Unified loading spinner with size variants (sm, md, lg)
+
+**Design System - Semantic Status Colors**:
+```css
+/* Light mode values */
+--status-success-bg: 142 100% 90%;    --status-success-fg: 142 76% 26%;
+--status-warning-bg: 48 100% 90%;     --status-warning-fg: 48 90% 26%;
+--status-error-bg: 0 100% 90%;        --status-error-fg: 0 84% 50%;
+--status-info-bg: 217 100% 94%;       --status-info-fg: 217 90% 40%;
+--status-neutral-bg: 220 15% 90%;     --status-neutral-fg: 220 15% 30%;
+```
+
+**StatusBadge Usage**:
+```typescript
+<StatusBadge variant="success">Paid</StatusBadge>
+<StatusBadge variant="warning">Pending</StatusBadge>
+<StatusBadge variant="error">Overdue</StatusBadge>
+<StatusBadge variant="info">In Progress</StatusBadge>
+<StatusBadge variant="neutral">Vacant</StatusBadge>
+```
+
+**Callout Usage**:
+```typescript
+<Callout variant="error" title="Error Loading Data">
+  Failed to load your lots. Please try again.
+</Callout>
+
+<Callout variant="success" title="Success" action={<Button>View</Button>}>
+  Your payment was processed successfully.
+</Callout>
+```
+
+**IconContainer Usage**:
+```typescript
+<IconContainer icon={Home} variant="primary" size="md" />
+<IconContainer icon={CheckCircle} variant="success" size="sm" />
+```
+
 ### My Lots Components (Resident-Facing)
 
 **Purpose**: Allow primary owners to manage household members directly from the My Lots page.
@@ -1585,9 +1653,47 @@ jobs:
 ## Document Metadata
 
 **Last Updated**: 2026-03-11
-**Version**: 1.3.0
+**Version**: 1.5.0
 **Status**: Production System (Audit Complete)
 **Maintained By**: Development Team
+
+**Recent Updates (v1.5.0)**:
+- Unified site design with semantic status components
+  - Created `StatusBadge` component with semantic variants (success, warning, error, info, neutral)
+  - Created `Callout` component for info/warning/error/success boxes with ARIA roles
+  - Created `IconContainer` component for standardized colored icon containers
+  - Created `LoadingSpinner` component for unified loading indicators
+  - Added CSS variables for semantic status colors with light/dark mode support
+  - Updated all pages to use new components for consistent status indicators
+  - Replaced custom Tailwind color classes with CSS variable-based components
+  - Improved accessibility with proper ARIA attributes on status components
+- Pages updated with new components:
+  - HouseholdMembersPanel - Use StatusBadge for verification status
+  - DashboardPage - Use StatusBadge, Callout, LoadingSpinner
+  - MyLotsPage - Replace custom badges and callouts with semantic components
+  - LoginPage - Use Callout for errors, Button/Input components
+  - AdminLotsPage/AdminPanelPage - Use Callout for errors, LoadingSpinner
+  - ServiceRequestsPage - Use StatusBadge for request status/priority
+  - PaymentsPage - Use StatusBadge, Callout, Dialog components
+
+**Recent Updates (v1.4.0)**:
+- Implemented proper admin layout structure with AdminLayout component
+  - Created `src/pages/admin/AdminLayout.tsx` with persistent sidebar
+  - Updated `src/App.tsx` to wrap admin routes with AdminLayout
+  - Refactored `src/pages/AdminPanelPage.tsx` to remove duplicate sidebar rendering
+  - Moved charts (PaymentChart, RequestStatusChart) to admin dashboard
+- Created dedicated user management pages
+  - Added `/admin/users` route with UsersSection component
+  - Separated users functionality into dedicated pages from admin dashboard
+- Refactored dashboards for clear separation of concerns
+  - Resident dashboard (`DashboardPage.tsx`) - User-centric with My Properties, Quick Actions, Announcements
+  - Admin dashboard (`AdminPanelPage.tsx`) - Admin-centric with system stats, charts, and quick actions
+  - Removed system-wide stats from resident dashboard
+- Admin sidebar improvements
+  - Added right margin (`mr-1`) to chevron icons and badges for better spacing
+- Fixed resident dashboard property display
+  - Changed from `api.dashboard.getStats()` to `api.households.getMyLots()` for fetching user's lots
+  - Fixed "No Properties Linked" issue for users with lots
 
 **Recent Updates (v1.3.0)**:
 - Added resident-facing household member management to My Lots page
