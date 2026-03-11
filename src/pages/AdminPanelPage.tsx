@@ -1,13 +1,7 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
-import { api, type AdminUser } from "@/lib/api";
+import { Link } from "react-router-dom";
+import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import type { UserRole } from "@/types";
-import { PaymentVerificationQueue } from "@/components/PaymentVerificationQueue";
-import { LateFeeConfig } from "@/components/LateFeeConfig";
-import { PaymentExport } from "@/components/PaymentExport";
-import { Sidebar } from "@/components/admin/Sidebar";
-import { Menu } from "lucide-react";
 import AdminReservationsPage from "./admin/reservations/index";
 import { AdminLotsPage } from "./AdminLotsPage";
 import { LotsManagementPage } from "@/components/admin/lots/LotsManagementPage";
@@ -20,77 +14,28 @@ import { AnnouncementsPage } from "./AnnouncementsPage";
 import { NotificationsPage } from "./NotificationsPage";
 import { MessagesPage } from "./MessagesPage";
 import { PaymentsPage } from "./PaymentsPage";
-import { UsersSection } from "./admin/users/index";
-
-type Tab = "users" | "lots" | "import" | "payments" | "settings";
+import { PaymentVerificationQueue } from "@/components/PaymentVerificationQueue";
+import { PaymentChart } from "@/components/charts/PaymentChart";
+import { RequestStatusChart } from "@/components/charts/RequestStatusChart";
+import { Callout } from "@/components/ui/callout";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { IconContainer } from "@/components/ui/icon-container";
+import { Users, Bell, CreditCard, Building2 } from "lucide-react";
 
 export function AdminPanelPage() {
   const { user } = useAuth();
-  const location = useLocation();
-  const [activeTab, setActiveTab] = useState<Tab>("users");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-
-  // Parse the current path to determine which section to show
-  const getPathSection = () => {
-    const path = location.pathname;
-    if (path === "/admin") return { section: "dashboard", tab: null };
-    if (path.startsWith("/admin/")) {
-      const parts = path.replace("/admin/", "").split("/");
-      return {
-        section: parts[0],
-        tab: parts[1] || null,
-      };
-    }
-    return { section: "dashboard", tab: null };
-  };
-
-  const pathInfo = getPathSection();
-
-  // Users state
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [showUserModal, setShowUserModal] = useState(false);
-  const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
-
-  // Import state
-  const [importData, setImportData] = useState("");
-  const [importResult, setImportResult] = useState<{
-    success: number;
-    failed: number;
-    errors: string[];
-  } | null>(null);
-
-  // Stats state
   const [stats, setStats] = useState<any>(null);
 
-  // Payments state
-  const [paymentStatus, setPaymentStatus] = useState<
-    "pending" | "approved" | "rejected"
-  >("pending");
-  const [paymentSubTab, setPaymentSubTab] = useState<
-    "verifications" | "settings" | "export"
-  >("verifications");
+  // Get the current path section
+  const pathSection = window.location.pathname
+    .replace("/admin/", "")
+    .split("/")[0];
 
+  // Load stats on mount
   useEffect(() => {
-    if (activeTab === "users") loadUsers();
-    if (activeTab === "settings") loadStats();
-  }, [activeTab]);
-
-  // Redirect to new Lots page if old tab is selected
-  useEffect(() => {
-    if (activeTab === "lots") {
-      window.location.href = "/admin/lots";
-    }
-  }, [activeTab]);
-
-  const loadUsers = async () => {
-    setLoading(true);
-    const response = await api.admin.listUsers();
-    if (response.data) {
-      setUsers(response.data.users);
-    }
-    setLoading(false);
-  };
+    loadStats();
+  }, []);
 
   const loadStats = async () => {
     setLoading(true);
@@ -101,802 +46,252 @@ export function AdminPanelPage() {
     setLoading(false);
   };
 
-  const handleCreateUser = async (data: any) => {
-    const response = await api.admin.createUser(data);
-    if (response.error) {
-      alert(response.error);
-      return;
-    }
-    setShowUserModal(false);
-    loadUsers();
-  };
-
-  const handleUpdateUser = async (id: string, data: any) => {
-    const response = await api.admin.updateUser(id, data);
-    if (response.error) {
-      alert(response.error);
-      return;
-    }
-    setShowUserModal(false);
-    setEditingUser(null);
-    loadUsers();
-  };
-
-  const handleImport = async () => {
-    try {
-      const data = JSON.parse(importData);
-      const response = await api.admin.importHouseholds({ households: data });
-      if (response.data) {
-        setImportResult(response.data.results);
-      }
-    } catch (e) {
-      alert("Invalid JSON format");
-    }
-  };
-
-  const tabs = [
-    { id: "users" as Tab, label: "Users", icon: "👥" },
-    { id: "lots" as Tab, label: "Lots", icon: "🏘️" },
-    { id: "import" as Tab, label: "Import", icon: "📥" },
-    { id: "payments" as Tab, label: "Payments", icon: "💳" },
-    { id: "settings" as Tab, label: "Stats", icon: "📊" },
-  ];
-
   if (user?.role !== "admin") {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-2">
-            Access Denied
-          </h2>
-          <p className="text-gray-600">
-            You don't have permission to access this page.
+        <Callout variant="error" title="Access Denied">
+          You don't have permission to access this page.
+        </Callout>
+      </div>
+    );
+  }
+
+  // Handle dedicated admin pages
+  if (pathSection === "reservations") {
+    return <AdminReservationsPage />;
+  }
+  if (pathSection === "lots") {
+    return <AdminLotsPage />;
+  }
+  if (pathSection === "lot-members") {
+    return (
+      <div className="p-6">
+        <LotsManagementPage />
+      </div>
+    );
+  }
+  if (pathSection === "dues") {
+    return <DuesConfigPage />;
+  }
+  if (
+    pathSection === "payments" &&
+    window.location.pathname.includes("in-person")
+  ) {
+    return <InPersonPaymentsPage />;
+  }
+  if (pathSection === "common-areas") {
+    return <CommonAreasPage />;
+  }
+  if (pathSection === "pass-management") {
+    return <PassManagementPage />;
+  }
+  if (pathSection === "whitelist") {
+    return <WhitelistManagementPage />;
+  }
+  if (pathSection === "pre-approved") {
+    return <WhitelistManagementPage />;
+  }
+  if (pathSection === "residents") {
+    return (
+      <div className="p-6">
+        <p className="text-muted-foreground">
+          Use the Users page from the sidebar.
+        </p>
+      </div>
+    );
+  }
+  if (pathSection === "announcements") {
+    return <AnnouncementsPage />;
+  }
+  if (pathSection === "notifications") {
+    return <NotificationsPage />;
+  }
+  if (pathSection === "messages") {
+    return <MessagesPage />;
+  }
+  if (
+    pathSection === "payments" &&
+    !window.location.pathname.includes("in-person")
+  ) {
+    return <PaymentsPage />;
+  }
+  if (pathSection === "dues-settings") {
+    return <DuesConfigPage />;
+  }
+  if (pathSection === "verification-queue") {
+    return (
+      <div className="container mx-auto px-4 py-6 space-y-6">
+        <h1 className="text-2xl font-bold">Payment Verification Queue</h1>
+        <PaymentVerificationQueue status="pending" onRefresh={() => {}} />
+      </div>
+    );
+  }
+  if (pathSection === "settings") {
+    return (
+      <div className="container mx-auto px-4 py-6 space-y-6">
+        <h1 className="text-2xl font-bold">System Settings</h1>
+        <div className="bg-white dark:bg-card rounded-lg shadow p-6">
+          <p className="text-muted-foreground">
+            System settings coming soon...
           </p>
         </div>
       </div>
     );
   }
 
-  // Handle reservations section
-  if (pathInfo.section === "reservations") {
-    return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 lg:ml-64">
-          <AdminReservationsPage />
-        </div>
-      </div>
-    );
-  }
-
-  // Handle lots section
-  if (pathInfo.section === "lots") {
-    return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 lg:ml-64">
-          <AdminLotsPage />
-        </div>
-      </div>
-    );
-  }
-
-  // Handle lot-members section
-  if (pathInfo.section === "lot-members") {
-    return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 lg:ml-64 p-6">
-          <LotsManagementPage />
-        </div>
-      </div>
-    );
-  }
-
-  // Handle dues section
-  if (pathInfo.section === "dues") {
-    return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 lg:ml-64">
-          <DuesConfigPage />
-        </div>
-      </div>
-    );
-  }
-
-  // Handle payments/in-person section
-  if (
-    pathInfo.section === "payments" &&
-    location.pathname.includes("in-person")
-  ) {
-    return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 lg:ml-64">
-          <InPersonPaymentsPage />
-        </div>
-      </div>
-    );
-  }
-
-  // Handle common-areas section
-  if (pathInfo.section === "common-areas") {
-    return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 lg:ml-64">
-          <CommonAreasPage />
-        </div>
-      </div>
-    );
-  }
-
-  // Handle pass-management section
-  if (pathInfo.section === "pass-management") {
-    return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 lg:ml-64">
-          <PassManagementPage />
-        </div>
-      </div>
-    );
-  }
-
-  // Handle whitelist section
-  if (pathInfo.section === "whitelist") {
-    return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 lg:ml-64">
-          <WhitelistManagementPage />
-        </div>
-      </div>
-    );
-  }
-
-  // Handle pre-approved section (same as whitelist)
-  if (pathInfo.section === "pre-approved") {
-    return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 lg:ml-64">
-          <WhitelistManagementPage />
-        </div>
-      </div>
-    );
-  }
-
-  // Handle residents section (use users tab)
-  if (pathInfo.section === "residents") {
-    return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 lg:ml-64">
-          <div className="container mx-auto px-4 py-6 space-y-6">
-            <h1 className="text-2xl font-bold">Residents Management</h1>
-            <div className="bg-white dark:bg-card rounded-lg shadow p-6">
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold">User Management</h2>
-                </div>
-                {loading ? (
-                  <div className="text-center py-8">Loading...</div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-muted">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                            Email
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                            Role
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                            Phone
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white dark:bg-card divide-y divide-gray-200 dark:divide-gray-700">
-                        {users.map((user) => (
-                          <tr key={user.id}>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {user.email}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span
-                                className={`px-2 py-1 text-xs rounded-full ${
-                                  user.role === "admin"
-                                    ? "bg-purple-100 text-purple-800"
-                                    : user.role === "staff"
-                                      ? "bg-blue-100 text-blue-800"
-                                      : user.role === "resident"
-                                        ? "bg-green-100 text-green-800"
-                                        : "bg-gray-100 text-gray-800"
-                                }`}
-                              >
-                                {user.role}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {user.phone || "-"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                              <button
-                                onClick={() => {
-                                  setEditingUser(user);
-                                  setShowUserModal(true);
-                                }}
-                                className="text-primary-600 hover:text-primary-900"
-                              >
-                                Edit
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Handle announcements section
-  if (pathInfo.section === "announcements") {
-    return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 lg:ml-64">
-          <AnnouncementsPage />
-        </div>
-      </div>
-    );
-  }
-
-  // Handle notifications section
-  if (pathInfo.section === "notifications") {
-    return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 lg:ml-64">
-          <NotificationsPage />
-        </div>
-      </div>
-    );
-  }
-
-  // Handle messages section
-  if (pathInfo.section === "messages") {
-    return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 lg:ml-64">
-          <MessagesPage />
-        </div>
-      </div>
-    );
-  }
-
-  // Handle payments section (main page)
-  if (
-    pathInfo.section === "payments" &&
-    !location.pathname.includes("in-person")
-  ) {
-    return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 lg:ml-64">
-          <PaymentsPage />
-        </div>
-      </div>
-    );
-  }
-
-  // Handle dues-settings section (same as dues)
-  if (pathInfo.section === "dues-settings") {
-    return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 lg:ml-64">
-          <DuesConfigPage />
-        </div>
-      </div>
-    );
-  }
-
-  // Handle verification-queue section
-  if (pathInfo.section === "verification-queue") {
-    return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 lg:ml-64">
-          <div className="container mx-auto px-4 py-6 space-y-6">
-            <h1 className="text-2xl font-bold">Payment Verification Queue</h1>
-            <PaymentVerificationQueue status="pending" onRefresh={() => {}} />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Handle settings section
-  if (pathInfo.section === "settings") {
-    return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex-1 lg:ml-64">
-          <div className="container mx-auto px-4 py-6 space-y-6">
-            <h1 className="text-2xl font-bold">System Settings</h1>
-            <div className="bg-white dark:bg-card rounded-lg shadow p-6">
-              <p className="text-muted-foreground">
-                System settings coming soon...
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // Dashboard overview
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <div className="flex-1 lg:ml-64">
-        <div className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 rounded-lg hover:bg-accent"
-                aria-label="Open sidebar"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
-              <h1 className="text-2xl font-bold">Admin Panel</h1>
-            </div>
-          </div>
-        </div>
-
-        <div className="container mx-auto px-4 py-6 space-y-6">
-          {/* Tabs */}
-          <div className="border-b border-gray-200 dark:border-border">
-            <nav className="-mb-px flex space-x-8">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center px-1 py-4 border-b-2 font-medium text-sm ${
-                    activeTab === tab.id
-                      ? "border-primary-500 text-primary-600"
-                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                  }`}
-                >
-                  <span className="mr-2">{tab.icon}</span>
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          {/* Content */}
-          <div className="bg-white dark:bg-card rounded-lg shadow p-6">
-            {activeTab === "users" && <UsersSection />}
-
-            {activeTab === "lots" && (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  Redirecting to Lots management...
-                </p>
-              </div>
-            )}
-
-            {activeTab === "import" && (
-              <div>
-                <h2 className="text-xl font-semibold mb-6">
-                  Bulk Import Households
-                </h2>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-2">
-                      Paste JSON data or enter manually
-                    </label>
-                    <textarea
-                      value={importData}
-                      onChange={(e) => setImportData(e.target.value)}
-                      rows={10}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono text-sm"
-                      placeholder={`[
-  {
-    "address": "123 Main St",
-    "block": "1",
-    "lot": "1",
-    "latitude": 14.1234,
-    "longitude": 121.5678,
-    "owner_email": "owner@example.com",
-    "residents": [
-      { "first_name": "John", "last_name": "Doe", "is_primary": true },
-      { "first_name": "Jane", "last_name": "Doe", "is_primary": false }
-    ]
-  }
-]`}
-                    />
-                  </div>
-
-                  <button
-                    onClick={handleImport}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-                  >
-                    Import Households
-                  </button>
-
-                  {importResult && (
-                    <div className="mt-4 p-4 bg-gray-50 dark:bg-muted rounded-lg">
-                      <h3 className="font-semibold mb-2">Import Results</h3>
-                      <p className="text-green-600">
-                        ✓ {importResult.success} households imported
-                      </p>
-                      <p className="text-red-600">
-                        ✗ {importResult.failed} households failed
-                      </p>
-                      {importResult.errors.length > 0 && (
-                        <div className="mt-2">
-                          <p className="font-medium">Errors:</p>
-                          <ul className="list-disc list-inside text-sm text-red-600">
-                            {importResult.errors.map((error, i) => (
-                              <li key={i}>{error}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {activeTab === "payments" && (
-              <div>
-                <h2 className="text-xl font-semibold mb-6">
-                  Payment Management
-                </h2>
-
-                {/* Sub-tabs */}
-                <div className="mb-4 border-b border-gray-200 dark:border-border">
-                  <nav
-                    className="-mb-px flex space-x-8"
-                    aria-label="Payment tabs"
-                  >
-                    <button
-                      onClick={() => setPaymentSubTab("verifications")}
-                      className={`${
-                        paymentSubTab === "verifications"
-                          ? "border-blue-500 text-blue-600"
-                          : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                      } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                    >
-                      Verification Queue
-                    </button>
-                    <button
-                      onClick={() => setPaymentSubTab("settings")}
-                      className={`${
-                        paymentSubTab === "settings"
-                          ? "border-blue-500 text-blue-600"
-                          : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                      } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                    >
-                      Settings
-                    </button>
-                    <button
-                      onClick={() => setPaymentSubTab("export")}
-                      className={`${
-                        paymentSubTab === "export"
-                          ? "border-blue-500 text-blue-600"
-                          : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                      } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                    >
-                      Export
-                    </button>
-                  </nav>
-                </div>
-
-                {/* Verification Queue Sub-tab */}
-                {paymentSubTab === "verifications" && (
-                  <div className="bg-white dark:bg-card rounded-lg shadow">
-                    <div className="border-b border-gray-200 dark:border-border">
-                      <nav
-                        className="-mb-px flex space-x-8"
-                        aria-label="Status tabs"
-                      >
-                        {[
-                          { id: "pending", label: "Pending" },
-                          { id: "approved", label: "Approved" },
-                          { id: "rejected", label: "Rejected" },
-                        ].map((tab) => (
-                          <button
-                            key={tab.id}
-                            onClick={() => setPaymentStatus(tab.id as any)}
-                            className={`${
-                              paymentStatus === tab.id
-                                ? "border-blue-500 text-blue-600"
-                                : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                          >
-                            {tab.label}
-                          </button>
-                        ))}
-                      </nav>
-                    </div>
-
-                    <div className="p-6">
-                      <PaymentVerificationQueue
-                        status={paymentStatus}
-                        onRefresh={() => {
-                          // Optional: refresh logic
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Settings Sub-tab */}
-                {paymentSubTab === "settings" && (
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <LateFeeConfig />
-                  </div>
-                )}
-
-                {/* Export Sub-tab */}
-                {paymentSubTab === "export" && (
-                  <div className="bg-white rounded-lg shadow p-6">
-                    <PaymentExport />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {activeTab === "settings" && (
-              <div>
-                <h2 className="text-xl font-semibold mb-6">
-                  System Statistics
-                </h2>
-
-                {loading ? (
-                  <div className="text-center py-8">Loading...</div>
-                ) : stats ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* Users Stats */}
-                    <div className="bg-purple-50 rounded-lg p-6">
-                      <h3 className="text-lg font-semibold text-purple-900 mb-4">
-                        Users
-                      </h3>
-                      <p className="text-3xl font-bold text-purple-600">
-                        {stats.users.total}
-                      </p>
-                      <div className="mt-4 space-y-2">
-                        {stats.users.byRole.map((item: any) => (
-                          <div
-                            key={item.role}
-                            className="flex justify-between text-sm"
-                          >
-                            <span className="capitalize">{item.role}</span>
-                            <span className="font-medium">{item.count}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Households Stats */}
-                    <div className="bg-blue-50 rounded-lg p-6">
-                      <h3 className="text-lg font-semibold text-blue-900 mb-4">
-                        Households
-                      </h3>
-                      <p className="text-3xl font-bold text-blue-600">
-                        {stats.households.total}
-                      </p>
-                      <div className="mt-4 space-y-2">
-                        {stats.households.byBlock.map((item: any) => (
-                          <div
-                            key={item.block}
-                            className="flex justify-between text-sm"
-                          >
-                            <span>Block {item.block}</span>
-                            <span className="font-medium">{item.count}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Residents Stats */}
-                    <div className="bg-green-50 rounded-lg p-6">
-                      <h3 className="text-lg font-semibold text-green-900 mb-4">
-                        Residents
-                      </h3>
-                      <p className="text-3xl font-bold text-green-600">
-                        {stats.residents}
-                      </p>
-                    </div>
-
-                    {/* Service Requests Stats */}
-                    <div className="bg-yellow-50 rounded-lg p-6">
-                      <h3 className="text-lg font-semibold text-yellow-900 mb-4">
-                        Pending Requests
-                      </h3>
-                      <p className="text-3xl font-bold text-yellow-600">
-                        {stats.serviceRequests.pending}
-                      </p>
-                    </div>
-
-                    {/* Reservations Stats */}
-                    <div className="bg-indigo-50 rounded-lg p-6">
-                      <h3 className="text-lg font-semibold text-indigo-900 mb-4">
-                        Upcoming Reservations
-                      </h3>
-                      <p className="text-3xl font-bold text-indigo-600">
-                        {stats.reservations.upcoming}
-                      </p>
-                    </div>
-
-                    {/* Payments Stats */}
-                    <div className="bg-red-50 rounded-lg p-6">
-                      <h3 className="text-lg font-semibold text-red-900 mb-4">
-                        Unpaid Payments
-                      </h3>
-                      <p className="text-3xl font-bold text-red-600">
-                        {stats.payments.unpaid}
-                      </p>
-                      <p className="text-sm text-red-700 mt-2">
-                        PHP {stats.payments.unpaidAmount.toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </div>
-
-          {/* User Modal */}
-          {showUserModal && (
-            <UserModal
-              user={editingUser}
-              onSave={
-                editingUser
-                  ? (data) => handleUpdateUser(editingUser.id, data)
-                  : handleCreateUser
-              }
-              onClose={() => {
-                setShowUserModal(false);
-                setEditingUser(null);
-              }}
-            />
-          )}
+    <div className="container mx-auto px-4 py-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-card-foreground">
+            Admin Dashboard
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Overview of system status and quick actions
+          </p>
         </div>
       </div>
-    </div>
-  );
-}
 
-function UserModal({
-  user,
-  onSave,
-  onClose,
-}: {
-  user: AdminUser | null;
-  onSave: (data: any) => void;
-  onClose: () => void;
-}) {
-  const [email, setEmail] = useState(user?.email || "");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState(user?.role || "resident");
-  const [phone, setPhone] = useState(user?.phone || "");
+      {/* Stats Grid */}
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <LoadingSpinner />
+        </div>
+      ) : stats ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Users Stats */}
+          <Link
+            to="/admin/users"
+            className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-6 border border-purple-200 dark:border-purple-800 hover:shadow-md transition-shadow"
+          >
+            <h3 className="text-lg font-semibold text-purple-900 dark:text-purple-100 mb-2">
+              Users
+            </h3>
+            <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+              {stats.users.total}
+            </p>
+            <p className="text-sm text-purple-600 dark:text-purple-400 mt-4">
+              Manage users →
+            </p>
+          </Link>
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const data: any = { email, role, phone };
-    if (password) data.password = password;
-    onSave(data);
-  };
+          {/* Households Stats */}
+          <Link
+            to="/admin/lots"
+            className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 border border-blue-200 dark:border-blue-800 hover:shadow-md transition-shadow"
+          >
+            <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+              Households
+            </h3>
+            <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+              {stats.households.total}
+            </p>
+            <p className="text-sm text-blue-600 dark:text-blue-400 mt-4">
+              View properties →
+            </p>
+          </Link>
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-card rounded-lg p-6 w-full max-w-md">
-        <h2 className="text-xl font-semibold mb-4">
-          {user ? "Edit User" : "Create User"}
+          {/* Residents Stats */}
+          <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-6 border border-green-200 dark:border-green-800">
+            <h3 className="text-lg font-semibold text-green-900 dark:text-green-100 mb-2">
+              Total Residents
+            </h3>
+            <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+              {stats.residents}
+            </p>
+          </div>
+
+          {/* Payments Stats */}
+          <Link
+            to="/admin/payments"
+            className="bg-red-50 dark:bg-red-900/20 rounded-lg p-6 border border-red-200 dark:border-red-800 hover:shadow-md transition-shadow"
+          >
+            <h3 className="text-lg font-semibold text-red-900 dark:text-red-100 mb-2">
+              Unpaid Payments
+            </h3>
+            <p className="text-3xl font-bold text-red-600 dark:text-red-400">
+              {stats.payments.unpaid}
+            </p>
+            <p className="text-sm text-red-700 dark:text-red-300 mt-2">
+              PHP {stats.payments.unpaidAmount.toLocaleString()}
+            </p>
+            <p className="text-sm text-red-600 dark:text-red-400 mt-4">
+              View payments →
+            </p>
+          </Link>
+        </div>
+      ) : null}
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-card rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-card-foreground mb-4">
+            Payment Trends
+          </h2>
+          <PaymentChart height={250} data={stats?.charts?.paymentTrends} />
+        </div>
+        <div className="bg-card rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-card-foreground mb-4">
+            Service Request Status
+          </h2>
+          <RequestStatusChart
+            height={250}
+            data={stats?.charts?.requestStatus}
+          />
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-card rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold text-card-foreground mb-4">
+          Quick Actions
         </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              required
-            />
-          </div>
-          {!user && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Link
+            to="/admin/users"
+            className="flex items-center gap-3 p-4 rounded-lg border border-border hover:bg-accent transition-colors"
+          >
+            <IconContainer icon={Users} variant="info" size="md" />
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                required={!user}
-              />
+              <p className="font-medium text-card-foreground">Manage Users</p>
+              <p className="text-sm text-muted-foreground">Add or edit users</p>
             </div>
-          )}
-          {user && (
+          </Link>
+
+          <Link
+            to="/admin/lots"
+            className="flex items-center gap-3 p-4 rounded-lg border border-border hover:bg-accent transition-colors"
+          >
+            <IconContainer icon={Building2} variant="success" size="md" />
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                New Password (optional)
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
+              <p className="font-medium text-card-foreground">Properties</p>
+              <p className="text-sm text-muted-foreground">View lots & maps</p>
             </div>
-          )}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Role
-            </label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as UserRole)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="admin">Admin</option>
-              <option value="staff">Staff</option>
-              <option value="resident">Resident</option>
-              <option value="guest">Guest</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Phone
-            </label>
-            <input
-              type="text"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 dark:border-border rounded-lg hover:bg-gray-50 dark:hover:bg-muted"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-            >
-              {user ? "Update" : "Create"}
-            </button>
-          </div>
-        </form>
+          </Link>
+
+          <Link
+            to="/admin/announcements"
+            className="flex items-center gap-3 p-4 rounded-lg border border-border hover:bg-accent transition-colors"
+          >
+            <IconContainer icon={Bell} variant="primary" size="md" />
+            <div>
+              <p className="font-medium text-card-foreground">Announcements</p>
+              <p className="text-sm text-muted-foreground">Send updates</p>
+            </div>
+          </Link>
+
+          <Link
+            to="/admin/payments"
+            className="flex items-center gap-3 p-4 rounded-lg border border-border hover:bg-accent transition-colors"
+          >
+            <IconContainer icon={CreditCard} variant="warning" size="md" />
+            <div>
+              <p className="font-medium text-card-foreground">Payments</p>
+              <p className="text-sm text-muted-foreground">View transactions</p>
+            </div>
+          </Link>
+        </div>
       </div>
     </div>
   );

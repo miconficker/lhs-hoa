@@ -15,6 +15,9 @@ import {
 } from "lucide-react";
 import { HouseholdMembersPanel } from "@/components/my-lots/HouseholdMembersPanel";
 import { AddMemberDialog } from "@/components/my-lots/AddMemberDialog";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Callout } from "@/components/ui/callout";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import {
   Dialog,
   DialogContent,
@@ -130,25 +133,25 @@ export function MyLotsPage() {
 
   if (!user) {
     return (
-      <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 p-4 rounded-lg">
+      <Callout variant="warning" title="Authentication Required">
         Please log in to view your lots.
-      </div>
+      </Callout>
     );
   }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-lg">
+      <Callout variant="error" title="Error Loading Data">
         Failed to load your lots. Please try again.
-      </div>
+      </Callout>
     );
   }
 
@@ -207,15 +210,15 @@ export function MyLotsPage() {
             <div className="flex items-center gap-2">
               {summary.voting_status === "eligible" ? (
                 <>
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
-                  <span className="text-sm font-medium text-green-700">
+                  <CheckCircle2 className="w-5 h-5 text-[hsl(var(--status-success-fg))]" />
+                  <span className="text-sm font-medium text-[hsl(var(--status-success-fg))]">
                     Eligible
                   </span>
                 </>
               ) : (
                 <>
-                  <AlertCircle className="w-5 h-5 text-red-600" />
-                  <span className="text-sm font-medium text-destructive">
+                  <AlertCircle className="w-5 h-5 text-[hsl(var(--status-error-fg))]" />
+                  <span className="text-sm font-medium text-[hsl(var(--status-error-fg))]">
                     Suspended
                   </span>
                 </>
@@ -226,24 +229,21 @@ export function MyLotsPage() {
 
         {/* Unpaid Periods Warning */}
         {summary.unpaid_periods.length > 0 && (
-          <div className="mt-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              <span className="font-semibold text-destructive">
-                Unpaid Dues - Voting Suspended
-              </span>
-            </div>
-            <p className="text-sm text-red-600">
-              You have unpaid dues for: {summary.unpaid_periods.join(", ")}.
-              Please pay to restore your voting rights.
-            </p>
-            <button
-              onClick={() => (window.location.href = "/payments")}
-              className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
-            >
-              Pay Now
-            </button>
-          </div>
+          <Callout
+            variant="error"
+            title="Unpaid Dues - Voting Suspended"
+            action={
+              <Button
+                size="sm"
+                onClick={() => (window.location.href = "/payments")}
+              >
+                Pay Now
+              </Button>
+            }
+          >
+            You have unpaid dues for: {summary.unpaid_periods.join(", ")}.{" "}
+            Please pay to restore your voting rights.
+          </Callout>
         )}
       </div>
 
@@ -309,13 +309,22 @@ export function MyLotsPage() {
                         {lot.address}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        <StatusBadge
+                          variant={
                             lot.lot_type === "resort"
-                              ? "bg-purple-100 text-purple-700"
+                              ? "info"
                               : lot.lot_type === "commercial"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-green-100 text-green-700"
+                                ? "neutral"
+                                : "success"
+                          }
+                          srLabel={`Lot type: ${
+                            lot.lot_type === "residential"
+                              ? "Residential"
+                              : lot.lot_type === "resort"
+                                ? "Resort"
+                                : lot.lot_type === "commercial"
+                                  ? "Commercial"
+                                  : "Unknown"
                           }`}
                         >
                           {lot.lot_type === "residential"
@@ -325,16 +334,23 @@ export function MyLotsPage() {
                               : lot.lot_type === "commercial"
                                 ? "Commercial"
                                 : "Unknown"}
-                        </span>
+                        </StatusBadge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        <StatusBadge
+                          variant={
                             lot.lot_status === "built"
-                              ? "bg-green-100 text-green-700"
+                              ? "success"
                               : lot.lot_status === "under_construction"
-                                ? "bg-orange-100 text-orange-700"
-                                : "bg-gray-100 text-card-foreground"
+                                ? "warning"
+                                : "neutral"
+                          }
+                          srLabel={`Lot status: ${
+                            lot.lot_status === "built"
+                              ? "Built"
+                              : lot.lot_status === "under_construction"
+                                ? "Under Construction"
+                                : "Vacant Lot"
                           }`}
                         >
                           {lot.lot_status === "built"
@@ -342,7 +358,7 @@ export function MyLotsPage() {
                             : lot.lot_status === "under_construction"
                               ? "Under Construction"
                               : "Vacant Lot"}
-                        </span>
+                        </StatusBadge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {lot.lot_size_sqm?.toLocaleString() || "—"}
@@ -412,25 +428,17 @@ export function MyLotsPage() {
       </div>
 
       {/* Info Card */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <div className="flex items-start gap-3">
-          <InfoIcon className="w-6 h-6 text-blue-600 mt-0.5" />
-          <div className="flex-1">
-            <h3 className="text-sm font-semibold text-blue-900">
-              About Your Lots
-            </h3>
-            <p className="text-sm text-blue-700 mt-1">
-              This page shows all lots registered to your account. Annual dues
-              are calculated based on lot size (₱{summary.rate_per_sqm} per
-              square meter per month × 12 months).
-            </p>
-            <p className="text-sm text-blue-700 mt-1">
-              Voting: 1 lot = 1 vote. If you own multiple lots, your single vote
-              counts for all your lots.
-            </p>
-          </div>
-        </div>
-      </div>
+      <Callout variant="info" title="About Your Lots">
+        <p className="text-sm mt-1">
+          This page shows all lots registered to your account. Annual dues are
+          calculated based on lot size (₱{summary.rate_per_sqm} per square meter
+          per month × 12 months).
+        </p>
+        <p className="text-sm mt-1">
+          Voting: 1 lot = 1 vote. If you own multiple lots, your single vote
+          counts for all your lots.
+        </p>
+      </Callout>
 
       {/* Edit Address Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
@@ -491,24 +499,5 @@ export function MyLotsPage() {
         />
       )}
     </div>
-  );
-}
-
-function InfoIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M13 16h-1v-4h-1m1-4h-1m1 4v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-      />
-    </svg>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import React from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { format } from "date-fns";
@@ -6,6 +7,18 @@ import { Plus, X, QrCode, CreditCard, Banknote, Landmark } from "lucide-react";
 import { labels } from "@/lib/content/labels";
 import { messages } from "@/lib/content/messages";
 import { notify } from "@/lib/toast";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Callout } from "@/components/ui/callout";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type {
   Payment,
   PaymentMethod,
@@ -13,10 +26,13 @@ import type {
   OutstandingBalance,
 } from "@/types";
 
-const statusColors: Record<PaymentStatus, string> = {
-  pending: "bg-yellow-100 text-yellow-700",
-  completed: "bg-green-100 text-green-700",
-  failed: "bg-red-100 text-red-700",
+const statusVariant: Record<
+  PaymentStatus,
+  "success" | "warning" | "error" | "info" | "neutral"
+> = {
+  pending: "warning",
+  completed: "success",
+  failed: "error",
 };
 
 const statusLabels: Record<PaymentStatus, string> = {
@@ -25,12 +41,15 @@ const statusLabels: Record<PaymentStatus, string> = {
   failed: labels.failed,
 };
 
-const methodIcons: Record<PaymentMethod, React.ReactNode> = {
-  gcash: <QrCode className="w-5 h-5" />,
-  paymaya: <CreditCard className="w-5 h-5" />,
-  instapay: <Landmark className="w-5 h-5" />,
-  cash: <Banknote className="w-5 h-5" />,
-  "in-person": <Plus className="w-5 h-5" />,
+const methodIcons: Record<
+  PaymentMethod,
+  React.ComponentType<{ className?: string }>
+> = {
+  gcash: ({ className }) => <QrCode className={className} />,
+  paymaya: ({ className }) => <CreditCard className={className} />,
+  instapay: ({ className }) => <Landmark className={className} />,
+  cash: ({ className }) => <Banknote className={className} />,
+  "in-person": ({ className }) => <Plus className={className} />,
 };
 
 const methodLabels: Record<PaymentMethod, string> = {
@@ -143,7 +162,7 @@ export function PaymentsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
@@ -155,13 +174,10 @@ export function PaymentsPage() {
         <h1 className="text-2xl font-bold text-card-foreground">
           {labels.payments}
         </h1>
-        <button
-          onClick={() => setShowNewPayment(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-        >
-          <Plus className="w-5 h-5" />
+        <Button onClick={() => setShowNewPayment(true)}>
+          <Plus className="w-5 h-5 mr-2" />
           {labels.newPayment}
-        </button>
+        </Button>
       </div>
 
       {/* Outstanding Balance Card */}
@@ -183,15 +199,20 @@ export function PaymentsPage() {
 
       {/* Error Display */}
       {error && (
-        <div className="bg-destructive/10 border border-red-200 text-red-700 p-4 rounded-lg">
+        <Callout
+          variant="error"
+          title="Error"
+          action={
+            <button
+              onClick={() => setError("")}
+              className="text-[hsl(var(--status-error-fg))] hover:opacity-70"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          }
+        >
           {error}
-          <button
-            onClick={() => setError("")}
-            className="ml-4 text-red-500 hover:text-red-700"
-          >
-            <X className="w-5 h-5 inline" />
-          </button>
-        </div>
+        </Callout>
       )}
 
       {/* Payment History */}
@@ -207,25 +228,28 @@ export function PaymentsPage() {
               <div key={payment.id} className="p-6 hover:bg-muted">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-muted-foreground">
-                      {methodIcons[payment.method]}
+                    <div className="p-2 bg-muted rounded-lg">
+                      {React.createElement(methodIcons[payment.method], {
+                        className: "w-5 h-5 text-muted-foreground",
+                      })}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-lg font-semibold text-card-foreground">
                           PHP {payment.amount.toFixed(2)}
                         </span>
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[payment.status]}`}
+                        <StatusBadge
+                          variant={statusVariant[payment.status]}
+                          srLabel={`Status: ${statusLabels[payment.status]}`}
                         >
                           {statusLabels[payment.status]}
-                        </span>
+                        </StatusBadge>
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {methodLabels[payment.method]} • Period:{" "}
                         {payment.period}
                       </div>
-                      <div className="text-xs text-gray-400 mt-1">
+                      <div className="text-xs text-muted-foreground mt-1">
                         {format(
                           new Date(payment.created_at),
                           "MMM d, yyyy h:mm a",
@@ -237,7 +261,7 @@ export function PaymentsPage() {
                         </div>
                       )}
                       {payment.paid_at && (
-                        <div className="text-xs text-green-600 mt-1">
+                        <div className="text-xs text-[hsl(var(--status-success-fg))] mt-1">
                           Paid on{" "}
                           {format(new Date(payment.paid_at), "MMM d, yyyy")}
                         </div>
@@ -246,16 +270,17 @@ export function PaymentsPage() {
                   </div>
                   {payment.method === "gcash" &&
                     payment.status === "pending" && (
-                      <button
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => {
                           setSelectedMethod("gcash");
                           setShowQRModal(true);
                         }}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-primary-600 border border-primary-600 rounded-lg hover:bg-primary-50"
                       >
-                        <QrCode className="w-4 h-4" />
+                        <QrCode className="w-4 h-4 mr-2" />
                         {labels.viewQR}
-                      </button>
+                      </Button>
                     )}
                 </div>
               </div>
@@ -269,125 +294,99 @@ export function PaymentsPage() {
       </div>
 
       {/* New Payment Modal */}
-      {showNewPayment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-card rounded-lg shadow-xl max-w-md w-full">
-            <div className="flex items-center justify-between p-6 border-b border-border">
-              <h3 className="text-lg font-semibold text-card-foreground">
-                {labels.createPayment}
-              </h3>
-              <button
-                onClick={() => setShowNewPayment(false)}
-                className="text-gray-400 hover:text-muted-foreground"
-              >
-                <X className="w-6 h-6" />
-              </button>
+      <Dialog open={showNewPayment} onOpenChange={setShowNewPayment}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{labels.createPayment}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreatePayment} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="amount">{labels.amountPHP} *</Label>
+              <Input
+                id="amount"
+                name="amount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                defaultValue={balance?.total_due || 0}
+                required
+              />
             </div>
-            <form onSubmit={handleCreatePayment} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-card-foreground mb-1">
-                  {labels.amountPHP} *
-                </label>
-                <input
-                  type="number"
-                  name="amount"
-                  min="0.01"
-                  step="0.01"
-                  defaultValue={balance?.total_due || 0}
-                  required
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-card-foreground mb-1">
-                  {labels.paymentMethod} *
-                </label>
-                <select
-                  name="method"
-                  required
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                >
-                  <option value="">{labels.selectMethod}</option>
-                  <option value="gcash">{labels.gcash}</option>
-                  <option value="paymaya">{labels.paymaya}</option>
-                  <option value="instapay">{labels.instapay}</option>
-                  <option value="cash">{labels.cash}</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-card-foreground mb-1">
-                  {labels.period} (YYYY-MM) *
-                </label>
-                <input
-                  type="month"
-                  name="period"
-                  required
-                  defaultValue={new Date().toISOString().slice(0, 7)}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-card-foreground mb-1">
-                  {labels.referenceNumber}
-                </label>
-                <input
-                  type="text"
-                  name="referenceNumber"
-                  placeholder="Optional"
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowNewPayment(false)}
-                  className="flex-1 px-4 py-2 border border-border text-card-foreground rounded-lg hover:bg-muted"
-                >
-                  {labels.cancel}
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
-                >
-                  {labels.createPayment}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <div className="space-y-2">
+              <Label htmlFor="method">{labels.paymentMethod} *</Label>
+              <select
+                id="method"
+                name="method"
+                required
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">{labels.selectMethod}</option>
+                <option value="gcash">{labels.gcash}</option>
+                <option value="paymaya">{labels.paymaya}</option>
+                <option value="instapay">{labels.instapay}</option>
+                <option value="cash">{labels.cash}</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="period">{labels.period} (YYYY-MM) *</Label>
+              <Input
+                id="period"
+                name="period"
+                type="month"
+                required
+                defaultValue={new Date().toISOString().slice(0, 7)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="referenceNumber">{labels.referenceNumber}</Label>
+              <Input
+                id="referenceNumber"
+                name="referenceNumber"
+                type="text"
+                placeholder="Optional"
+              />
+            </div>
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowNewPayment(false)}
+              >
+                {labels.cancel}
+              </Button>
+              <Button type="submit" className="flex-1">
+                {labels.createPayment}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* GCash QR Modal */}
-      {showQRModal && selectedMethod === "gcash" && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-card rounded-lg shadow-xl max-w-sm w-full">
-            <div className="flex items-center justify-between p-6 border-b border-border">
-              <h3 className="text-lg font-semibold text-card-foreground">
-                {labels.gcashPayment}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowQRModal(false);
-                  setSelectedMethod(null);
-                }}
-                className="text-gray-400 hover:text-muted-foreground"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-6">
-              {getGcashQRPlaceholder()}
-              <div className="mt-6 space-y-3 text-sm text-muted-foreground">
-                {labels.gcashInstructions.map(
-                  (instruction: string, index: number) => (
-                    <p key={index}>{`${index + 1}. ${instruction}`}</p>
-                  ),
-                )}
-              </div>
+      <Dialog
+        open={showQRModal && selectedMethod === "gcash"}
+        onOpenChange={(open) => {
+          setShowQRModal(open);
+          if (!open) setSelectedMethod(null);
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{labels.gcashPayment}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {getGcashQRPlaceholder()}
+            <div className="space-y-3 text-sm text-muted-foreground">
+              {labels.gcashInstructions.map(
+                (instruction: string, index: number) => (
+                  <p key={index}>{`${index + 1}. ${instruction}`}</p>
+                ),
+              )}
             </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

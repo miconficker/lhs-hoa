@@ -1,207 +1,223 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { api, DashboardStatsResponse } from "@/lib/api";
+import { api } from "@/lib/api";
 import { format } from "date-fns";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Callout } from "@/components/ui/callout";
+import { IconContainer } from "@/components/ui/icon-container";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import {
   Home,
   ClipboardList,
   Calendar,
-  DollarSign,
+  CreditCard,
+  Badge,
+  FileText,
   AlertTriangle,
-  Settings,
 } from "lucide-react";
-import { PaymentChart } from "@/components/charts/PaymentChart";
-import { RequestStatusChart } from "@/components/charts/RequestStatusChart";
 
-interface StatCardProps {
-  title: string;
-  value: number | string;
+interface QuickActionProps {
+  to: string;
   icon: React.ComponentType<{ className?: string }>;
-  color: string;
-  to?: string;
+  label: string;
+  description: string;
 }
 
-function StatCard({ title, value, icon: Icon, color, to }: StatCardProps) {
-  const content = (
-    <div className="bg-card rounded-lg shadow p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-3xl font-bold text-card-foreground mt-2">
-            {value}
-          </p>
-        </div>
-        <div className={`p-3 rounded-lg ${color}`}>
-          <Icon className="w-8 h-8 text-white" />
-        </div>
+function QuickAction({ to, icon: Icon, label, description }: QuickActionProps) {
+  // We need to wrap the component to match IconContainer's expected type
+  const IconWrapper = Icon as React.ComponentType<{ className?: string }>;
+  return (
+    <Link
+      to={to}
+      className="flex items-center gap-4 p-4 border border-border rounded-lg hover:bg-accent transition-colors"
+    >
+      <div className="p-2 bg-primary/10 rounded-lg">
+        <IconWrapper className="w-6 h-6 text-primary" />
       </div>
-    </div>
+      <div className="flex-1">
+        <p className="font-medium text-card-foreground">{label}</p>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+    </Link>
   );
-
-  if (to) {
-    return <Link to={to}>{content}</Link>;
-  }
-
-  return content;
 }
 
 export function DashboardPage() {
   const { user } = useAuth();
-  const [stats, setStats] = useState<DashboardStatsResponse | null>(null);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [myLots, setMyLots] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
   useEffect(() => {
-    async function loadStats() {
+    async function loadData() {
       setLoading(true);
-      setError("");
 
-      const result = await api.dashboard.getStats();
+      // Load user's dashboard data
+      const [announcementsRes, lotsRes] = await Promise.all([
+        api.announcements.list(),
+        api.households.getMyLots(),
+      ]);
 
-      if (result.error || !result.data) {
-        setError(result.error || "Failed to load dashboard");
-      } else {
-        setStats(result.data);
+      if (announcementsRes.data?.announcements) {
+        setAnnouncements(announcementsRes.data.announcements.slice(0, 3));
+      }
+      if (lotsRes.data?.lots) {
+        setMyLots(lotsRes.data.lots);
       }
 
       setLoading(false);
     }
 
-    loadStats();
+    loadData();
   }, []);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-lg">
-        {error}
-      </div>
-    );
-  }
-
-  const isAdmin = user?.role === "admin" || user?.role === "staff";
+  // Check if user has lots
+  const hasLots = myLots && myLots.length > 0;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <span className="text-sm text-muted-foreground">
-          Welcome back, {user?.email}
-        </span>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {isAdmin ? (
-          <>
-            <StatCard
-              title="Total Households"
-              value={stats?.stats.households || 0}
-              icon={Home}
-              color="bg-blue-500"
-              to="/map"
-            />
-            <StatCard
-              title="Pending Requests"
-              value={stats?.stats.pendingRequests || 0}
-              icon={ClipboardList}
-              color="bg-yellow-500"
-              to="/service-requests"
-            />
-            <StatCard
-              title="Upcoming Reservations"
-              value={stats?.stats.upcomingReservations || 0}
-              icon={Calendar}
-              color="bg-green-500"
-              to="/reservations"
-            />
-            <StatCard
-              title="Unpaid Payments"
-              value={stats?.stats.unpaidPayments || 0}
-              icon={DollarSign}
-              color="bg-red-500"
-              to="/payments"
-            />
-          </>
-        ) : (
-          <div className="col-span-full">
-            <p className="text-muted-foreground">
-              Welcome to the Laguna Hills HOA portal. Use the sidebar to
-              navigate.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Charts Section (for admin/staff) */}
-      {isAdmin && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-card rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-card-foreground mb-4">
-              Payment Trends
-            </h2>
-            <PaymentChart height={250} data={stats?.charts?.paymentTrends} />
-          </div>
-          <div className="bg-card rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-card-foreground mb-4">
-              Service Request Status
-            </h2>
-            <RequestStatusChart
-              height={250}
-              data={stats?.charts?.requestStatus}
-            />
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Welcome Home</h1>
+          <p className="text-muted-foreground mt-1">
+            {user?.first_name
+              ? `${user.first_name} ${user.last_name || ""}`
+              : user?.email}
+          </p>
         </div>
-      )}
+      </div>
 
-      {/* Recent Announcements */}
-      {stats?.recentAnnouncements && stats.recentAnnouncements.length > 0 && (
+      {/* My Properties Section */}
+      {hasLots ? (
         <div className="bg-card rounded-lg shadow">
           <div className="p-6 border-b border-border">
-            <h2 className="text-lg font-semibold text-card-foreground">
-              Recent Announcements
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-card-foreground">
+                My Properties
+              </h2>
+              <Link
+                to="/my-lots"
+                className="text-sm text-primary hover:text-primary/80"
+              >
+                View all →
+              </Link>
+            </div>
           </div>
           <div className="divide-y divide-border">
-            {stats.recentAnnouncements.map((announcement) => (
-              <div key={announcement.id} className="p-6">
+            {myLots.slice(0, 2).map((lot: any) => (
+              <div key={lot.lot_id} className="p-4">
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      {announcement.is_pinned && (
-                        <AlertTriangle className="w-4 h-4 text-yellow-500" />
-                      )}
-                      <h3 className="text-lg font-medium text-card-foreground">
-                        {announcement.title}
-                      </h3>
-                      {announcement.category && (
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            announcement.category === "urgent"
-                              ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                              : announcement.category === "event"
-                                ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                                : announcement.category === "policy"
-                                  ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                                  : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-                          }`}
-                        >
-                          {announcement.category}
-                        </span>
-                      )}
+                  <div className="flex items-start gap-3">
+                    <IconContainer icon={Home} variant="info" size="md" />
+                    <div>
+                      <p className="font-medium text-card-foreground">
+                        {lot.address}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Block {lot.block_number}, Lot {lot.lot_number}
+                      </p>
                     </div>
-                    <p className="text-muted-foreground mt-1">
+                  </div>
+                  {lot.payment_status && (
+                    <StatusBadge
+                      variant={
+                        lot.payment_status === "paid"
+                          ? "success"
+                          : lot.payment_status === "overdue"
+                            ? "error"
+                            : "warning"
+                      }
+                      srLabel={`Payment status: ${lot.payment_status}`}
+                    >
+                      {lot.payment_status}
+                    </StatusBadge>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <Callout variant="info" title="No Properties Linked">
+          Contact the HOA office to link your property to your account.
+        </Callout>
+      )}
+
+      {/* Quick Actions */}
+      <div className="bg-card rounded-lg shadow">
+        <div className="p-6 border-b border-border">
+          <h2 className="text-lg font-semibold text-card-foreground">
+            Quick Actions
+          </h2>
+        </div>
+        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <QuickAction
+            to="/service-requests"
+            icon={ClipboardList}
+            label="Service Request"
+            description="Report maintenance issues"
+          />
+          <QuickAction
+            to="/reservations"
+            icon={Calendar}
+            label="Book Amenity"
+            description="Reserve common areas"
+          />
+          <QuickAction
+            to="/payments"
+            icon={CreditCard}
+            label="Pay Dues"
+            description="View and pay HOA fees"
+          />
+          <QuickAction
+            to="/passes"
+            icon={Badge}
+            label="My Passes"
+            description="Manage vehicle & ID passes"
+          />
+        </div>
+      </div>
+
+      {/* Recent Announcements */}
+      {announcements.length > 0 && (
+        <div className="bg-card rounded-lg shadow">
+          <div className="p-6 border-b border-border">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-card-foreground">
+                Recent Announcements
+              </h2>
+              <Link
+                to="/announcements"
+                className="text-sm text-primary hover:text-primary/80"
+              >
+                View all →
+              </Link>
+            </div>
+          </div>
+          <div className="divide-y divide-border">
+            {announcements.map((announcement) => (
+              <div key={announcement.id} className="p-6">
+                <div className="flex items-start gap-3">
+                  {announcement.is_pinned && (
+                    <AlertTriangle className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-card-foreground">
+                      {announcement.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                       {announcement.content}
                     </p>
-                    <p className="text-sm text-muted-foreground mt-2">
+                    <p className="text-xs text-muted-foreground mt-2">
                       {format(new Date(announcement.created_at), "MMM d, yyyy")}
                     </p>
                   </div>
@@ -209,65 +225,42 @@ export function DashboardPage() {
               </div>
             ))}
           </div>
-          <div className="p-4 bg-muted border-t border-border">
-            <Link
-              to="/announcements"
-              className="text-primary hover:text-primary/80 font-medium text-sm"
-            >
-              View all announcements →
-            </Link>
-          </div>
         </div>
       )}
 
-      {/* Quick Actions (for admin/staff) */}
-      {isAdmin && (
-        <div className="bg-card rounded-lg shadow">
-          <div className="p-6 border-b border-border">
-            <h2 className="text-lg font-semibold text-card-foreground">
-              Quick Actions
-            </h2>
+      {/* Other Resources */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Link
+          to="/documents"
+          className="flex items-center gap-3 p-4 border border-border rounded-lg hover:bg-accent transition-colors"
+        >
+          <IconContainer icon={FileText} variant="muted" size="md" />
+          <div>
+            <p className="font-medium text-card-foreground">Documents</p>
+            <p className="text-sm text-muted-foreground">Rules & forms</p>
           </div>
-          <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Link
-              to="/service-requests"
-              className="flex flex-col items-center p-4 border border-border rounded-lg hover:bg-muted transition-colors"
-            >
-              <ClipboardList className="w-8 h-8 text-primary mb-2" />
-              <span className="text-sm font-medium text-card-foreground">
-                New Request
-              </span>
-            </Link>
-            <Link
-              to="/reservations"
-              className="flex flex-col items-center p-4 border border-border rounded-lg hover:bg-muted transition-colors"
-            >
-              <Calendar className="w-8 h-8 text-primary mb-2" />
-              <span className="text-sm font-medium text-card-foreground">
-                Book Amenity
-              </span>
-            </Link>
-            <Link
-              to="/payments"
-              className="flex flex-col items-center p-4 border border-border rounded-lg hover:bg-muted transition-colors"
-            >
-              <DollarSign className="w-8 h-8 text-primary mb-2" />
-              <span className="text-sm font-medium text-card-foreground">
-                Pay Dues
-              </span>
-            </Link>
-            <Link
-              to="/admin"
-              className="flex flex-col items-center p-4 border border-border rounded-lg hover:bg-muted transition-colors"
-            >
-              <Settings className="w-8 h-8 text-primary mb-2" />
-              <span className="text-sm font-medium text-card-foreground">
-                Admin Panel
-              </span>
-            </Link>
+        </Link>
+        <Link
+          to="/map"
+          className="flex items-center gap-3 p-4 border border-border rounded-lg hover:bg-accent transition-colors"
+        >
+          <IconContainer icon={Home} variant="success" size="md" />
+          <div>
+            <p className="font-medium text-card-foreground">Community Map</p>
+            <p className="text-sm text-muted-foreground">View subdivision</p>
           </div>
-        </div>
-      )}
+        </Link>
+        <Link
+          to="/help"
+          className="flex items-center gap-3 p-4 border border-border rounded-lg hover:bg-accent transition-colors"
+        >
+          <IconContainer icon={FileText} variant="warning" size="md" />
+          <div>
+            <p className="font-medium text-card-foreground">Help & Support</p>
+            <p className="text-sm text-muted-foreground">Get assistance</p>
+          </div>
+        </Link>
+      </div>
     </div>
   );
 }

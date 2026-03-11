@@ -5,24 +5,34 @@ import { format } from "date-fns";
 import { Plus, Filter } from "lucide-react";
 import { labels } from "@/lib/content/labels";
 import { messages } from "@/lib/content/messages";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Callout } from "@/components/ui/callout";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Button } from "@/components/ui/button";
 import type {
   ServiceRequestStatus,
   ServiceRequestPriority,
   ServiceRequestCategory,
 } from "@/types";
 
-const statusColors: Record<ServiceRequestStatus, string> = {
-  pending: "bg-yellow-100 text-yellow-700",
-  "in-progress": "bg-blue-100 text-blue-700",
-  completed: "bg-green-100 text-green-700",
-  rejected: "bg-red-100 text-red-700",
+const statusVariant: Record<
+  ServiceRequestStatus,
+  "success" | "warning" | "error" | "info" | "neutral"
+> = {
+  pending: "warning",
+  "in-progress": "info",
+  completed: "success",
+  rejected: "error",
 };
 
-const priorityColors: Record<ServiceRequestPriority, string> = {
-  low: "bg-gray-100 text-card-foreground",
-  normal: "bg-blue-100 text-blue-700",
-  high: "bg-orange-100 text-orange-700",
-  urgent: "bg-red-100 text-red-700",
+const priorityVariant: Record<
+  ServiceRequestPriority,
+  "success" | "warning" | "error" | "info" | "neutral"
+> = {
+  low: "neutral",
+  normal: "info",
+  high: "warning",
+  urgent: "error",
 };
 
 const categoryLabels: Record<ServiceRequestCategory, string> = {
@@ -88,16 +98,16 @@ export function ServiceRequestsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+      <Callout variant="error" title="Error">
         {error}
-      </div>
+      </Callout>
     );
   }
 
@@ -107,10 +117,10 @@ export function ServiceRequestsPage() {
         <h1 className="text-2xl font-bold text-card-foreground">
           {labels.serviceRequests}
         </h1>
-        <button className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-          <Plus className="w-5 h-5" />
+        <Button>
+          <Plus className="w-5 h-5 mr-2" />
           {labels.newRequest}
-        </button>
+        </Button>
       </div>
 
       {/* Filters */}
@@ -202,19 +212,24 @@ export function ServiceRequestsPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[request.status]}`}
+                      <StatusBadge
+                        variant={statusVariant[request.status]}
+                        srLabel={`Status: ${request.status}`}
                       >
                         {request.status}
-                      </span>
-                      <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full ${priorityColors[request.priority]}`}
+                      </StatusBadge>
+                      <StatusBadge
+                        variant={priorityVariant[request.priority]}
+                        srLabel={`Priority: ${request.priority}`}
                       >
                         {request.priority}
-                      </span>
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-card-foreground">
+                      </StatusBadge>
+                      <StatusBadge
+                        variant="neutral"
+                        srLabel={`Category: ${categoryLabels[request.category]}`}
+                      >
                         {categoryLabels[request.category]}
-                      </span>
+                      </StatusBadge>
                     </div>
                     <p className="text-card-foreground font-medium">
                       {request.description}
@@ -227,7 +242,7 @@ export function ServiceRequestsPage() {
                       )}
                     </p>
                     {request.completed_at && (
-                      <p className="text-sm text-green-600 mt-1">
+                      <p className="text-sm text-[hsl(var(--status-success-fg))] mt-1">
                         Completed on{" "}
                         {format(new Date(request.completed_at), "MMM d, yyyy")}
                       </p>
@@ -235,12 +250,10 @@ export function ServiceRequestsPage() {
                   </div>
                   {isAdmin && (
                     <div className="ml-4 flex gap-2">
-                      <button className="px-3 py-1 text-sm border border-border rounded-lg hover:bg-muted">
+                      <Button variant="outline" size="sm">
                         {labels.view}
-                      </button>
-                      <button className="px-3 py-1 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-                        {labels.update}
-                      </button>
+                      </Button>
+                      <Button size="sm">{labels.update}</Button>
                     </div>
                   )}
                 </div>

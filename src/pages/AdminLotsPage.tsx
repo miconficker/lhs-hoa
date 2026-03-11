@@ -2,20 +2,40 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { MapContainer, ImageOverlay, GeoJSON } from "react-leaflet";
 import { LatLngBoundsExpression } from "leaflet";
 import L from "leaflet";
-import { FeatureGroup } from "react-leaflet";
-import { EditControl } from "react-leaflet-draw";
-import "leaflet-draw";
-import "react-leaflet-draw";
 import union from "@turf/union";
 import { featureCollection } from "@turf/helpers";
 import { useTheme } from "next-themes";
 import {
-  red, orange, amber, lime, green,
-  teal, cyan, blue, indigo, violet,
-  purple, pink, crimson, tomato, brown,
-  redDark, orangeDark, amberDark, limeDark, greenDark,
-  tealDark, cyanDark, blueDark, indigoDark, violetDark,
-  purpleDark, pinkDark, crimsonDark, tomatoDark, brownDark,
+  red,
+  orange,
+  amber,
+  lime,
+  green,
+  teal,
+  cyan,
+  blue,
+  indigo,
+  violet,
+  purple,
+  pink,
+  crimson,
+  tomato,
+  brown,
+  redDark,
+  orangeDark,
+  amberDark,
+  limeDark,
+  greenDark,
+  tealDark,
+  cyanDark,
+  blueDark,
+  indigoDark,
+  violetDark,
+  purpleDark,
+  pinkDark,
+  crimsonDark,
+  tomatoDark,
+  brownDark,
 } from "@radix-ui/colors";
 import { api } from "@/lib/api";
 import {
@@ -28,6 +48,8 @@ import {
 import { Map, Save, X, Link2, Unlink, MousePointer2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { logger } from "@/lib/logger";
+import { Callout } from "@/components/ui/callout";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 // Fix for default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -259,26 +281,6 @@ export function AdminLotsPage() {
     setSelectedLots(newSelected);
   }
 
-  function handleLotBoundaryCreated(e: any) {
-    const layer = e.layer;
-    const latlngs = layer.getLatLngs()[0];
-    const polygon = latlngs.map((ll: L.LatLng) => [ll.lng, ll.lat]);
-    console.log("Lot boundary created:", polygon);
-
-    if (selectedLot) {
-      api.admin.updateLotPolygon(selectedLot.lot_id, polygon);
-    }
-  }
-
-  function handleLotBoundaryEdited(e: any) {
-    const layers = e.layers.getLayers();
-    layers.forEach((layer: any) => {
-      const latlngs = layer.getLatLngs()[0];
-      const polygon = latlngs.map((ll: L.LatLng) => [ll.lng, ll.lat]);
-      console.log("Lot boundary edited:", polygon);
-    });
-  }
-
   async function handleSave() {
     if (!selectedLot) return;
 
@@ -453,16 +455,16 @@ export function AdminLotsPage() {
 
   if (user?.role !== "admin") {
     return (
-      <div className="bg-yellow-50/50 dark:bg-yellow-400/10 border border-yellow-200 dark:border-yellow-400/20 text-yellow-700 dark:text-yellow-400 p-4 rounded-lg">
-        Access denied. Admin privileges required.
-      </div>
+      <Callout variant="warning" title="Access Denied">
+        Admin privileges required.
+      </Callout>
     );
   }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
@@ -501,7 +503,7 @@ export function AdminLotsPage() {
         </div>
       </div>
 
-      <div className="fixed top-16 left-0 right-0 bottom-0 z-40 lg:left-64">
+      <div className="fixed top-16 left-0 right-0 bottom-0 z-[100] lg:left-64">
         {/* Floating selection toolbar over the map */}
         {selectedLots.size > 0 && (
           <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[9600] bg-card shadow-lg rounded-lg px-4 py-3 flex items-center gap-3 border border-border">
@@ -562,20 +564,6 @@ export function AdminLotsPage() {
                 bounds={mapBounds}
                 opacity={1}
               />
-              <FeatureGroup>
-                <EditControl
-                  position="topright"
-                  draw={{
-                    rectangle: false,
-                    circle: false,
-                    circlemarker: false,
-                    marker: false,
-                    polyline: false,
-                  }}
-                  onCreated={handleLotBoundaryCreated}
-                  onEdited={handleLotBoundaryEdited}
-                />
-              </FeatureGroup>
               {geojsonData && (
                 <GeoJSON
                   key={`geojson-${Array.from(selectedLots).sort().join(",")}-${selectedLot?.lot_id ?? ""}`}

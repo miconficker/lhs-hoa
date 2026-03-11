@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
-import { Users, X, Loader2 } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Users, X } from "lucide-react";
 
 export interface HouseholdMember {
   id: string;
@@ -26,7 +28,6 @@ interface HouseholdMembersPanelProps {
 
 export function HouseholdMembersPanel({
   householdId,
-  lotAddress,
   isPrimaryOwner,
   onMemberChange,
 }: HouseholdMembersPanelProps) {
@@ -78,7 +79,7 @@ export function HouseholdMembersPanel({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <LoadingSpinner />
       </div>
     );
   }
@@ -100,20 +101,7 @@ export function HouseholdMembersPanel({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-card-foreground">
-            Household Members
-          </h3>
-          <p className="text-xs text-muted-foreground">{lotAddress}</p>
-        </div>
-        <Badge variant="outline" className="text-xs">
-          {members.length} {members.length === 1 ? "member" : "members"}
-        </Badge>
-      </div>
-
+    <div>
       {/* Members List */}
       {members.length === 0 ? (
         <div className="text-center py-8 border rounded-lg bg-muted/30">
@@ -133,15 +121,15 @@ export function HouseholdMembersPanel({
               className="flex items-center justify-between p-3 border rounded-lg bg-card"
             >
               <div className="flex items-center gap-3">
-                {member.verified ? (
-                  <div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center">
-                    <span className="text-green-600 text-xs">✓</span>
-                  </div>
-                ) : (
-                  <div className="h-5 w-5 rounded-full bg-yellow-100 flex items-center justify-center">
-                    <span className="text-yellow-600 text-xs">!</span>
-                  </div>
-                )}
+                <StatusBadge
+                  variant={member.verified ? "success" : "warning"}
+                  srLabel={
+                    member.verified ? "Verified" : "Pending verification"
+                  }
+                  className="h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px]"
+                >
+                  {member.verified ? "✓" : "!"}
+                </StatusBadge>
                 <div>
                   <p className="font-medium text-sm">
                     {member.first_name} {member.last_name}

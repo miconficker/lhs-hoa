@@ -36,6 +36,18 @@
     --ring: 142 76% 36%;
     --radius: 0.5rem;
     --map-filter: none;
+
+    /* Status colors - light mode */
+    --status-success-bg: 142 100% 90%;
+    --status-success-fg: 142 76% 26%;
+    --status-warning-bg: 48 100% 90%;
+    --status-warning-fg: 48 90% 26%;
+    --status-error-bg: 0 100% 90%;
+    --status-error-fg: 0 84% 50%;
+    --status-info-bg: 217 100% 94%;
+    --status-info-fg: 217 90% 40%;
+    --status-neutral-bg: 220 15% 90%;
+    --status-neutral-fg: 220 15% 30%;
   }
 
   .dark {
@@ -59,6 +71,18 @@
     --input: 217.2 32.6% 17.5%;
     --ring: 142 76% 36%;
     --map-filter: brightness(0.65) contrast(1.3) saturate(0.75);
+
+    /* Status colors - dark mode */
+    --status-success-bg: 142 30% 20%;
+    --status-success-fg: 142 80% 60%;
+    --status-warning-bg: 48 30% 20%;
+    --status-warning-fg: 48 90% 60%;
+    --status-error-bg: 0 30% 20%;
+    --status-error-fg: 0 80% 60%;
+    --status-info-bg: 217 30% 20%;
+    --status-info-fg: 217 80% 60%;
+    --status-neutral-bg: 220 15% 20%;
+    --status-neutral-fg: 220 15% 70%;
   }
 
   body {
