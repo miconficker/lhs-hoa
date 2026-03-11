@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { MapContainer, ImageOverlay, GeoJSON } from "react-leaflet";
 import { LatLngBoundsExpression } from "leaflet";
 import L from "leaflet";
@@ -6,6 +6,17 @@ import { FeatureGroup } from "react-leaflet";
 import { EditControl } from "react-leaflet-draw";
 import "leaflet-draw";
 import "react-leaflet-draw";
+import union from "@turf/union";
+import { featureCollection } from "@turf/helpers";
+import { useTheme } from "next-themes";
+import {
+  red, orange, amber, lime, green,
+  teal, cyan, blue, indigo, violet,
+  purple, pink, crimson, tomato, brown,
+  redDark, orangeDark, amberDark, limeDark, greenDark,
+  tealDark, cyanDark, blueDark, indigoDark, violetDark,
+  purpleDark, pinkDark, crimsonDark, tomatoDark, brownDark,
+} from "@radix-ui/colors";
 import { api } from "@/lib/api";
 import {
   LotOwnership,
@@ -14,7 +25,7 @@ import {
   User,
   LotFeatureProperties,
 } from "@/types";
-import { Map, Save, X, Link2, Unlink } from "lucide-react";
+import { Map, Save, X, Link2, Unlink, MousePointer2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { logger } from "@/lib/logger";
 
@@ -47,12 +58,62 @@ const mapBounds: LatLngBoundsExpression = [
   [MAP_HEIGHT, MAP_WIDTH],
 ];
 
+// Radix step 9 — WCAG AA compliant on white backgrounds (light mode)
+// Radix dark step 9 — WCAG AA compliant on dark backgrounds (dark mode)
+const lightPalette = [
+  red.red9,
+  orange.orange9,
+  amber.amber9,
+  lime.lime9,
+  green.green9,
+  teal.teal9,
+  cyan.cyan9,
+  blue.blue9,
+  indigo.indigo9,
+  violet.violet9,
+  purple.purple9,
+  pink.pink9,
+  crimson.crimson9,
+  tomato.tomato9,
+  brown.brown9,
+];
+
+const darkPalette = [
+  redDark.red9,
+  orangeDark.orange9,
+  amberDark.amber9,
+  limeDark.lime9,
+  greenDark.green9,
+  tealDark.teal9,
+  cyanDark.cyan9,
+  blueDark.blue9,
+  indigoDark.indigo9,
+  violetDark.violet9,
+  purpleDark.purple9,
+  pinkDark.pink9,
+  crimsonDark.crimson9,
+  tomatoDark.tomato9,
+  brownDark.brown9,
+];
+
+function groupIdToColor(groupId: string, isDark: boolean): string {
+  let hash = 0;
+  for (let i = 0; i < groupId.length; i++) {
+    hash = groupId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const palette = isDark ? darkPalette : lightPalette;
+  return palette[Math.abs(hash) % palette.length];
+}
+
 interface LotWithOwnership extends LotOwnership {
   featureId?: string;
 }
 
 export function AdminLotsPage() {
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   const [lots, setLots] = useState<LotWithOwnership[]>([]);
   const [homeowners, setHomeowners] = useState<User[]>([]);
   const [geojsonData, setGeojsonData] =
@@ -67,10 +128,81 @@ export function AdminLotsPage() {
   const [lotDescription, setLotDescription] = useState<string>("");
   const [lotStreet, setLotStreet] = useState<string>("");
   const [selectedLots, setSelectedLots] = useState<Set<string>>(new Set());
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [highlightOwnerId, setHighlightOwnerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showMergeModal, setShowMergeModal] = useState(false);
+
+  // Refs to fix stale closures in Leaflet callbacks.
+  // Leaflet registers onEachFeature/style once at mount and never re-registers,
+  // so any state read inside those callbacks must be accessed via a ref.
+  const selectedLotsRef = useRef(selectedLots);
+  const lotsRef = useRef(lots);
+  const selectedLotRef = useRef(selectedLot);
+  const highlightOwnerIdRef = useRef(highlightOwnerId);
+  const isMultiSelectModeRef = useRef(isMultiSelectMode);
+
+  useEffect(() => {
+    selectedLotsRef.current = selectedLots;
+  }, [selectedLots]);
+
+  useEffect(() => {
+    lotsRef.current = lots;
+  }, [lots]);
+
+  useEffect(() => {
+    selectedLotRef.current = selectedLot;
+  }, [selectedLot]);
+
+  useEffect(() => {
+    highlightOwnerIdRef.current = highlightOwnerId;
+  }, [highlightOwnerId]);
+
+  useEffect(() => {
+    isMultiSelectModeRef.current = isMultiSelectMode;
+  }, [isMultiSelectMode]);
+
+  // Compute union outlines for merged lots (groups with household_group_id)
+  const mergedOutlines = useMemo(() => {
+    if (!geojsonData || !lots) return null;
+
+    const groups = new globalThis.Map<string, string[]>();
+    for (const lot of lots) {
+      if (lot.household_group_id) {
+        const existing = groups.get(lot.household_group_id) ?? [];
+        existing.push(lot.lot_id);
+        groups.set(lot.household_group_id, existing);
+      }
+    }
+
+    const outlineFeatures: GeoJSON.Feature[] = [];
+
+    for (const [groupId, lotIds] of groups.entries()) {
+      if (lotIds.length < 2) continue;
+
+      const features = geojsonData.features.filter((f) =>
+        lotIds.includes(f.properties?.path_id),
+      ) as GeoJSON.Feature<GeoJSON.Polygon>[];
+
+      if (features.length < 2) continue;
+
+      let merged: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> =
+        features[0];
+      for (let i = 1; i < features.length; i++) {
+        const result = union(featureCollection([merged, features[i]]));
+        if (result) merged = result;
+      }
+
+      merged.properties = { household_group_id: groupId };
+      outlineFeatures.push(merged);
+    }
+
+    return {
+      type: "FeatureCollection" as const,
+      features: outlineFeatures,
+    };
+  }, [geojsonData, lots]);
 
   useEffect(() => {
     loadData();
@@ -118,7 +250,7 @@ export function AdminLotsPage() {
   }
 
   function handleLotToggle(lotId: string) {
-    const newSelected = new Set(selectedLots);
+    const newSelected = new Set(selectedLotsRef.current);
     if (newSelected.has(lotId)) {
       newSelected.delete(lotId);
     } else {
@@ -133,7 +265,6 @@ export function AdminLotsPage() {
     const polygon = latlngs.map((ll: L.LatLng) => [ll.lng, ll.lat]);
     console.log("Lot boundary created:", polygon);
 
-    // If a lot is selected, save its polygon
     if (selectedLot) {
       api.admin.updateLotPolygon(selectedLot.lot_id, polygon);
     }
@@ -145,9 +276,6 @@ export function AdminLotsPage() {
       const latlngs = layer.getLatLngs()[0];
       const polygon = latlngs.map((ll: L.LatLng) => [ll.lng, ll.lat]);
       console.log("Lot boundary edited:", polygon);
-
-      // Find the lot that matches this polygon and update it
-      // For now, this is a simplified implementation
     });
   }
 
@@ -197,7 +325,6 @@ export function AdminLotsPage() {
     setSaving(true);
     try {
       await api.admin.batchAssignOwner(Array.from(selectedLots), selectedOwner);
-
       await loadData();
       setSelectedLots(new Set());
     } catch (error) {
@@ -245,46 +372,82 @@ export function AdminLotsPage() {
     setSaving(false);
   }
 
+  // Border colors map matching the map page
+  const borderColors: Record<string, string> = {
+    "#9ca3af": "#6b7280",
+    "#22c55e": "#16a34a",
+    "#3b82f6": "#2563eb",
+    "#ef4444": "#dc2626",
+    "#f59e0b": "#d97706",
+    "#8b5cf6": "#7c3aed",
+    "#ec4899": "#db2777",
+    "#14b8a6": "#0d9488",
+    "#f97316": "#ea580c",
+    "#06b6d4": "#0891b2",
+    "#84cc16": "#65a30d",
+    "#6366f1": "#4f46e5",
+    "#eab308": "#ca8a04",
+    "#a78bfa": "#8b5cf6",
+  };
+
   function getLotStyle(feature?: GeoJSON.Feature<any, any>) {
     if (!feature) return {};
 
     const props = feature.properties as LotFeatureProperties;
     const lotId = props?.path_id;
 
-    const isSelected = selectedLot?.lot_id === lotId;
-    const isMultiSelected = selectedLots.has(lotId || "");
+    // Read all state from refs to avoid stale closure
+    const isSelected = selectedLotRef.current?.lot_id === lotId;
+    const isMultiSelected = selectedLotsRef.current.has(lotId || "");
     const isHighlighted =
-      highlightOwnerId && props?.owner_user_id === highlightOwnerId;
+      highlightOwnerIdRef.current &&
+      props?.owner_user_id === highlightOwnerIdRef.current;
 
-    // Check if this lot is owned by the current user
-    const isMyLot = props?.owner_user_id === user?.id;
+    const lot = lotsRef.current.find((l) => l.lot_id === lotId);
+    const lotType = lot?.lot_type || props?.lot_type;
+    const ownerId = lot?.owner_user_id || props?.owner_user_id;
+    const lotStatus = lot?.lot_status || props?.status;
+    const isMerged = lot?.household_group_id;
 
-    let fillColor = "#e5e7eb"; // Default: light gray (vacant)
+    const isMyLot = user && ownerId === user.id;
 
-    // Priority: my lots > HOA lots > status > default
+    let fillColor = "#e5e7eb";
+
     if (isMyLot) {
-      fillColor = "#3b82f6"; // Blue - MY lots (overrides all)
-    } else if (props?.lot_type === "community") {
-      fillColor = "#a855f7"; // Purple - community areas
-    } else if (props?.lot_type === "utility") {
-      fillColor = "#ef4444"; // Red - utility areas
-    } else if (props?.lot_type === "open_space") {
-      fillColor = "#14b8a6"; // Teal - open space
+      fillColor = "#3b82f6";
+    } else if (lotType === "community") {
+      fillColor = "#a855f7";
+    } else if (lotType === "utility") {
+      fillColor = "#ef4444";
+    } else if (lotType === "open_space") {
+      fillColor = "#14b8a6";
     } else {
-      // Status colors for ALL residential lots (owned or not)
-      if (props?.status === "built") {
-        fillColor = "#22c55e"; // Green - built
-      } else if (props?.status === "under_construction") {
-        fillColor = "#f59e0b"; // Orange - under construction
-      }
-      // else: vacant (default light gray)
+      if (lotStatus === "built") fillColor = "#22c55e";
+      if (lotStatus === "under_construction") fillColor = "#f59e0b";
     }
 
     return {
-      color: isSelected ? "#1d4ed8" : isHighlighted ? "#eab308" : "#6b7280",
-      weight: isSelected || isMultiSelected || isHighlighted ? 3 : 1.5,
-      fillColor,
-      fillOpacity: isSelected || isMultiSelected ? 0.6 : isMyLot ? 0.4 : 0.25,
+      color: isSelected
+        ? "#1d4ed8"
+        : isMultiSelected
+          ? "#7c3aed"
+          : isHighlighted
+            ? "#eab308"
+            : isMerged
+              ? "#7c3aed"
+              : borderColors[fillColor] || "#6b7280",
+      weight:
+        isSelected || isMultiSelected || isHighlighted ? 3 : isMerged ? 1 : 1.5,
+      dashArray:
+        isMerged && !isSelected && !isMultiSelected ? "4 3" : undefined,
+      fillColor: isMultiSelected ? "#a855f7" : fillColor,
+      fillOpacity: isSelected
+        ? 0.6
+        : isMultiSelected
+          ? 0.55
+          : isMyLot
+            ? 0.4
+            : 0.25,
     };
   }
 
@@ -308,16 +471,40 @@ export function AdminLotsPage() {
     <div className="space-y-6">
       <div>
         <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Lot Ownership Management
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Click lots to assign owners and update status. Map updates
-            automatically.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">
+                Lot Ownership Management
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Click lots to assign owners and update status. Map updates
+                automatically.
+              </p>
+            </div>
+            <button
+              onClick={() => setIsMultiSelectMode(!isMultiSelectMode)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isMultiSelectMode
+                  ? "bg-purple-600 text-white hover:bg-purple-700"
+                  : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground border border-border"
+              }`}
+              title={
+                isMultiSelectMode
+                  ? "Disable multi-select mode"
+                  : "Enable multi-select mode - click multiple lots to select them"
+              }
+            >
+              <MousePointer2 className="w-4 h-4" />
+              {isMultiSelectMode ? "Multi-select ON" : "Multi-select OFF"}
+            </button>
+          </div>
         </div>
+      </div>
+
+      <div className="fixed top-16 left-0 right-0 bottom-0 z-40 lg:left-64">
+        {/* Floating selection toolbar over the map */}
         {selectedLots.size > 0 && (
-          <div className="flex items-center gap-3 mt-4">
+          <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[9600] bg-card shadow-lg rounded-lg px-4 py-3 flex items-center gap-3 border border-border">
             <span className="text-sm text-muted-foreground">
               {selectedLots.size} lot(s) selected
             </span>
@@ -360,9 +547,7 @@ export function AdminLotsPage() {
             </button>
           </div>
         )}
-      </div>
 
-      <div className="fixed top-16 left-64 right-0 bottom-0 z-40">
         {/* Fullscreen Map */}
         <div className="absolute inset-0">
           <div className="relative h-full">
@@ -393,6 +578,7 @@ export function AdminLotsPage() {
               </FeatureGroup>
               {geojsonData && (
                 <GeoJSON
+                  key={`geojson-${Array.from(selectedLots).sort().join(",")}-${selectedLot?.lot_id ?? ""}`}
                   data={geojsonData}
                   style={getLotStyle}
                   onEachFeature={(feature, layer) => {
@@ -400,15 +586,19 @@ export function AdminLotsPage() {
                     const lotId = props?.path_id;
 
                     if (lotId) {
-                      layer.on({
-                        click: (e) => {
+                      layer.on("click", (e: L.LeafletMouseEvent) => {
+                        const isMultiSelect =
+                          isMultiSelectModeRef.current ||
+                          e.originalEvent.ctrlKey ||
+                          e.originalEvent.metaKey;
+
+                        if (isMultiSelect) {
                           L.DomEvent.stopPropagation(e);
-                          if (e.originalEvent.ctrlKey) {
-                            handleLotToggle(lotId);
-                          } else {
-                            handleLotClick(lotId);
-                          }
-                        },
+                          e.originalEvent.preventDefault();
+                          handleLotToggle(lotId);
+                        } else {
+                          handleLotClick(lotId);
+                        }
                       });
                     }
 
@@ -454,6 +644,27 @@ export function AdminLotsPage() {
                       layer.bindPopup(popupContent);
                     }
                   }}
+                />
+              )}
+
+              {/* Merged group union outlines — one WCAG AA color per group */}
+              {mergedOutlines && mergedOutlines.features.length > 0 && (
+                <GeoJSON
+                  key={`merged-outlines-${isDark ? "dark" : "light"}-${lots
+                    .filter((l) => l.household_group_id)
+                    .map((l) => l.household_group_id)
+                    .sort()
+                    .join(",")}`}
+                  data={mergedOutlines}
+                  style={(feature) => ({
+                    color: groupIdToColor(
+                      feature?.properties?.household_group_id ?? "",
+                      isDark,
+                    ),
+                    weight: 4,
+                    fillOpacity: 0,
+                    interactive: false,
+                  })}
                 />
               )}
             </MapContainer>
@@ -676,7 +887,7 @@ export function AdminLotsPage() {
 
       {/* Merge Modal */}
       {showMergeModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000]">
           <div className="bg-card rounded-lg p-6 max-w-md">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Link2 className="w-5 h-5 text-purple-600" />

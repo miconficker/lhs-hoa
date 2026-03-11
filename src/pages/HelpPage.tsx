@@ -116,6 +116,10 @@ const faqItems = [
 ];
 
 export function HelpPage() {
+  // Detect platform for correct keyboard shortcut display
+  const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+  const searchShortcut = isMac ? "⌘K" : "Ctrl+K";
+
   const scrollToSection = (href: string) => {
     const element = document.querySelector(href);
     if (element) {
@@ -265,7 +269,7 @@ export function HelpPage() {
                       <li>
                         <strong>Global Search</strong>: Press{" "}
                         <code className="bg-muted px-2 py-1 rounded">
-                          Cmd/Ctrl + K
+                          {searchShortcut}
                         </code>{" "}
                         to search
                       </li>

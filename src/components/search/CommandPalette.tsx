@@ -106,6 +106,10 @@ export function CommandPalette() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // Detect platform for correct keyboard shortcut display
+  const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+  const shortcutKey = isMac ? "⌘" : "Ctrl";
+
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if ((e.key === "k" && (e.metaKey || e.ctrlKey)) || e.key === "/") {
@@ -240,7 +244,7 @@ export function CommandPalette() {
         <Search className="h-4 w-4" />
         <span>Search...</span>
         <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-          <span className="text-xs">⌘</span>K
+          {shortcutKey}K
         </kbd>
       </button>
 

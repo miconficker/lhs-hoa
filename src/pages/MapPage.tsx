@@ -294,13 +294,23 @@ const LotsGeoJSON = memo(function LotsGeoJSON({
         const lotDescription = ownershipData?.lot_description;
         const lotType = ownershipData?.lot_type;
 
+        // Check if this lot is owned by the current user
+        const isMyLot = user && ownerId === user.id;
+
+        // Show ownership info: for admins show full details, for users show only if they own it
         const ownerInfo = isAdmin
           ? `
         <p class="text-sm text-muted-foreground">
           Owner: ${!ownerName && !ownerId ? "HOA-Owned" : ownerName || ownerId || "Unassigned"}
         </p>
       `
-          : "";
+          : isMyLot
+            ? `
+        <p class="text-sm text-blue-600 font-medium">
+          ✓ You own this lot
+        </p>
+      `
+            : "";
 
         const isMerged = ownershipData?.household_group_id;
         const mergeBadge = isMerged
