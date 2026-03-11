@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import AdminReservationsPage from "./admin/reservations/index";
@@ -24,13 +24,12 @@ import { Users, Bell, CreditCard, Building2 } from "lucide-react";
 
 export function AdminPanelPage() {
   const { user } = useAuth();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
 
-  // Get the current path section
-  const pathSection = window.location.pathname
-    .replace("/admin/", "")
-    .split("/")[0];
+  // Get the current path section using React Router's location
+  const pathSection = location.pathname.replace("/admin/", "").split("/")[0];
 
   // Load stats on mount
   useEffect(() => {
@@ -73,10 +72,7 @@ export function AdminPanelPage() {
   if (pathSection === "dues") {
     return <DuesConfigPage />;
   }
-  if (
-    pathSection === "payments" &&
-    window.location.pathname.includes("in-person")
-  ) {
+  if (pathSection === "payments" && location.pathname.includes("in-person")) {
     return <InPersonPaymentsPage />;
   }
   if (pathSection === "common-areas") {
@@ -109,10 +105,7 @@ export function AdminPanelPage() {
   if (pathSection === "messages") {
     return <MessagesPage />;
   }
-  if (
-    pathSection === "payments" &&
-    !window.location.pathname.includes("in-person")
-  ) {
+  if (pathSection === "payments" && !location.pathname.includes("in-person")) {
     return <PaymentsPage />;
   }
   if (pathSection === "dues-settings") {
