@@ -194,7 +194,7 @@ export function DuesConfigPage() {
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90"
           >
             <Plus className="w-4 h-4" />
             Add New Rate
@@ -207,7 +207,7 @@ export function DuesConfigPage() {
         <div
           className={`p-4 rounded-lg border ${
             message.type === "success"
-              ? "bg-green-50/50 border-green-200 text-green-700"
+              ? "bg-[hsl(var(--status-success-bg))] border-[hsl(var(--status-success-fg))] text-[hsl(var(--status-success-fg))]"
               : "bg-destructive/10 border-destructive/20 text-destructive"
           }`}
         >
@@ -224,7 +224,7 @@ export function DuesConfigPage() {
 
       {/* Current Active Rate Card */}
       {currentRate && (
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow p-6 text-white">
+        <div className="bg-gradient-to-r from-primary to-primary/80 rounded-lg shadow p-6 text-primary-foreground">
           <div className="flex items-center gap-2 mb-2">
             <DollarSign className="w-5 h-5" />
             <h2 className="text-lg font-semibold">Current Active Rate</h2>
@@ -233,9 +233,9 @@ export function DuesConfigPage() {
             <span className="text-4xl font-bold">
               ₱{currentRate.rate_per_sqm.toLocaleString()}
             </span>
-            <span className="text-blue-100">per sqm/month</span>
+            <span className="text-primary-foreground/80">per sqm/month</span>
           </div>
-          <p className="text-sm text-blue-100 mt-2">
+          <p className="text-sm text-primary-foreground/80 mt-2">
             Effective since{" "}
             {new Date(currentRate.effective_date).toLocaleDateString()}
           </p>
@@ -262,7 +262,7 @@ export function DuesConfigPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, year: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
               />
             </div>
 
@@ -279,7 +279,7 @@ export function DuesConfigPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, rate_per_sqm: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
                 placeholder="e.g., 5.00"
               />
             </div>
@@ -295,7 +295,7 @@ export function DuesConfigPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, effective_date: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
               />
               <p className="text-xs text-muted-foreground mt-1">
                 This rate will apply to all dues calculations from this date
@@ -307,7 +307,7 @@ export function DuesConfigPage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving
                   ? "Saving..."
@@ -336,104 +336,111 @@ export function DuesConfigPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-muted">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                  Year
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                  Monthly Rate (₱/sqm)
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                  Effective Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-card divide-y divide-gray-200 dark:divide-gray-700">
-              {rates.length === 0 ? (
+          <div className="min-w-[700px]">
+            <table className="w-full divide-y divide-border">
+              <thead className="bg-muted">
                 <tr>
-                  <td
-                    colSpan={5}
-                    className="px-6 py-12 text-center text-sm text-muted-foreground"
-                  >
-                    No dues rates configured yet. Click "Add New Rate" to get
-                    started.
-                  </td>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Year
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Monthly Rate (₱/sqm)
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Effective Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
+                    Actions
+                  </th>
                 </tr>
-              ) : (
-                rates.map((rate) => {
-                  const isActive =
-                    currentRate?.id === rate.id &&
-                    new Date(rate.effective_date) <= new Date();
-                  const isFuture = new Date(rate.effective_date) > new Date();
+              </thead>
+              <tbody className="bg-card divide-y divide-border">
+                {rates.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-6 py-12 text-center text-sm text-muted-foreground"
+                    >
+                      No dues rates configured yet. Click "Add New Rate" to get
+                      started.
+                    </td>
+                  </tr>
+                ) : (
+                  rates.map((rate) => {
+                    const isActive =
+                      currentRate?.id === rate.id &&
+                      new Date(rate.effective_date) <= new Date();
+                    const isFuture = new Date(rate.effective_date) > new Date();
 
-                  return (
-                    <tr key={rate.id} className={isActive ? "bg-blue-50" : ""}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-card-foreground">
-                        {rate.year}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-card-foreground">
-                        ₱{rate.rate_per_sqm.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                        {new Date(rate.effective_date).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {isActive ? (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
-                            Active
-                          </span>
-                        ) : isFuture ? (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700">
-                            Future
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-card-foreground">
-                            Historical
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                        <button
-                          onClick={() => handleEdit(rate)}
-                          className="text-blue-600 hover:text-blue-800 mr-3"
-                        >
-                          <Edit2 className="w-4 h-4 inline" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(rate)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <Trash2 className="w-4 h-4 inline" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                    return (
+                      <tr
+                        key={rate.id}
+                        className={
+                          isActive ? "bg-[hsl(var(--status-info-bg))]" : ""
+                        }
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-card-foreground">
+                          {rate.year}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-card-foreground">
+                          ₱{rate.rate_per_sqm.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                          {new Date(rate.effective_date).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {isActive ? (
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
+                              Active
+                            </span>
+                          ) : isFuture ? (
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700">
+                              Future
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-card-foreground">
+                              Historical
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                          <button
+                            onClick={() => handleEdit(rate)}
+                            className="text-[hsl(var(--status-info-fg))] hover:opacity-80 mr-3"
+                          >
+                            <Edit2 className="w-4 h-4 inline" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(rate)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 className="w-4 h-4 inline" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       {/* Info Card */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+      <div className="bg-[hsl(var(--status-info-bg))] border border-[hsl(var(--status-info-fg))] rounded-lg p-6">
         <div className="flex items-start gap-3">
-          <AlertCircle className="w-6 h-6 text-blue-600 mt-0.5" />
+          <AlertCircle className="w-6 h-6 text-[hsl(var(--status-info-fg))] mt-0.5" />
           <div className="flex-1">
-            <h3 className="text-sm font-semibold text-blue-900">
+            <h3 className="text-sm font-semibold text-[hsl(var(--status-info-fg))]">
               About Dues Rates
             </h3>
-            <p className="text-sm text-blue-700 mt-1">
+            <p className="text-sm text-[hsl(var(--status-info-fg))] mt-1">
               The annual dues for each lot is calculated as:
-              <code className="ml-1 px-1 py-0.5 bg-blue-100 rounded">
+              <code className="ml-1 px-1 py-0.5 bg-[hsl(var(--status-info-fg))]/10 rounded">
                 lot_size_sqm × monthly_rate × 12
               </code>
             </p>

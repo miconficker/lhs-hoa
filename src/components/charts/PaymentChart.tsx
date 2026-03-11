@@ -7,6 +7,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { useEffect, useState } from "react";
 
 interface PaymentData {
   month: string;
@@ -20,26 +21,57 @@ interface PaymentChartProps {
   height?: number;
 }
 
-const COLORS = {
-  paid: "#10b981", // green-500
-  pending: "#f59e0b", // amber-500
-  failed: "#ef4444", // red-500
+interface ChartColors {
+  paid: string;
+  pending: string;
+  failed: string;
+  axis: string;
+  tooltipBg: string;
+  tooltipBorder: string;
+  tooltipText: string;
+}
+
+// Theme-aware colors using CSS variables
+const getChartColors = (): ChartColors => {
+  const isDark = document.documentElement.classList.contains("dark");
+  return {
+    paid: isDark ? "hsl(142 80% 60%)" : "#10b981",
+    pending: isDark ? "hsl(48 90% 60%)" : "#f59e0b",
+    failed: isDark ? "hsl(0 80% 60%)" : "#ef4444",
+    axis: isDark ? "#9ca3af" : "#6b7280",
+    tooltipBg: isDark ? "hsl(220 30% 15%)" : "white",
+    tooltipBorder: isDark ? "hsl(217 32% 20%)" : "#e5e7eb",
+    tooltipText: isDark ? "#f3f4f6" : "#374151",
+  };
 };
 
-// Default mock data for visualization
-const defaultData: PaymentData[] = [
-  { month: "Jan", paid: 45000, pending: 5000, failed: 500 },
-  { month: "Feb", paid: 52000, pending: 3000, failed: 200 },
-  { month: "Mar", paid: 48000, pending: 8000, failed: 1000 },
-  { month: "Apr", paid: 55000, pending: 2000, failed: 300 },
-  { month: "May", paid: 60000, pending: 4000, failed: 500 },
-  { month: "Jun", paid: 58000, pending: 6000, failed: 700 },
-];
+export function PaymentChart({ data, height = 300 }: PaymentChartProps) {
+  const [colors, setColors] = useState<ChartColors>(getChartColors);
 
-export function PaymentChart({
-  data = defaultData,
-  height = 300,
-}: PaymentChartProps) {
+  // Update colors when theme changes
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setColors(getChartColors());
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Don't show chart if no data available
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[200px]">
+        <p className="text-sm text-muted-foreground">
+          No payment data available
+        </p>
+      </div>
+    );
+  }
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("en-PH", {
       style: "currency",
@@ -58,13 +90,13 @@ export function PaymentChart({
         >
           <XAxis
             dataKey="month"
-            stroke="#6b7280"
+            stroke={colors.axis}
             fontSize={12}
             tickLine={false}
             axisLine={false}
           />
           <YAxis
-            stroke="#6b7280"
+            stroke={colors.axis}
             fontSize={12}
             tickLine={false}
             axisLine={false}
@@ -72,38 +104,39 @@ export function PaymentChart({
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: "white",
-              border: "1px solid #e5e7eb",
+              backgroundColor: colors.tooltipBg,
+              border: `1px solid ${colors.tooltipBorder}`,
               borderRadius: "8px",
+              color: colors.tooltipText,
             }}
             formatter={(value: number | undefined) => [
               formatCurrency(value ?? 0),
               "",
             ]}
-            labelStyle={{ color: "#374151" }}
+            labelStyle={{ color: colors.tooltipText }}
           />
           <Legend />
           <Bar
             dataKey="paid"
             name="Paid"
-            fill={COLORS.paid}
+            fill={colors.paid}
             radius={[4, 4, 0, 0]}
           />
           <Bar
             dataKey="pending"
             name="Pending"
-            fill={COLORS.pending}
+            fill={colors.pending}
             radius={[4, 4, 0, 0]}
           />
           <Bar
             dataKey="failed"
             name="Failed"
-            fill={COLORS.failed}
+            fill={colors.failed}
             radius={[4, 4, 0, 0]}
           />
         </BarChart>
       </ResponsiveContainer>
-      <p className="text-sm text-gray-500 text-center mt-2">
+      <p className="text-sm text-muted-foreground text-center mt-2">
         Monthly payment collection summary (last 6 months)
       </p>
     </div>

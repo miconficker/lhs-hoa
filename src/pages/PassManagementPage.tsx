@@ -602,7 +602,7 @@ export function PassManagementPage() {
           <div className="bg-card rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-blue-100 rounded-lg">
-                <Users className="w-6 h-6 text-blue-600" />
+                <Users className="w-6 h-6 text-[hsl(var(--status-info-fg))]" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">
@@ -631,7 +631,7 @@ export function PassManagementPage() {
 
           <div className="bg-card rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-yellow-100 rounded-lg">
+              <div className="p-3 bg-[hsl(var(--status-warning-bg))] rounded-lg">
                 <Calendar className="w-6 h-6 text-yellow-600" />
               </div>
               <div>
@@ -648,7 +648,7 @@ export function PassManagementPage() {
           <div className="bg-card rounded-lg shadow p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-purple-100 rounded-lg">
-                <Wallet className="w-6 h-6 text-purple-600" />
+                <Wallet className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Monthly Revenue</p>
@@ -747,146 +747,153 @@ export function PassManagementPage() {
 
             {/* Employee Table */}
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                      Employee
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                      Type
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                      ID Number
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                      Address
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                      Status
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                      Dates
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {employees.length > 0 ? (
-                    employees.map((employee) => (
-                      <tr key={employee.id} className="border-b hover:bg-muted">
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            {employee.photo_url ? (
-                              <img
-                                src={employee.photo_url}
-                                alt={employee.full_name}
-                                className="w-10 h-10 rounded-lg object-cover"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
-                                <Users className="w-5 h-5 text-gray-400" />
-                              </div>
-                            )}
-                            <span className="font-medium text-card-foreground">
-                              {employee.full_name}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-gray-700 dark:text-card-foreground">
-                          {employeeTypeLabels[employee.employee_type]}
-                        </td>
-                        <td className="py-3 px-4 text-gray-700 dark:text-card-foreground">
-                          {employee.id_number}
-                        </td>
-                        <td className="py-3 px-4 text-gray-700 text-sm">
-                          {employee.household_address || "N/A"}
-                        </td>
-                        <td className="py-3 px-4">
-                          <UIBadge
-                            className={employeeStatusColors[employee.status]}
-                          >
-                            {employee.status}
-                          </UIBadge>
-                        </td>
-                        <td className="py-3 px-4 text-gray-700 text-sm">
-                          <div>
-                            {employee.issued_date && (
-                              <div>
-                                Issued:{" "}
-                                {new Date(
-                                  employee.issued_date,
-                                ).toLocaleDateString()}
-                              </div>
-                            )}
-                            {employee.expiry_date && (
-                              <div>
-                                Expires:{" "}
-                                {new Date(
-                                  employee.expiry_date,
-                                ).toLocaleDateString()}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            {employee.status === "pending" && (
+              <div className="min-w-[900px]">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Employee
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Type
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        ID Number
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Address
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Status
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Dates
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {employees.length > 0 ? (
+                      employees.map((employee) => (
+                        <tr
+                          key={employee.id}
+                          className="border-b hover:bg-muted"
+                        >
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              {employee.photo_url ? (
+                                <img
+                                  src={employee.photo_url}
+                                  alt={employee.full_name}
+                                  className="w-10 h-10 rounded-lg object-cover"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
+                                  <Users className="w-5 h-5 text-gray-400" />
+                                </div>
+                              )}
+                              <span className="font-medium text-card-foreground">
+                                {employee.full_name}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-gray-700 dark:text-card-foreground">
+                            {employeeTypeLabels[employee.employee_type]}
+                          </td>
+                          <td className="py-3 px-4 text-gray-700 dark:text-card-foreground">
+                            {employee.id_number}
+                          </td>
+                          <td className="py-3 px-4 text-gray-700 text-sm">
+                            {employee.household_address || "N/A"}
+                          </td>
+                          <td className="py-3 px-4">
+                            <UIBadge
+                              className={employeeStatusColors[employee.status]}
+                            >
+                              {employee.status}
+                            </UIBadge>
+                          </td>
+                          <td className="py-3 px-4 text-gray-700 text-sm">
+                            <div>
+                              {employee.issued_date && (
+                                <div>
+                                  Issued:{" "}
+                                  {new Date(
+                                    employee.issued_date,
+                                  ).toLocaleDateString()}
+                                </div>
+                              )}
+                              {employee.expiry_date && (
+                                <div>
+                                  Expires:{" "}
+                                  {new Date(
+                                    employee.expiry_date,
+                                  ).toLocaleDateString()}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              {employee.status === "pending" && (
+                                <Button
+                                  onClick={() =>
+                                    handleUpdateEmployeeStatus(
+                                      employee.id,
+                                      "active",
+                                    )
+                                  }
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-green-600 hover:text-green-700"
+                                >
+                                  <Check className="w-4 h-4" />
+                                </Button>
+                              )}
+                              {employee.status === "active" && (
+                                <Button
+                                  onClick={() =>
+                                    handleUpdateEmployeeStatus(
+                                      employee.id,
+                                      "revoked",
+                                    )
+                                  }
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 hover:text-destructive"
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </Button>
+                              )}
                               <Button
                                 onClick={() =>
-                                  handleUpdateEmployeeStatus(
-                                    employee.id,
-                                    "active",
-                                  )
-                                }
-                                size="sm"
-                                variant="outline"
-                                className="text-green-600 hover:text-green-700"
-                              >
-                                <Check className="w-4 h-4" />
-                              </Button>
-                            )}
-                            {employee.status === "active" && (
-                              <Button
-                                onClick={() =>
-                                  handleUpdateEmployeeStatus(
-                                    employee.id,
-                                    "revoked",
-                                  )
+                                  handleDeleteEmployee(employee.id)
                                 }
                                 size="sm"
                                 variant="outline"
                                 className="text-red-600 hover:text-destructive"
                               >
-                                <XCircle className="w-4 h-4" />
+                                <Trash2 className="w-4 h-4" />
                               </Button>
-                            )}
-                            <Button
-                              onClick={() => handleDeleteEmployee(employee.id)}
-                              size="sm"
-                              variant="outline"
-                              className="text-red-600 hover:text-destructive"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={7}
+                          className="text-center py-8 text-muted-foreground"
+                        >
+                          No employee passes found
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan={7}
-                        className="text-center py-8 text-muted-foreground"
-                      >
-                        No employee passes found
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </TabsContent>
@@ -985,235 +992,244 @@ export function PassManagementPage() {
 
             {/* Vehicle Table */}
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                      Vehicle
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                      Pass Type
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                      Address
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                      Status
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                      Payment
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                      Codes
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {vehicles.length > 0 ? (
-                    vehicles.map((vehicle) => (
-                      <tr key={vehicle.id} className="border-b hover:bg-muted">
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                              <Car className="w-5 h-5 text-blue-600" />
+              <div className="min-w-[1000px]">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Vehicle
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Pass Type
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Address
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Status
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Payment
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Codes
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vehicles.length > 0 ? (
+                      vehicles.map((vehicle) => (
+                        <tr
+                          key={vehicle.id}
+                          className="border-b hover:bg-muted"
+                        >
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <Car className="w-5 h-5 text-blue-600" />
+                              </div>
+                              <div>
+                                <div className="font-medium text-card-foreground">
+                                  {vehicle.plate_number}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {vehicle.make} {vehicle.model} (
+                                  {vehicle.color})
+                                </div>
+                              </div>
                             </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex gap-1 flex-wrap">
+                              {vehicle.sticker_pass_id && (
+                                <UIBadge className="bg-blue-100 text-blue-700 text-xs">
+                                  Sticker
+                                </UIBadge>
+                              )}
+                              {vehicle.rfid_pass_id && (
+                                <UIBadge className="bg-green-100 text-green-700 text-xs">
+                                  RFID
+                                </UIBadge>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-gray-700 text-sm">
+                            {vehicle.household_address || "N/A"}
+                          </td>
+                          <td className="py-3 px-4">
+                            <UIBadge
+                              className={vehicleStatusColors[vehicle.status]}
+                            >
+                              {vehicle.status}
+                            </UIBadge>
+                          </td>
+                          <td className="py-3 px-4">
+                            <UIBadge
+                              className={
+                                paymentStatusColors[vehicle.payment_status]
+                              }
+                            >
+                              {vehicle.payment_status}
+                            </UIBadge>
+                            {vehicle.amount_due && (
+                              <div className="text-sm text-gray-700 mt-1">
+                                ₱{vehicle.amount_due.toFixed(2)}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-gray-700 text-sm">
                             <div>
-                              <div className="font-medium text-card-foreground">
-                                {vehicle.plate_number}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {vehicle.make} {vehicle.model} ({vehicle.color})
-                              </div>
+                              {vehicle.rfid_code && (
+                                <div>
+                                  RFID:{" "}
+                                  <span className="font-mono">
+                                    {vehicle.rfid_code}
+                                  </span>
+                                </div>
+                              )}
+                              {vehicle.sticker_number && (
+                                <div>
+                                  Sticker:{" "}
+                                  <span className="font-mono">
+                                    {vehicle.sticker_number}
+                                  </span>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex gap-1 flex-wrap">
-                            {vehicle.sticker_pass_id && (
-                              <UIBadge className="bg-blue-100 text-blue-700 text-xs">
-                                Sticker
-                              </UIBadge>
-                            )}
-                            {vehicle.rfid_pass_id && (
-                              <UIBadge className="bg-green-100 text-green-700 text-xs">
-                                RFID
-                              </UIBadge>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-gray-700 text-sm">
-                          {vehicle.household_address || "N/A"}
-                        </td>
-                        <td className="py-3 px-4">
-                          <UIBadge
-                            className={vehicleStatusColors[vehicle.status]}
-                          >
-                            {vehicle.status}
-                          </UIBadge>
-                        </td>
-                        <td className="py-3 px-4">
-                          <UIBadge
-                            className={
-                              paymentStatusColors[vehicle.payment_status]
-                            }
-                          >
-                            {vehicle.payment_status}
-                          </UIBadge>
-                          {vehicle.amount_due && (
-                            <div className="text-sm text-gray-700 mt-1">
-                              ₱{vehicle.amount_due.toFixed(2)}
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-gray-700 text-sm">
-                          <div>
-                            {vehicle.rfid_code && (
-                              <div>
-                                RFID:{" "}
-                                <span className="font-mono">
-                                  {vehicle.rfid_code}
-                                </span>
-                              </div>
-                            )}
-                            {vehicle.sticker_number && (
-                              <div>
-                                Sticker:{" "}
-                                <span className="font-mono">
-                                  {vehicle.sticker_number}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex flex-wrap items-center gap-2">
-                            {vehicle.pass_type === "rfid" ||
-                            vehicle.pass_type === "both" ? (
-                              <Button
-                                onClick={() =>
-                                  setEditVehicle({
-                                    ...editVehicle,
-                                    vehicle,
-                                    showRFIDModal: true,
-                                    rfidCode: vehicle.rfid_code || "",
-                                  })
-                                }
-                                size="sm"
-                                variant="outline"
-                                title="Assign RFID"
-                              >
-                                <CreditCard className="w-4 h-4" />
-                              </Button>
-                            ) : null}
-                            {vehicle.pass_type === "sticker" ||
-                            vehicle.pass_type === "both" ? (
-                              <Button
-                                onClick={() =>
-                                  setEditVehicle({
-                                    ...editVehicle,
-                                    vehicle,
-                                    showStickerModal: true,
-                                    stickerNumber: vehicle.sticker_number || "",
-                                  })
-                                }
-                                size="sm"
-                                variant="outline"
-                                title="Assign Sticker"
-                              >
-                                <Badge className="w-4 h-4" />
-                              </Button>
-                            ) : null}
-                            {vehicle.payment_status === "unpaid" && (
-                              <Button
-                                onClick={() =>
-                                  setEditVehicle({
-                                    ...editVehicle,
-                                    vehicle,
-                                    showPaymentModal: true,
-                                    paymentAmount:
-                                      vehicle.amount_due?.toString() || "",
-                                  })
-                                }
-                                size="sm"
-                                variant="outline"
-                                title="Record Payment"
-                              >
-                                <Wallet className="w-4 h-4" />
-                              </Button>
-                            )}
-                            {(vehicle.status === "pending_payment" ||
-                              vehicle.status === "pending_approval") && (
-                              <Button
-                                onClick={() =>
-                                  handleUpdateVehicleStatus(
-                                    vehicle.id,
-                                    "active",
-                                  )
-                                }
-                                size="sm"
-                                variant="outline"
-                                className="text-green-600 hover:text-green-700"
-                                title="Approve"
-                              >
-                                <Check className="w-4 h-4" />
-                              </Button>
-                            )}
-                            {vehicle.rfid_pass_id &&
-                              vehicle.status === "active" && (
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex flex-wrap items-center gap-2">
+                              {vehicle.pass_type === "rfid" ||
+                              vehicle.pass_type === "both" ? (
                                 <Button
-                                  onClick={() => handleReplaceRfid(vehicle.id)}
+                                  onClick={() =>
+                                    setEditVehicle({
+                                      ...editVehicle,
+                                      vehicle,
+                                      showRFIDModal: true,
+                                      rfidCode: vehicle.rfid_code || "",
+                                    })
+                                  }
                                   size="sm"
                                   variant="outline"
-                                  className="text-orange-600 hover:text-orange-700"
-                                  title="Replace RFID"
+                                  title="Assign RFID"
                                 >
-                                  <RefreshCcw className="w-4 h-4" />
+                                  <CreditCard className="w-4 h-4" />
+                                </Button>
+                              ) : null}
+                              {vehicle.pass_type === "sticker" ||
+                              vehicle.pass_type === "both" ? (
+                                <Button
+                                  onClick={() =>
+                                    setEditVehicle({
+                                      ...editVehicle,
+                                      vehicle,
+                                      showStickerModal: true,
+                                      stickerNumber:
+                                        vehicle.sticker_number || "",
+                                    })
+                                  }
+                                  size="sm"
+                                  variant="outline"
+                                  title="Assign Sticker"
+                                >
+                                  <Badge className="w-4 h-4" />
+                                </Button>
+                              ) : null}
+                              {vehicle.payment_status === "unpaid" && (
+                                <Button
+                                  onClick={() =>
+                                    setEditVehicle({
+                                      ...editVehicle,
+                                      vehicle,
+                                      showPaymentModal: true,
+                                      paymentAmount:
+                                        vehicle.amount_due?.toString() || "",
+                                    })
+                                  }
+                                  size="sm"
+                                  variant="outline"
+                                  title="Record Payment"
+                                >
+                                  <Wallet className="w-4 h-4" />
                                 </Button>
                               )}
-                            {vehicle.status === "active" && (
+                              {(vehicle.status === "pending_payment" ||
+                                vehicle.status === "pending_approval") && (
+                                <Button
+                                  onClick={() =>
+                                    handleUpdateVehicleStatus(
+                                      vehicle.id,
+                                      "active",
+                                    )
+                                  }
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-green-600 hover:text-green-700"
+                                  title="Approve"
+                                >
+                                  <Check className="w-4 h-4" />
+                                </Button>
+                              )}
+                              {vehicle.rfid_pass_id &&
+                                vehicle.status === "active" && (
+                                  <Button
+                                    onClick={() =>
+                                      handleReplaceRfid(vehicle.id)
+                                    }
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-orange-600 hover:text-orange-700"
+                                    title="Replace RFID"
+                                  >
+                                    <RefreshCcw className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              {vehicle.status === "active" && (
+                                <Button
+                                  onClick={() =>
+                                    handleUpdateVehicleStatus(
+                                      vehicle.id,
+                                      "cancelled",
+                                    )
+                                  }
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 hover:text-destructive"
+                                  title="Cancel"
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </Button>
+                              )}
                               <Button
-                                onClick={() =>
-                                  handleUpdateVehicleStatus(
-                                    vehicle.id,
-                                    "cancelled",
-                                  )
-                                }
+                                onClick={() => handleDeleteVehicle(vehicle.id)}
                                 size="sm"
                                 variant="outline"
                                 className="text-red-600 hover:text-destructive"
-                                title="Cancel"
+                                title="Delete"
                               >
-                                <XCircle className="w-4 h-4" />
+                                <Trash2 className="w-4 h-4" />
                               </Button>
-                            )}
-                            <Button
-                              onClick={() => handleDeleteVehicle(vehicle.id)}
-                              size="sm"
-                              variant="outline"
-                              className="text-red-600 hover:text-destructive"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={7}
+                          className="text-center py-8 text-muted-foreground"
+                        >
+                          No vehicle registrations found
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan={7}
-                        className="text-center py-8 text-muted-foreground"
-                      >
-                        No vehicle registrations found
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </TabsContent>
@@ -1238,7 +1254,7 @@ export function PassManagementPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="p-6 border rounded-lg">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 bg-blue-100 rounded-lg">
+                  <div className="p-3 bg-[hsl(var(--status-info-bg))] rounded-lg">
                     <Badge className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
@@ -1256,7 +1272,7 @@ export function PassManagementPage() {
               </div>
               <div className="p-6 border rounded-lg">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 bg-green-100 rounded-lg">
+                  <div className="p-3 bg-[hsl(var(--status-success-bg))] rounded-lg">
                     <CreditCard className="w-6 h-6 text-green-600" />
                   </div>
                   <div>
@@ -1274,7 +1290,7 @@ export function PassManagementPage() {
               </div>
               <div className="p-6 border rounded-lg">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="p-3 bg-purple-100 rounded-lg">
+                  <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
                     <Badge className="w-6 h-6 text-purple-600" />
                     <CreditCard className="w-6 h-6 text-purple-600 -ml-4" />
                   </div>
@@ -1317,133 +1333,139 @@ export function PassManagementPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                        Vehicle
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                        Address
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                        Reason
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                        Requested By
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                        Status
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                        Date
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {replacementRequests.map((request) => (
-                      <tr key={request.id} className="border-b hover:bg-muted">
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                              <Car className="w-5 h-5 text-blue-600" />
-                            </div>
-                            <div>
-                              <div className="font-medium text-card-foreground">
-                                {request.plate_number}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {request.make} {request.model} ({request.color})
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-gray-700 text-sm">
-                          {request.household_address || "N/A"}
-                        </td>
-                        <td className="py-3 px-4 text-gray-700 text-sm">
-                          {request.reason}
-                        </td>
-                        <td className="py-3 px-4 text-gray-700 text-sm">
-                          <div>
-                            <div className="font-medium">
-                              {request.requester_name || "N/A"}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {request.requester_email || ""}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <UIBadge
-                            className={
-                              request.status === "pending"
-                                ? "bg-yellow-100 text-yellow-700"
-                                : request.status === "completed"
-                                  ? "bg-green-100 text-green-700"
-                                  : request.status === "rejected"
-                                    ? "bg-red-100 text-red-700"
-                                    : "bg-gray-100 text-gray-700"
-                            }
-                          >
-                            {request.status}
-                          </UIBadge>
-                          {request.admin_notes && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              Note: {request.admin_notes}
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-gray-700 text-sm">
-                          {new Date(request.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            {request.status === "pending" && (
-                              <>
-                                <Button
-                                  onClick={() =>
-                                    handleApproveReplacement(request.id)
-                                  }
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-green-600 hover:text-green-700"
-                                  title="Approve Request"
-                                >
-                                  <Check className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  onClick={() =>
-                                    handleRejectReplacement(request.id)
-                                  }
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-red-600 hover:text-destructive"
-                                  title="Reject Request"
-                                >
-                                  <XCircle className="w-4 h-4" />
-                                </Button>
-                              </>
-                            )}
-                            {request.status === "completed" && (
-                              <span className="text-xs text-gray-500">
-                                Completed - New RFID created
-                              </span>
-                            )}
-                            {request.status === "rejected" && (
-                              <span className="text-xs text-gray-500">
-                                Rejected
-                              </span>
-                            )}
-                          </div>
-                        </td>
+                <div className="min-w-[900px]">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                          Vehicle
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                          Address
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                          Reason
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                          Requested By
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                          Status
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                          Date
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-card-foreground">
+                          Actions
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {replacementRequests.map((request) => (
+                        <tr
+                          key={request.id}
+                          className="border-b hover:bg-muted"
+                        >
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <Car className="w-5 h-5 text-blue-600" />
+                              </div>
+                              <div>
+                                <div className="font-medium text-card-foreground">
+                                  {request.plate_number}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {request.make} {request.model} (
+                                  {request.color})
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-gray-700 text-sm">
+                            {request.household_address || "N/A"}
+                          </td>
+                          <td className="py-3 px-4 text-gray-700 text-sm">
+                            {request.reason}
+                          </td>
+                          <td className="py-3 px-4 text-gray-700 text-sm">
+                            <div>
+                              <div className="font-medium">
+                                {request.requester_name || "N/A"}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {request.requester_email || ""}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <UIBadge
+                              className={
+                                request.status === "pending"
+                                  ? "bg-yellow-100 text-yellow-700"
+                                  : request.status === "completed"
+                                    ? "bg-green-100 text-green-700"
+                                    : request.status === "rejected"
+                                      ? "bg-red-100 text-red-700"
+                                      : "bg-gray-100 text-gray-700"
+                              }
+                            >
+                              {request.status}
+                            </UIBadge>
+                            {request.admin_notes && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                Note: {request.admin_notes}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-gray-700 text-sm">
+                            {new Date(request.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              {request.status === "pending" && (
+                                <>
+                                  <Button
+                                    onClick={() =>
+                                      handleApproveReplacement(request.id)
+                                    }
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-green-600 hover:text-green-700"
+                                    title="Approve Request"
+                                  >
+                                    <Check className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    onClick={() =>
+                                      handleRejectReplacement(request.id)
+                                    }
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-red-600 hover:text-destructive"
+                                    title="Reject Request"
+                                  >
+                                    <XCircle className="w-4 h-4" />
+                                  </Button>
+                                </>
+                              )}
+                              {request.status === "completed" && (
+                                <span className="text-xs text-gray-500">
+                                  Completed - New RFID created
+                                </span>
+                              )}
+                              {request.status === "rejected" && (
+                                <span className="text-xs text-gray-500">
+                                  Rejected
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>

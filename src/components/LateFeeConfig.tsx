@@ -81,7 +81,7 @@ export function LateFeeConfig({ onSettingsChange }: LateFeeConfigProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+        <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -90,30 +90,30 @@ export function LateFeeConfig({ onSettingsChange }: LateFeeConfigProps) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <Settings className="w-5 h-5 text-gray-600" />
+        <Settings className="w-5 h-5 text-muted-foreground" />
         <h3 className="text-lg font-semibold">Late Fee Configuration</h3>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+        <div className="p-3 bg-[hsl(var(--status-error-bg))] border border-[hsl(var(--status-error-fg))] rounded-lg text-[hsl(var(--status-error-fg))] text-sm dark:bg-opacity-20 dark:border-opacity-30">
           {error}
         </div>
       )}
 
       {/* Success Message */}
       {success && (
-        <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+        <div className="p-3 bg-[hsl(var(--status-success-bg))] border border-[hsl(var(--status-success-fg))] rounded-lg text-[hsl(var(--status-success-fg))] text-sm dark:bg-opacity-20 dark:border-opacity-30">
           {success}
         </div>
       )}
 
       {/* Bank Details Display */}
-      <div className="bg-blue-50 p-4 rounded-lg">
-        <h4 className="font-medium text-blue-900 mb-3">
+      <div className="bg-[hsl(var(--status-info-bg))] p-4 rounded-lg">
+        <h4 className="font-medium text-[hsl(var(--status-info-fg))] mb-3">
           Bank Transfer Details
         </h4>
-        <div className="text-sm text-blue-800 space-y-1">
+        <div className="text-sm text-[hsl(var(--status-info-fg))] space-y-1">
           <p>
             <span className="font-medium">Bank:</span>{" "}
             {settings?.bank_details?.bank_name}
@@ -130,9 +130,11 @@ export function LateFeeConfig({ onSettingsChange }: LateFeeConfigProps) {
       </div>
 
       {/* GCash Details Display */}
-      <div className="bg-blue-50 p-4 rounded-lg">
-        <h4 className="font-medium text-blue-900 mb-3">GCash Details</h4>
-        <div className="text-sm text-blue-800 space-y-1">
+      <div className="bg-[hsl(var(--status-info-bg))] p-4 rounded-lg">
+        <h4 className="font-medium text-[hsl(var(--status-info-fg))] mb-3">
+          GCash Details
+        </h4>
+        <div className="text-sm text-[hsl(var(--status-info-fg))] space-y-1">
           <p>
             <span className="font-medium">Name:</span>{" "}
             {settings?.gcash_details?.name}
@@ -146,12 +148,12 @@ export function LateFeeConfig({ onSettingsChange }: LateFeeConfigProps) {
 
       {/* Late Fee Configuration Form */}
       <form onSubmit={handleSave} className="space-y-4">
-        <div className="bg-white dark:bg-card border border-gray-200 dark:border-border rounded-lg p-4 space-y-4">
+        <div className="bg-card border border-border rounded-lg p-4 space-y-4">
           <h4 className="font-medium">Late Fee Rules</h4>
 
           {/* Rate Percent */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
+            <label className="block text-sm font-medium text-card-foreground mb-1">
               Late Fee Rate (% per month)
             </label>
             <div className="flex items-center gap-2">
@@ -164,14 +166,14 @@ export function LateFeeConfig({ onSettingsChange }: LateFeeConfigProps) {
                 onChange={(e) =>
                   setRatePercent(parseFloat(e.target.value) || 0)
                 }
-                className="w-32 px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-32 px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
                 required
               />
-              <span className="text-sm text-gray-600 dark:text-card-foreground">
+              <span className="text-sm text-muted-foreground">
                 % of amount per month late
               </span>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Example: 1% means PHP 10 late fee per month for a PHP 1,000
               payment
             </p>
@@ -179,7 +181,7 @@ export function LateFeeConfig({ onSettingsChange }: LateFeeConfigProps) {
 
           {/* Grace Period */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
+            <label className="block text-sm font-medium text-card-foreground mb-1">
               Grace Period (days)
             </label>
             <div className="flex items-center gap-2">
@@ -191,21 +193,21 @@ export function LateFeeConfig({ onSettingsChange }: LateFeeConfigProps) {
                 onChange={(e) =>
                   setGracePeriodDays(parseInt(e.target.value) || 0)
                 }
-                className="w-32 px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-32 px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
                 required
               />
-              <span className="text-sm text-gray-600 dark:text-card-foreground">
+              <span className="text-sm text-muted-foreground">
                 days before late fees apply
               </span>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Payments made within this period after due date incur no late fees
             </p>
           </div>
 
           {/* Max Months */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-card-foreground mb-1">
+            <label className="block text-sm font-medium text-card-foreground mb-1">
               Maximum Late Fee Months
             </label>
             <div className="flex items-center gap-2">
@@ -215,23 +217,23 @@ export function LateFeeConfig({ onSettingsChange }: LateFeeConfigProps) {
                 max="120"
                 value={maxMonths}
                 onChange={(e) => setMaxMonths(parseInt(e.target.value) || 0)}
-                className="w-32 px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-32 px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
                 required
               />
-              <span className="text-sm text-gray-600 dark:text-card-foreground">
+              <span className="text-sm text-muted-foreground">
                 months maximum
               </span>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Late fees won't accumulate beyond this many months
             </p>
           </div>
 
           {/* Example Calculation */}
-          <div className="bg-gray-50 dark:bg-muted p-3 rounded-lg border border-gray-200 dark:border-border">
+          <div className="bg-muted p-3 rounded-lg border border-border">
             <div className="flex items-start gap-2">
-              <Info className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-gray-600">
+              <Info className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-card-foreground">
                 <p className="font-medium mb-1">Example Calculation:</p>
                 <p>
                   For a PHP 1,000 payment that's 3 months late (past grace
@@ -260,7 +262,7 @@ export function LateFeeConfig({ onSettingsChange }: LateFeeConfigProps) {
           <button
             type="button"
             onClick={loadSettings}
-            className="px-4 py-2 border border-gray-300 dark:border-border text-gray-700 dark:text-card-foreground rounded-lg hover:bg-gray-50 dark:hover:bg-muted flex items-center gap-2"
+            className="px-4 py-2 border border-input text-card-foreground rounded-lg hover:bg-muted flex items-center gap-2"
             disabled={loading}
           >
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
@@ -269,7 +271,7 @@ export function LateFeeConfig({ onSettingsChange }: LateFeeConfigProps) {
           <button
             type="submit"
             disabled={saving}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <Save className={`w-4 h-4 ${saving ? "animate-spin" : ""}`} />
             {saving ? "Saving..." : "Save Settings"}

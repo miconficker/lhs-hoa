@@ -350,7 +350,7 @@ export function PassesPage() {
 
       {/* Success/Error Messages */}
       {successMessage && (
-        <div className="bg-green-50/50 border border-green-200 text-green-700 p-4 rounded-lg flex items-center gap-2">
+        <div className="bg-[hsl(var(--status-success-bg))] border border-[hsl(var(--status-success-fg))] text-[hsl(var(--status-success-fg))] p-4 rounded-lg flex items-center gap-2 dark:bg-opacity-20 dark:border-opacity-30">
           <Check className="w-5 h-5" />
           {successMessage}
         </div>
@@ -369,8 +369,8 @@ export function PassesPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-card rounded-lg shadow p-6">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <Users className="w-6 h-6 text-blue-600" />
+            <div className="p-3 bg-[hsl(var(--status-info-bg))] rounded-lg">
+              <Users className="w-6 h-6 text-[hsl(var(--status-info-fg))]" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Active Employees</p>
@@ -384,7 +384,7 @@ export function PassesPage() {
         <div className="bg-card rounded-lg shadow p-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-green-100 rounded-lg">
-              <Car className="w-6 h-6 text-green-600" />
+              <Car className="w-6 h-6 text-[hsl(var(--status-success-fg))]" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Active Vehicles</p>
@@ -397,8 +397,8 @@ export function PassesPage() {
 
         <div className="bg-card rounded-lg shadow p-6">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-yellow-100 rounded-lg">
-              <Calendar className="w-6 h-6 text-yellow-600" />
+            <div className="p-3 bg-[hsl(var(--status-warning-bg))] rounded-lg">
+              <Calendar className="w-6 h-6 text-[hsl(var(--status-warning-fg))]" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Pending Approvals</p>
@@ -411,8 +411,8 @@ export function PassesPage() {
 
         <div className="bg-card rounded-lg shadow p-6">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <Wallet className="w-6 h-6 text-purple-600" />
+            <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <Wallet className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Due</p>
@@ -432,7 +432,7 @@ export function PassesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-muted rounded-lg">
             <div className="flex items-center gap-3">
-              <Badge className="w-5 h-5 text-blue-600" />
+              <Badge className="w-5 h-5 text-[hsl(var(--status-info-fg))]" />
               <span className="font-medium text-card-foreground">
                 Sticker Pass
               </span>
@@ -443,7 +443,7 @@ export function PassesPage() {
           </div>
           <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-muted rounded-lg">
             <div className="flex items-center gap-3">
-              <CreditCard className="w-5 h-5 text-green-600" />
+              <CreditCard className="w-5 h-5 text-[hsl(var(--status-success-fg))]" />
               <span className="font-medium text-card-foreground">
                 RFID Pass
               </span>
@@ -495,7 +495,7 @@ export function PassesPage() {
                         full_name: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-input rounded-lg focus:ring-primary focus:border-primary"
                     required
                   />
                 </div>
@@ -511,7 +511,7 @@ export function PassesPage() {
                         employee_type: e.target.value as EmployeeType,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-input rounded-lg focus:ring-primary focus:border-primary"
                     required
                   >
                     <option value="driver">Driver</option>
@@ -533,7 +533,7 @@ export function PassesPage() {
                         photo: e.target.files?.[0],
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-input rounded-lg focus:ring-primary focus:border-primary"
                   />
                 </div>
                 <div>
@@ -549,7 +549,7 @@ export function PassesPage() {
                         expiry_date: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-input rounded-lg focus:ring-primary focus:border-primary"
                   />
                 </div>
               </div>
@@ -581,8 +581,8 @@ export function PassesPage() {
                       className="w-16 h-16 rounded-lg object-cover"
                     />
                   ) : (
-                    <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
-                      <Users className="w-8 h-8 text-gray-400" />
+                    <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center">
+                      <Users className="w-8 h-8 text-muted-foreground" />
                     </div>
                   )}
                   <div>
@@ -688,7 +688,7 @@ export function PassesPage() {
                         plate_number: e.target.value.toUpperCase(),
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-input rounded-lg focus:ring-primary focus:border-primary"
                     required
                   />
                 </div>
@@ -702,7 +702,7 @@ export function PassesPage() {
                     onChange={(e) =>
                       setVehicleForm({ ...vehicleForm, make: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-input rounded-lg focus:ring-primary focus:border-primary"
                     required
                   />
                 </div>
@@ -716,7 +716,7 @@ export function PassesPage() {
                     onChange={(e) =>
                       setVehicleForm({ ...vehicleForm, model: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-input rounded-lg focus:ring-primary focus:border-primary"
                     required
                   />
                 </div>
@@ -730,7 +730,7 @@ export function PassesPage() {
                     onChange={(e) =>
                       setVehicleForm({ ...vehicleForm, color: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 py-2 border border-input rounded-lg focus:ring-primary focus:border-primary"
                     required
                   />
                 </div>

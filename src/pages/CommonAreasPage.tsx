@@ -51,7 +51,7 @@ export function CommonAreasPage() {
 
   if (user?.role !== "admin") {
     return (
-      <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 p-4 rounded-lg">
+      <div className="bg-[hsl(var(--status-warning-bg))] border border-[hsl(var(--status-warning-fg))] text-[hsl(var(--status-warning-fg))] p-4 rounded-lg">
         Access denied. Admin privileges required.
       </div>
     );
@@ -68,11 +68,15 @@ export function CommonAreasPage() {
   const getLotIcon = (lotType: string) => {
     switch (lotType) {
       case "community":
-        return <Trees className="w-5 h-5 text-green-600" />;
+        return (
+          <Trees className="w-5 h-5 text-[hsl(var(--status-success-fg))]" />
+        );
       case "utility":
         return <Building2 className="w-5 h-5 text-muted-foreground" />;
       case "open_space":
-        return <Droplets className="w-5 h-5 text-blue-600" />;
+        return (
+          <Droplets className="w-5 h-5 text-[hsl(var(--status-info-fg))]" />
+        );
       default:
         return <Trees className="w-5 h-5 text-muted-foreground" />;
     }
@@ -81,13 +85,13 @@ export function CommonAreasPage() {
   const getLotTypeBadge = (lotType: string) => {
     switch (lotType) {
       case "community":
-        return "bg-green-100 text-green-700";
+        return "bg-[hsl(var(--status-success-bg))] text-[hsl(var(--status-success-fg))]";
       case "utility":
-        return "bg-gray-100 text-gray-700";
+        return "bg-muted text-muted-foreground";
       case "open_space":
-        return "bg-blue-100 text-blue-700";
+        return "bg-[hsl(var(--status-info-bg))] text-[hsl(var(--status-info-fg))]";
       default:
-        return "bg-gray-100 text-gray-700";
+        return "bg-muted text-muted-foreground";
     }
   };
 
@@ -109,112 +113,115 @@ export function CommonAreasPage() {
 
       <div className="bg-card rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-border">
-            <thead className="bg-muted">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                  Location
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                  Label
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                  Description
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-card divide-y divide-border">
-              {lots.map((lot) => (
-                <tr key={lot.lot_id}>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      {getLotIcon(lot.lot_type)}
-                      <div>
-                        <div className="text-sm font-medium text-card-foreground">
-                          {lot.address}
-                        </div>
-                        {lot.block && lot.lot && (
-                          <div className="text-xs text-muted-foreground">
-                            Block {lot.block}, Lot {lot.lot}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${getLotTypeBadge(
-                        lot.lot_type,
-                      )}`}
-                    >
-                      {lot.lot_type.charAt(0).toUpperCase() +
-                        lot.lot_type.slice(1)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">
-                    {lot.lot_label || (
-                      <span className="text-muted-foreground italic">
-                        Not labeled
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">
-                    {lot.lot_description || (
-                      <span className="text-muted-foreground italic">
-                        No description
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setEditingLot(lot);
-                        setEditDialogOpen(true);
-                      }}
-                    >
-                      <Pencil className="h-3 w-3 mr-1" />
-                      Edit
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-              {lots.length === 0 && (
+          <div className="min-w-[700px]">
+            <table className="w-full divide-y divide-border">
+              <thead className="bg-muted">
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
-                    <div className="flex flex-col items-center">
-                      <Trees className="w-12 h-12 text-muted-foreground mb-3" />
-                      <p className="text-sm text-muted-foreground">
-                        No common areas found
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Community, utility, and open space lots will appear here
-                      </p>
-                    </div>
-                  </td>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Location
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Type
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Label
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Description
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
+                    Actions
+                  </th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-card divide-y divide-border">
+                {lots.map((lot) => (
+                  <tr key={lot.lot_id}>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        {getLotIcon(lot.lot_type)}
+                        <div>
+                          <div className="text-sm font-medium text-card-foreground">
+                            {lot.address}
+                          </div>
+                          {lot.block && lot.lot && (
+                            <div className="text-xs text-muted-foreground">
+                              Block {lot.block}, Lot {lot.lot}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`px-2 py-1 text-xs font-medium rounded-full ${getLotTypeBadge(
+                          lot.lot_type,
+                        )}`}
+                      >
+                        {lot.lot_type.charAt(0).toUpperCase() +
+                          lot.lot_type.slice(1)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                      {lot.lot_label || (
+                        <span className="text-muted-foreground italic">
+                          Not labeled
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                      {lot.lot_description || (
+                        <span className="text-muted-foreground italic">
+                          No description
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setEditingLot(lot);
+                          setEditDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-3 w-3 mr-1" />
+                        Edit
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+                {lots.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center">
+                        <Trees className="w-12 h-12 text-muted-foreground mb-3" />
+                        <p className="text-sm text-muted-foreground">
+                          No common areas found
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Community, utility, and open space lots will appear
+                          here
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       {/* Info Card */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+      <div className="bg-[hsl(var(--status-info-bg))] border border-[hsl(var(--status-info-fg))] rounded-lg p-6">
         <div className="flex items-start gap-3">
-          <Trees className="w-6 h-6 text-blue-600 mt-0.5" />
+          <Trees className="w-6 h-6 text-[hsl(var(--status-info-fg))] mt-0.5" />
           <div className="flex-1">
-            <h3 className="text-sm font-semibold text-blue-900">
+            <h3 className="text-sm font-semibold text-[hsl(var(--status-info-fg))]">
               About Common Areas
             </h3>
-            <p className="text-sm text-blue-700 mt-1">
+            <p className="text-sm text-[hsl(var(--status-info-fg))] mt-1">
               Common areas are HOA-owned properties such as parks, utilities,
               and open spaces. These lots don't pay dues and don't have voting
               rights. Use the Lot Management page to assign labels and
