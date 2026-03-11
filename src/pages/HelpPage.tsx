@@ -8,6 +8,8 @@ import {
   Home,
   Settings,
   HelpCircle,
+  Shield,
+  Search,
 } from "lucide-react";
 
 const helpSections = [
@@ -18,6 +20,7 @@ const helpSections = [
       { title: "Logging In", href: "#logging-in" },
       { title: "Dashboard Overview", href: "#dashboard-overview" },
       { title: "Navigation", href: "#navigation" },
+      { title: "Global Search", href: "#global-search" },
     ],
   },
   {
@@ -48,6 +51,16 @@ const helpSections = [
       { title: "Pass Management", href: "#pass-management" },
       { title: "User Management", href: "#user-management" },
       { title: "Sending Notifications", href: "#sending-notifications" },
+      { title: "Audit Logs", href: "#audit-logs" },
+    ],
+  },
+  {
+    title: "Security & Privacy",
+    icon: Shield,
+    items: [
+      { title: "Rate Limiting", href: "#rate-limiting" },
+      { title: "Audit Logging", href: "#audit-logging" },
+      { title: "Data Protection", href: "#data-protection" },
     ],
   },
 ];
@@ -110,6 +123,23 @@ const faqItems = [
       {
         q: "What if I need to cancel my reservation?",
         a: 'Go to Reservations, find your booking, and click "Cancel." Cancellations must be 24 hours before the booking time.',
+      },
+    ],
+  },
+  {
+    category: "Security & Privacy",
+    questions: [
+      {
+        q: "Is my personal information secure?",
+        a: "Yes. We use JWT authentication, password hashing, role-based access control, and all data is transmitted over HTTPS. Audit logs track all access to sensitive data.",
+      },
+      {
+        q: "Why am I seeing 'Too Many Requests' error?",
+        a: "This happens when you exceed the rate limit for API requests (e.g., 30 searches per minute). Wait a minute and try again. This protects against abuse.",
+      },
+      {
+        q: "Can other residents see my information?",
+        a: "No. Residents can only view their own lots, payments, and requests. Admins can view all records for management purposes, and all access is logged.",
       },
     ],
   },
@@ -300,6 +330,69 @@ export function HelpPage() {
                   </div>
                 </div>
               </div>
+
+              <div id="global-search" className="scroll-mt-8">
+                <h3 className="text-xl font-semibold text-card-foreground mb-3 flex items-center gap-2">
+                  <Search className="w-5 h-5" />
+                  Global Search
+                </h3>
+                <p className="text-muted-foreground mb-3">
+                  The powerful search feature helps you quickly find anything in
+                  the system:
+                </p>
+                <div className="bg-muted/50 dark:bg-muted/10 rounded-lg p-4 border border-border space-y-3">
+                  <div>
+                    <h4 className="font-medium text-card-foreground mb-2">
+                      What You Can Search
+                    </h4>
+                    <ul className="space-y-1 text-sm text-muted-foreground">
+                      <li>
+                        • <strong>Lots</strong> - Search by lot number, block,
+                        or owner name
+                      </li>
+                      <li>
+                        • <strong>Users</strong> - Find residents by name,
+                        email, or phone
+                      </li>
+                      <li>
+                        • <strong>Households</strong> - Locate households by
+                        address or owner
+                      </li>
+                      <li>
+                        • <strong>Service Requests</strong> - Find requests by
+                        ID or description
+                      </li>
+                      <li>
+                        • <strong>Payments</strong> - Search payment records and
+                        transactions
+                      </li>
+                      <li>
+                        • <strong>Reservations</strong> - Look up bookings by
+                        facility or date
+                      </li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-card-foreground mb-2">
+                      Search Tips
+                    </h4>
+                    <ul className="space-y-1 text-sm text-muted-foreground">
+                      <li>
+                        • Results are limited to 10 items per category for
+                        faster browsing
+                      </li>
+                      <li>
+                        • Use partial matches - typing "john" finds "Johnson"
+                        too
+                      </li>
+                      <li>
+                        • Admin users can search all records; residents see only
+                        their own data
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -407,6 +500,170 @@ export function HelpPage() {
                 description="Approve vehicle pass and employee ID applications"
                 icon={BookOpen}
               />
+              <FeatureCard
+                title="User Management"
+                description="Manage user accounts, roles, and household associations"
+                icon={Users}
+              />
+              <FeatureCard
+                title="Audit Logs"
+                description="View comprehensive security audit trail of all system activities"
+                icon={Shield}
+              />
+            </div>
+
+            <div id="audit-logs" className="scroll-mt-8 mt-6">
+              <h3 className="text-xl font-semibold text-card-foreground mb-3 flex items-center gap-2">
+                <Shield className="w-5 h-5" />
+                Audit Logs
+              </h3>
+              <p className="text-muted-foreground mb-3">
+                Admins can view comprehensive audit logs tracking all
+                security-relevant events in the system.
+              </p>
+              <div className="bg-muted/50 dark:bg-muted/10 rounded-lg p-4 border border-border">
+                <h4 className="font-medium text-card-foreground mb-2">
+                  Tracked Events Include:
+                </h4>
+                <ul className="space-y-1 text-sm text-muted-foreground">
+                  <li>• User login attempts (success and failure)</li>
+                  <li>• Data export and search operations</li>
+                  <li>• Payment approvals and rejections</li>
+                  <li>• User and household modifications</li>
+                  <li>• Pass and ID approvals</li>
+                  <li>• Configuration changes</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          {/* Security & Privacy */}
+          <section id="security--privacy" className="scroll-mt-8">
+            <h2 className="text-2xl font-bold text-card-foreground mb-4 flex items-center gap-2">
+              <Shield className="w-6 h-6" />
+              Security & Privacy
+            </h2>
+
+            <div className="space-y-6">
+              <div id="rate-limiting" className="scroll-mt-8">
+                <h3 className="text-xl font-semibold text-card-foreground mb-3">
+                  Rate Limiting
+                </h3>
+                <p className="text-muted-foreground mb-3">
+                  To protect against abuse and ensure fair usage, the system
+                  implements rate limiting on all API endpoints:
+                </p>
+                <div className="bg-muted/50 dark:bg-muted/10 rounded-lg p-4 border border-border">
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li>
+                      <strong>Search:</strong> 30 requests per minute
+                    </li>
+                    <li>
+                      <strong>Admin endpoints:</strong> 100 requests per minute
+                    </li>
+                    <li>
+                      <strong>Authentication:</strong> 10 requests per minute
+                    </li>
+                    <li>
+                      <strong>General:</strong> 200 requests per minute
+                    </li>
+                  </ul>
+                  <p className="text-xs text-muted-foreground mt-3">
+                    Exceeding these limits will return a 429 (Too Many Requests)
+                    error. Limits reset automatically after the time window
+                    expires.
+                  </p>
+                </div>
+              </div>
+
+              <div id="audit-logging" className="scroll-mt-8">
+                <h3 className="text-xl font-semibold text-card-foreground mb-3">
+                  Audit Logging
+                </h3>
+                <p className="text-muted-foreground mb-3">
+                  All security-relevant actions are logged for accountability
+                  and monitoring:
+                </p>
+                <div className="bg-muted/50 dark:bg-muted/10 rounded-lg p-4 border border-border space-y-2">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <span className="text-card-foreground font-medium">
+                      Logged Information:
+                    </span>
+                    <span className="text-muted-foreground">
+                      User ID, timestamp, action type
+                    </span>
+                    <span className="text-card-foreground font-medium">
+                      Resource Tracking:
+                    </span>
+                    <span className="text-muted-foreground">
+                      What data was accessed
+                    </span>
+                    <span className="text-card-foreground font-medium">
+                      Security Events:
+                    </span>
+                    <span className="text-muted-foreground">
+                      Failed logins, unauthorized access
+                    </span>
+                    <span className="text-card-foreground font-medium">
+                      IP Address:
+                    </span>
+                    <span className="text-muted-foreground">
+                      Request origin tracking
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div id="data-protection" className="scroll-mt-8">
+                <h3 className="text-xl font-semibold text-card-foreground mb-3">
+                  Data Protection
+                </h3>
+                <p className="text-muted-foreground mb-3">
+                  The system implements multiple layers of data protection:
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                    <h4 className="font-semibold text-card-foreground mb-2">
+                      Authentication
+                    </h4>
+                    <ul className="space-y-1 text-sm text-muted-foreground">
+                      <li>• JWT-based secure sessions</li>
+                      <li>• Google OAuth integration</li>
+                      <li>• Password hashing</li>
+                    </ul>
+                  </div>
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                    <h4 className="font-semibold text-card-foreground mb-2">
+                      Authorization
+                    </h4>
+                    <ul className="space-y-1 text-sm text-muted-foreground">
+                      <li>• Role-based access control</li>
+                      <li>• Household ownership verification</li>
+                      <li>• Admin-only protected routes</li>
+                    </ul>
+                  </div>
+                  <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                    <h4 className="font-semibold text-card-foreground mb-2">
+                      Input Sanitization
+                    </h4>
+                    <ul className="space-y-1 text-sm text-muted-foreground">
+                      <li>• SQL injection prevention</li>
+                      <li>• XSS protection</li>
+                      <li>• Error message sanitization</li>
+                    </ul>
+                  </div>
+                  <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4 border border-orange-200 dark:border-orange-800">
+                    <h4 className="font-semibold text-card-foreground mb-2">
+                      Privacy Controls
+                    </h4>
+                    <ul className="space-y-1 text-sm text-muted-foreground">
+                      <li>• Residents see only their data</li>
+                      <li>• Search result pagination</li>
+                      <li>• No sensitive data in logs</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 
