@@ -1,15 +1,12 @@
 import {
   Home,
   Map,
-  Calendar,
   CreditCard,
   Megaphone,
   FileText,
   Wrench,
-  CarFront,
   Settings,
   MessageSquare,
-  Bell,
   Building2,
   type LucideIcon,
 } from "lucide-react";
@@ -32,16 +29,21 @@ export const navItems: NavItem[] = [
     roles: ["admin", "resident", "staff"],
   },
   {
-    to: "/my-lots",
+    label: "My Property",
     icon: Building2,
-    label: "My Lots",
     roles: ["admin", "resident"],
-  },
-  {
-    to: "/map",
-    icon: Map,
-    label: "Map",
-    roles: ["admin", "resident", "staff"],
+    children: [
+      {
+        to: "/my-lots",
+        label: "My Lots",
+        roles: ["admin", "resident"],
+      },
+      {
+        to: "/map",
+        label: "Map",
+        roles: ["admin", "resident", "staff"],
+      },
+    ],
   },
   {
     label: "Community",
@@ -66,9 +68,66 @@ export const navItems: NavItem[] = [
     ],
   },
   {
+    label: "Services",
+    icon: Wrench,
+    roles: ["admin", "resident", "staff", "guest"],
+    children: [
+      {
+        to: "/reservations",
+        label: "Reservations",
+        roles: ["admin", "resident", "guest"],
+      },
+      {
+        to: "/service-requests",
+        label: "Service Requests",
+        roles: ["admin", "resident", "staff"],
+      },
+      {
+        label: "Passes & IDs",
+        to: "/passes",
+        roles: ["admin", "resident"],
+        children: [
+          {
+            to: "/passes",
+            label: "Vehicle Passes",
+            roles: ["admin", "resident"],
+          },
+          {
+            to: "/passes?type=employee",
+            label: "Employee IDs",
+            roles: ["admin"],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    to: "/payments",
+    icon: CreditCard,
+    label: "Payments",
+    roles: ["admin", "resident"],
+  },
+  {
+    label: "Communications",
+    icon: MessageSquare,
+    roles: ["admin", "resident", "staff"],
+    children: [
+      {
+        to: "/messages",
+        label: "Messages",
+        roles: ["admin", "resident", "staff"],
+      },
+      {
+        to: "/notifications",
+        label: "Notifications",
+        roles: ["admin", "resident", "staff"],
+      },
+    ],
+  },
+  {
     label: "Resources",
     icon: FileText,
-    roles: ["admin", "resident", "staff"],
+    roles: ["admin", "resident", "staff", "guest"],
     children: [
       {
         to: "/documents",
@@ -83,69 +142,10 @@ export const navItems: NavItem[] = [
     ],
   },
   {
-    to: "/reservations",
-    icon: Calendar,
-    label: "Reservations",
-    roles: ["admin", "resident", "guest"],
-  },
-  {
-    label: "Payments",
-    icon: CreditCard,
-    roles: ["admin", "resident"],
-    children: [
-      { to: "/payments", label: "My Payments", roles: ["admin", "resident"] },
-      {
-        to: "/payments?action=new",
-        label: "Make Payment",
-        roles: ["admin", "resident"],
-      },
-    ],
-  },
-  {
-    label: "Passes & IDs",
-    icon: CarFront,
-    roles: ["admin", "resident"],
-    children: [
-      {
-        to: "/passes",
-        label: "Vehicle Passes",
-        roles: ["admin", "resident"],
-      },
-      {
-        to: "/passes?type=employee",
-        label: "Employee IDs",
-        roles: ["admin"],
-      },
-    ],
-  },
-  {
-    label: "Services",
-    icon: Wrench,
-    roles: ["admin", "resident", "staff"],
-    children: [
-      {
-        to: "/service-requests",
-        label: "Service Requests",
-        roles: ["admin", "resident", "staff"],
-      },
-      {
-        to: "/admin/common-areas",
-        label: "Common Areas",
-        roles: ["admin"],
-      },
-    ],
-  },
-  {
-    to: "/messages",
-    icon: MessageSquare,
-    label: "Messages",
-    roles: ["admin", "resident", "staff"],
-  },
-  {
-    to: "/notifications",
-    icon: Bell,
-    label: "Notifications",
-    roles: ["admin", "resident", "staff"],
+    to: "/account",
+    icon: Settings,
+    label: "Account",
+    roles: ["admin", "resident", "staff", "guest"],
   },
   {
     to: "/admin",
