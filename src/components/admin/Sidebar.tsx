@@ -42,7 +42,7 @@ const navItems: NavItem[] = [
       },
       { title: "Pre-Approved", href: "/admin/pre-approved", icon: Users },
       {
-        title: "Member Approvals",
+        title: "Household Approvals",
         href: "/admin/member-approvals",
         icon: CheckCircle,
       },
@@ -225,10 +225,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                           {item.title}
                         </span>
                         {expandedSections.has(item.title) ? (
-                          <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                          <ChevronDown
+                            className="mr-1 h-4 w-4"
+                            aria-hidden="true"
+                          />
                         ) : (
                           <ChevronRight
-                            className="h-4 w-4"
+                            className="mr-1 h-4 w-4"
                             aria-hidden="true"
                           />
                         )}
@@ -266,7 +269,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                                 {child.badge !== undefined &&
                                   child.badge > 0 && (
                                     <span
-                                      className="ml-auto rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground"
+                                      className="ml-auto mr-1 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground"
                                       aria-label={`${child.badge} items`}
                                     >
                                       {child.badge}
@@ -298,7 +301,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                       {item.title}
                       {item.badge !== undefined && item.badge > 0 && (
                         <span
-                          className="ml-auto rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground"
+                          className="ml-auto mr-1 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground"
                           aria-label={`${item.badge} items`}
                         >
                           {item.badge}

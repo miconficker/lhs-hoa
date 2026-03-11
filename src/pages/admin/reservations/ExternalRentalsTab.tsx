@@ -498,138 +498,145 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
       ) : (
         <div className="rounded-lg border bg-card">
           <div className="overflow-x-auto">
-            <table className="w-full" role="table">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Date & Time
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Amenity
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Renter
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Amount
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {rentals
-                  .sort(
-                    (a, b) =>
-                      new Date(b.date).getTime() - new Date(a.date).getTime(),
-                  )
-                  .map((rental) => (
-                    <tr key={rental.id} className="border-b hover:bg-muted/30">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
+            <div className="min-w-[1000px]">
+              <table className="w-full" role="table">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Date & Time
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Amenity
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Renter
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Amount
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rentals
+                    .sort(
+                      (a, b) =>
+                        new Date(b.date).getTime() - new Date(a.date).getTime(),
+                    )
+                    .map((rental) => (
+                      <tr
+                        key={rental.id}
+                        className="border-b hover:bg-muted/30"
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">
+                                {new Date(rental.date).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    weekday: "short",
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  },
+                                )}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {slotLabels[rental.slot]}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant="outline">
+                            {amenityLabels[rental.amenity_type]}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">
                           <div>
                             <p className="text-sm font-medium">
-                              {new Date(rental.date).toLocaleDateString(
-                                "en-US",
-                                {
-                                  weekday: "short",
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                },
-                              )}
+                              {rental.renter_name}
                             </p>
-                            <p className="text-xs text-muted-foreground">
-                              {slotLabels[rental.slot]}
-                            </p>
+                            {rental.renter_contact && (
+                              <p className="text-xs text-muted-foreground">
+                                {rental.renter_contact}
+                              </p>
+                            )}
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant="outline">
-                          {amenityLabels[rental.amenity_type]}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div>
-                          <p className="text-sm font-medium">
-                            {rental.renter_name}
-                          </p>
-                          {rental.renter_contact && (
-                            <p className="text-xs text-muted-foreground">
-                              {rental.renter_contact}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div>
+                            <p className="text-sm font-medium">
+                              ₱{rental.amount.toFixed(2)}
                             </p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div>
-                          <p className="text-sm font-medium">
-                            ₱{rental.amount.toFixed(2)}
-                          </p>
-                          {rental.amount_paid > 0 && (
-                            <p className="text-xs text-muted-foreground">
-                              Paid: ₱{rental.amount_paid.toFixed(2)}
-                            </p>
-                          )}
-                          {rental.amount - rental.amount_paid > 0 && (
-                            <p className="text-xs text-destructive">
-                              Balance: ₱
-                              {(rental.amount - rental.amount_paid).toFixed(2)}
-                            </p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge
-                          variant={
-                            paymentStatusBadgeVariant[rental.payment_status]
-                          }
-                        >
-                          {paymentStatusLabels[rental.payment_status]}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-2">
-                          {(rental.payment_status === "unpaid" ||
-                            rental.payment_status === "partial") && (
+                            {rental.amount_paid > 0 && (
+                              <p className="text-xs text-muted-foreground">
+                                Paid: ₱{rental.amount_paid.toFixed(2)}
+                              </p>
+                            )}
+                            {rental.amount - rental.amount_paid > 0 && (
+                              <p className="text-xs text-destructive">
+                                Balance: ₱
+                                {(rental.amount - rental.amount_paid).toFixed(
+                                  2,
+                                )}
+                              </p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge
+                            variant={
+                              paymentStatusBadgeVariant[rental.payment_status]
+                            }
+                          >
+                            {paymentStatusLabels[rental.payment_status]}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-2">
+                            {(rental.payment_status === "unpaid" ||
+                              rental.payment_status === "partial") && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => openPaymentDialog(rental)}
+                                title="Record payment"
+                              >
+                                <Receipt className="h-4 w-4 text-green-500" />
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => openPaymentDialog(rental)}
-                              title="Record payment"
+                              onClick={() => openEditDialog(rental)}
+                              aria-label="Edit rental"
                             >
-                              <Receipt className="h-4 w-4 text-green-500" />
+                              <Pencil className="h-4 w-4" />
                             </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => openEditDialog(rental)}
-                            aria-label="Edit rental"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDelete(rental.id)}
-                            disabled={isDeleting === rental.id}
-                            aria-label="Delete rental"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDelete(rental.id)}
+                              disabled={isDeleting === rental.id}
+                              aria-label="Delete rental"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

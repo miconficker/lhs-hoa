@@ -566,196 +566,199 @@ export function BookingsTab({ amenityTypes }: BookingsTabProps) {
       ) : (
         <div className="rounded-lg border bg-card">
           <div className="overflow-x-auto">
-            <table className="w-full" role="table">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Date & Time
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Amenity
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Resident
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Purpose
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Amount
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredReservations.map((reservation) => (
-                  <tr
-                    key={reservation.id}
-                    className="border-b hover:bg-muted/30"
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-sm font-medium">
-                            {new Date(reservation.date).toLocaleDateString(
-                              "en-US",
-                              {
-                                weekday: "short",
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                              },
-                            )}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {slotLabels[reservation.slot]}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm">
-                        {amenityLabels[reservation.amenity_type]}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Home className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">
-                          {reservation.household_address || "Unknown"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm text-muted-foreground">
-                        {reservation.purpose || "-"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div>
-                        {(reservation.amount || 0) > 0 ? (
-                          <>
+            <div className="min-w-[1000px]">
+              <table className="w-full" role="table">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Date & Time
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Amenity
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Resident
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Purpose
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Amount
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredReservations.map((reservation) => (
+                    <tr
+                      key={reservation.id}
+                      className="border-b hover:bg-muted/30"
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <div>
                             <p className="text-sm font-medium">
-                              ₱{(reservation.amount || 0).toFixed(0)}
-                            </p>
-                            {reservation.amount_paid &&
-                              reservation.amount_paid > 0 && (
-                                <>
-                                  <p className="text-xs text-muted-foreground">
-                                    Paid: ₱{reservation.amount_paid.toFixed(0)}
-                                  </p>
-                                  {(reservation.amount || 0) -
-                                    reservation.amount_paid >
-                                    0 && (
-                                    <p className="text-xs text-destructive">
-                                      Balance: ₱
-                                      {(
-                                        (reservation.amount || 0) -
-                                        reservation.amount_paid
-                                      ).toFixed(0)}
-                                    </p>
-                                  )}
-                                </>
-                              )}
-                            {reservation.payment_status && (
-                              <Badge
-                                variant={
-                                  paymentStatusBadgeVariant[
-                                    reservation.payment_status
-                                  ]
-                                }
-                                className="mt-1"
-                              >
+                              {new Date(reservation.date).toLocaleDateString(
+                                "en-US",
                                 {
-                                  paymentStatusLabels[
-                                    reservation.payment_status
-                                  ]
-                                }
-                              </Badge>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            -
+                                  weekday: "short",
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                },
+                              )}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {slotLabels[reservation.slot]}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm">
+                          {amenityLabels[reservation.amenity_type]}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Home className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">
+                            {reservation.household_address || "Unknown"}
                           </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge variant={statusBadgeVariant[reservation.status]}>
-                        {statusLabels[reservation.status]}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        {reservation.status === "confirmed" &&
-                          (reservation.amount || 0) > 0 &&
-                          (!reservation.payment_status ||
-                            reservation.payment_status === "unpaid" ||
-                            reservation.payment_status === "partial") && (
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-muted-foreground">
+                          {reservation.purpose || "-"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div>
+                          {(reservation.amount || 0) > 0 ? (
+                            <>
+                              <p className="text-sm font-medium">
+                                ₱{(reservation.amount || 0).toFixed(0)}
+                              </p>
+                              {reservation.amount_paid &&
+                                reservation.amount_paid > 0 && (
+                                  <>
+                                    <p className="text-xs text-muted-foreground">
+                                      Paid: ₱
+                                      {reservation.amount_paid.toFixed(0)}
+                                    </p>
+                                    {(reservation.amount || 0) -
+                                      reservation.amount_paid >
+                                      0 && (
+                                      <p className="text-xs text-destructive">
+                                        Balance: ₱
+                                        {(
+                                          (reservation.amount || 0) -
+                                          reservation.amount_paid
+                                        ).toFixed(0)}
+                                      </p>
+                                    )}
+                                  </>
+                                )}
+                              {reservation.payment_status && (
+                                <Badge
+                                  variant={
+                                    paymentStatusBadgeVariant[
+                                      reservation.payment_status
+                                    ]
+                                  }
+                                  className="mt-1"
+                                >
+                                  {
+                                    paymentStatusLabels[
+                                      reservation.payment_status
+                                    ]
+                                  }
+                                </Badge>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              -
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant={statusBadgeVariant[reservation.status]}>
+                          {statusLabels[reservation.status]}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          {reservation.status === "confirmed" &&
+                            (reservation.amount || 0) > 0 &&
+                            (!reservation.payment_status ||
+                              reservation.payment_status === "unpaid" ||
+                              reservation.payment_status === "partial") && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => openPaymentDialog(reservation)}
+                                title="Record payment"
+                              >
+                                <Receipt className="h-4 w-4 text-green-500" />
+                              </Button>
+                            )}
+                          {reservation.status === "pending" && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() =>
+                                  updateReservationStatus(
+                                    reservation.id,
+                                    "confirmed",
+                                  )
+                                }
+                                disabled={isProcessing === reservation.id}
+                                aria-label="Approve reservation"
+                              >
+                                <Check className="h-4 w-4 text-green-500" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() =>
+                                  updateReservationStatus(
+                                    reservation.id,
+                                    "cancelled",
+                                  )
+                                }
+                                disabled={isProcessing === reservation.id}
+                                aria-label="Decline reservation"
+                              >
+                                <X className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </>
+                          )}
+                          {reservation.status === "cancelled" && (
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => openPaymentDialog(reservation)}
-                              title="Record payment"
+                              onClick={() => openDeleteDialog(reservation)}
+                              title="Delete reservation"
                             >
-                              <Receipt className="h-4 w-4 text-green-500" />
+                              <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                             </Button>
                           )}
-                        {reservation.status === "pending" && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() =>
-                                updateReservationStatus(
-                                  reservation.id,
-                                  "confirmed",
-                                )
-                              }
-                              disabled={isProcessing === reservation.id}
-                              aria-label="Approve reservation"
-                            >
-                              <Check className="h-4 w-4 text-green-500" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() =>
-                                updateReservationStatus(
-                                  reservation.id,
-                                  "cancelled",
-                                )
-                              }
-                              disabled={isProcessing === reservation.id}
-                              aria-label="Decline reservation"
-                            >
-                              <X className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </>
-                        )}
-                        {reservation.status === "cancelled" && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => openDeleteDialog(reservation)}
-                            title="Delete reservation"
-                          >
-                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

@@ -252,79 +252,81 @@ export function UsersTab() {
       ) : (
         <div className="rounded-lg border bg-card">
           <div className="overflow-x-auto">
-            <table className="w-full" role="table">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Email
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Name
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Role
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Phone
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} className="border-b hover:bg-muted/30">
-                    <td className="px-4 py-3">
-                      <span className="text-sm">{user.email}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm">
-                        {user.first_name || user.last_name
-                          ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
-                          : "-"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        variant={
-                          user.role === "admin"
-                            ? "default"
-                            : user.role === "staff"
-                              ? "secondary"
-                              : "outline"
-                        }
-                      >
-                        {user.role}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm">{user.phone || "-"}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => openEditDialog(user)}
-                          aria-label="Edit user"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => openDeleteDialog(user)}
-                          aria-label="Delete user"
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </td>
+            <div className="min-w-[900px]">
+              <table className="w-full" role="table">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Email
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Name
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Role
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Phone
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {users.map((user) => (
+                    <tr key={user.id} className="border-b hover:bg-muted/30">
+                      <td className="px-4 py-3">
+                        <span className="text-sm">{user.email}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm">
+                          {user.first_name || user.last_name
+                            ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
+                            : "-"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge
+                          variant={
+                            user.role === "admin"
+                              ? "default"
+                              : user.role === "staff"
+                                ? "secondary"
+                                : "outline"
+                          }
+                        >
+                          {user.role}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm">{user.phone || "-"}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openEditDialog(user)}
+                            aria-label="Edit user"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openDeleteDialog(user)}
+                            aria-label="Delete user"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

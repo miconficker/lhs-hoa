@@ -252,93 +252,95 @@ export function TimeBlocksTab({ amenityTypes }: TimeBlocksTabProps) {
       ) : (
         <div className="rounded-lg border bg-card">
           <div className="overflow-x-auto">
-            <table className="w-full" role="table">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Date & Time
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Amenity
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Reason
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                    Created
-                  </th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {timeBlocks
-                  .sort(
-                    (a, b) =>
-                      new Date(a.date).getTime() - new Date(b.date).getTime(),
-                  )
-                  .map((block) => (
-                    <tr key={block.id} className="border-b hover:bg-muted/30">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-sm font-medium">
-                              {new Date(block.date).toLocaleDateString(
-                                "en-US",
-                                {
-                                  weekday: "short",
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                },
-                              )}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {slotLabels[block.slot]}
-                            </p>
+            <div className="min-w-[800px]">
+              <table className="w-full" role="table">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Date & Time
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Amenity
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Reason
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                      Created
+                    </th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {timeBlocks
+                    .sort(
+                      (a, b) =>
+                        new Date(a.date).getTime() - new Date(b.date).getTime(),
+                    )
+                    .map((block) => (
+                      <tr key={block.id} className="border-b hover:bg-muted/30">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm font-medium">
+                                {new Date(block.date).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    weekday: "short",
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  },
+                                )}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {slotLabels[block.slot]}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant="outline">
-                          {amenityLabels[block.amenity_type]}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm">{block.reason}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(block.created_at).toLocaleDateString()}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => openEditDialog(block)}
-                            aria-label="Edit time block"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDelete(block.id)}
-                            disabled={isDeleting === block.id}
-                            aria-label="Delete time block"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant="outline">
+                            {amenityLabels[block.amenity_type]}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm">{block.reason}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(block.created_at).toLocaleDateString()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => openEditDialog(block)}
+                              aria-label="Edit time block"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDelete(block.id)}
+                              disabled={isDeleting === block.id}
+                              aria-label="Delete time block"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
