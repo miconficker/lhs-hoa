@@ -21,6 +21,7 @@ import { adminRouter } from './routes/admin';
 import { notificationsRouter } from './routes/notifications';
 import { passManagementRouter } from './routes/pass-management';
 import { lotMembersRouter, adminLotMembersRouter } from './routes/lot-members';
+import { publicRouter } from './routes/public';
 
 type Env = {
   DB: D1Database;
@@ -147,6 +148,7 @@ app.route('/api/polls', pollsRouter);
 app.route('/api/documents', documentsRouter);
 app.route('/api/notifications', notificationsRouter);
 app.route('/api/admin', adminRouter);
+app.route('/api/public', publicRouter);
 app.route('/api/lot-members', lotMembersRouter);
 app.route('/api/admin/lot-members', adminLotMembersRouter);
 app.route('/api/pass-requests', passManagementRouter);
