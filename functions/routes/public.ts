@@ -61,35 +61,50 @@ publicRouter.get('/availability/:amenityType', async (c) => {
   const startDate = c.req.query('start') || new Date().toISOString().split('T')[0];
   const endDate = c.req.query('end') || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-  // Get blocked dates (confirmed bookings only)
-  const blockedDates = await c.env.DB.prepare(
-    `SELECT booking_date, slot FROM booking_blocked_dates
-     WHERE amenity_type = ? AND booking_date BETWEEN ? AND ?`
-  ).bind(amenityType, startDate, endDate).all();
+  const blockedSet = new Set<string>();
 
-  const blockedSet = new Set(
-    (blockedDates.results || []).map((d: any) => `${d.booking_date}-${d.slot}`)
-  );
+  // Get blocked dates (confirmed bookings only) - handle missing table gracefully
+  try {
+    const blockedDates = await c.env.DB.prepare(
+      `SELECT booking_date, slot FROM booking_blocked_dates
+       WHERE amenity_type = ? AND booking_date BETWEEN ? AND ?`
+    ).bind(amenityType, startDate, endDate).all();
 
-  // Check resident reservations
-  const residentBlocked = await c.env.DB.prepare(
-    `SELECT date, slot FROM reservations
-     WHERE amenity_type = ? AND date BETWEEN ? AND ?
-     AND status != 'cancelled'`
-  ).bind(amenityType, startDate, endDate).all();
-
-  for (const r of (residentBlocked.results || [])) {
-    blockedSet.add(`${r.date}-${r.slot}`);
+    for (const d of (blockedDates.results || [])) {
+      blockedSet.add(`${d.booking_date}-${d.slot}`);
+    }
+  } catch (e) {
+    // Table might not exist yet - continue with empty blocked set
+    console.warn('booking_blocked_dates table not available:', e);
   }
 
-  // Check time blocks
-  const timeBlocked = await c.env.DB.prepare(
-    `SELECT date, slot FROM time_blocks
-     WHERE amenity_type = ? AND date BETWEEN ? AND ?`
-  ).bind(amenityType, startDate, endDate).all();
+  // Check resident reservations - handle missing table gracefully
+  try {
+    const residentBlocked = await c.env.DB.prepare(
+      `SELECT date, slot FROM reservations
+       WHERE amenity_type = ? AND date BETWEEN ? AND ?
+       AND status != 'cancelled'`
+    ).bind(amenityType, startDate, endDate).all();
 
-  for (const t of (timeBlocked.results || [])) {
-    blockedSet.add(`${t.date}-${t.slot}`);
+    for (const r of (residentBlocked.results || [])) {
+      blockedSet.add(`${r.date}-${r.slot}`);
+    }
+  } catch (e) {
+    console.warn('reservations table not available:', e);
+  }
+
+  // Check time blocks - handle missing table gracefully
+  try {
+    const timeBlocked = await c.env.DB.prepare(
+      `SELECT date, slot FROM time_blocks
+       WHERE amenity_type = ? AND date BETWEEN ? AND ?`
+    ).bind(amenityType, startDate, endDate).all();
+
+    for (const t of (timeBlocked.results || [])) {
+      blockedSet.add(`${t.date}-${t.slot}`);
+    }
+  } catch (e) {
+    console.warn('time_blocks table not available:', e);
   }
 
   // Generate available dates

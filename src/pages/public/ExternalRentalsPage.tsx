@@ -136,12 +136,6 @@ export function ExternalRentalsPage() {
               <li>Upload proof of payment</li>
               <li>We'll verify and confirm your booking within 24-48 hours</li>
             </ol>
-            <div className="mt-4 pt-4 border-t">
-              <p className="text-sm font-medium">Residents get 50% off!</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Log in to your account to avail the resident discount.
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>
