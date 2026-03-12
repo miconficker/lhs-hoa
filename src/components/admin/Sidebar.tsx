@@ -106,6 +106,11 @@ const navItems: NavItem[] = [
         icon: DollarSign,
       },
       {
+        title: "Delinquency Management",
+        href: "/admin/financials/delinquency",
+        icon: DollarSign,
+      },
+      {
         title: "Verification Queue",
         href: "/admin/verification-queue",
         icon: DollarSign,

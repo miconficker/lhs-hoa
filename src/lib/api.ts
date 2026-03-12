@@ -70,6 +70,14 @@ import type {
   CreateExternalRentalInput,
   RecordPaymentInput,
   UserRole,
+  ManualDelinquency,
+  DelinquentMember,
+  DelinquencySummary,
+  DelinquencyStatus,
+  DemandGenerationRequest,
+  DemandGenerationResponse,
+  MarkDelinquentRequest,
+  WaiveDelinquencyRequest,
 } from "@/types";
 
 import { logger } from "@/lib/logger";
@@ -1834,5 +1842,69 @@ export const api = {
           method: "DELETE",
         },
       ),
+  },
+
+  // Delinquency management
+  delinquency: {
+    // Admin: List all delinquents
+    getDelinquents: async (params?: {
+      type?: "all" | "automatic" | "manual";
+      year?: number;
+      search?: string;
+    }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.type && params.type !== "all")
+        queryParams.append("type", params.type);
+      if (params?.year) queryParams.append("year", params.year.toString());
+      if (params?.search) queryParams.append("search", params.search);
+
+      return apiRequest<{
+        delinquents: DelinquentMember[];
+        summary: DelinquencySummary;
+      }>(
+        `/admin/delinquency/members${queryParams.toString() ? "?" + queryParams.toString() : ""}`,
+      );
+    },
+
+    // Admin: Mark member as delinquent
+    markDelinquent: async (data: MarkDelinquentRequest) => {
+      return apiRequest<{ delinquency: ManualDelinquency }>(
+        "/admin/delinquency/mark",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        },
+      );
+    },
+
+    // Admin: Waive delinquency
+    waiveDelinquency: async (id: string, data: WaiveDelinquencyRequest) => {
+      return apiRequest<{ success: boolean }>(
+        `/admin/delinquency/waive/${id}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        },
+      );
+    },
+
+    // Admin: Generate payment demands
+    generateDemands: async (data: DemandGenerationRequest) => {
+      return apiRequest<DemandGenerationResponse>(
+        "/admin/delinquency/demands",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        },
+      );
+    },
+
+    // Get current user's delinquency status
+    getMyStatus: async () => {
+      return apiRequest<DelinquencyStatus>("/my-lots/delinquency-status");
+    },
   },
 };

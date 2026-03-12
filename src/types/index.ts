@@ -1078,3 +1078,74 @@ export interface CreateThreadResponse {
 export interface MessageResponse {
   message: Message;
 }
+
+// Delinquency Management
+export interface ManualDelinquency {
+  id: string;
+  lot_member_id: string;
+  is_active: boolean;
+  reason: string | null;
+  marked_by: string;
+  marked_at: string;
+  waived_by: string | null;
+  waived_at: string | null;
+  waiver_reason: string | null;
+}
+
+export interface DelinquentMember {
+  id?: string;
+  lot_member_id: string;
+  block: string;
+  lot: string;
+  lot_size_sqm: number;
+  member: {
+    user_id: string;
+    name: string;
+    email: string;
+  };
+  delinquency_type: "automatic" | "manual";
+  days_overdue: number | null;
+  amount_due: number;
+  unpaid_periods: string[];
+  marked_at?: string;
+  reason?: string;
+}
+
+export interface DelinquencySummary {
+  total: number;
+  manual: number;
+  automatic: number;
+  total_amount_due: number;
+}
+
+export interface DelinquencyStatus {
+  is_delinquent: boolean;
+  delinquency_type: "automatic" | "manual" | null;
+  voting_eligible: boolean;
+  voting_restored_at: string | null;
+  total_due: number;
+  unpaid_periods: string[];
+  reason?: string;
+  days_until_restore?: number;
+}
+
+export interface DemandGenerationRequest {
+  year: number;
+  due_date?: string;
+}
+
+export interface DemandGenerationResponse {
+  generated: number;
+  skipped: number;
+  rate_per_sqm: number;
+  due_date: string;
+}
+
+export interface MarkDelinquentRequest {
+  lot_member_id: string;
+  reason: string;
+}
+
+export interface WaiveDelinquencyRequest {
+  waiver_reason: string;
+}

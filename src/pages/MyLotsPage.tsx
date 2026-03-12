@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import React from "react";
 import { api } from "@/lib/api";
-import type { MyLot, MyLotsSummary } from "@/types";
+import type { MyLot, MyLotsSummary, DelinquencyStatus } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 import {
   AlertCircle,
@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { HouseholdMembersPanel } from "@/components/my-lots/HouseholdMembersPanel";
 import { AddMemberDialog } from "@/components/my-lots/AddMemberDialog";
+import { DelinquencyBanner } from "@/components/my-lots/DelinquencyBanner";
+import { RestorationCountdown } from "@/components/delinquency/RestorationCountdown";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Callout } from "@/components/ui/callout";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -42,6 +44,8 @@ export function MyLotsPage() {
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [selectedLotForMember, setSelectedLotForMember] =
     useState<MyLot | null>(null);
+  const [delinquencyStatus, setDelinquencyStatus] =
+    useState<DelinquencyStatus | null>(null);
 
   useEffect(() => {
     loadMyLots();
@@ -59,6 +63,20 @@ export function MyLotsPage() {
     }
     setLoading(false);
   }
+
+  useEffect(() => {
+    async function loadDelinquencyStatus() {
+      try {
+        const response = await api.delinquency.getMyStatus();
+        if (response.data) {
+          setDelinquencyStatus(response.data as DelinquencyStatus);
+        }
+      } catch (error) {
+        console.error("Error loading delinquency status:", error);
+      }
+    }
+    loadDelinquencyStatus();
+  }, []);
 
   function openEditDialog(lot: MyLot) {
     setEditingLot(lot);
@@ -167,6 +185,9 @@ export function MyLotsPage() {
         </p>
       </div>
 
+      {/* Delinquency Banner */}
+      {delinquencyStatus && <DelinquencyBanner status={delinquencyStatus} />}
+
       {/* Summary Card */}
       <div className="bg-card rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold text-card-foreground mb-4">
@@ -224,6 +245,12 @@ export function MyLotsPage() {
                 </>
               )}
             </div>
+            {delinquencyStatus?.voting_restored_at && (
+              <RestorationCountdown
+                voting_restored_at={delinquencyStatus.voting_restored_at}
+                days_until_restore={delinquencyStatus.days_until_restore}
+              />
+            )}
           </div>
         </div>
 

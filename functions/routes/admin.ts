@@ -6,6 +6,7 @@ import { logAuditEvent, AUDIT_ACTIONS, getUserAgent } from '../lib/audit';
 import type { User, UserRole } from '../types';
 import { timeBlocksRouter } from './admin/time-blocks';
 import { externalRentalsRouter } from './admin/external-rentals';
+import delinquencyRoutes from './delinquency';
 
 type Env = {
   DB: D1Database;
@@ -26,6 +27,7 @@ export const adminRouter = new Hono<{ Bindings: Env }>();
 // Mount sub-routers
 adminRouter.route('/time-blocks', timeBlocksRouter);
 adminRouter.route('/external-rentals', externalRentalsRouter);
+adminRouter.route('/', delinquencyRoutes);
 
 // Helper function to generate UUID
 function generateId(): string {
