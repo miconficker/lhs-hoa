@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { labels } from "@/lib/content/labels";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Calendar } from "lucide-react";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -207,6 +208,19 @@ export function LoginPage() {
           <p className="mt-6 text-xs text-gray-500 text-center">
             {labels.noAccountMessage}
           </p>
+
+          {/* Visitor booking link */}
+          <div className="mt-4 pt-4 border-t border-border">
+            <Link to="/external-rentals">
+              <Button variant="outline" className="w-full" type="button">
+                <Calendar className="w-4 h-4 mr-2" />
+                Book Amenity as Visitor
+              </Button>
+            </Link>
+            <p className="mt-2 text-xs text-center text-muted-foreground">
+              Not a resident? Book our amenities for your events.
+            </p>
+          </div>
         </div>
       </div>
     </div>

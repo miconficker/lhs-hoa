@@ -82,6 +82,11 @@ const HelpPage = lazy(() =>
 );
 
 // Public pages (no authentication required)
+const LandingPage = lazy(() =>
+  import("./pages/public/LandingPage").then((m) => ({
+    default: m.LandingPage,
+  })),
+);
 const ExternalRentalsPage = lazy(() =>
   import("./pages/public/ExternalRentalsPage").then((m) => ({
     default: m.ExternalRentalsPage,
@@ -134,6 +139,8 @@ function App() {
       </a>
       <Suspense fallback={<PageLoader />}>
         <Routes>
+          {/* Public landing page - no auth required */}
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route
             path="/"

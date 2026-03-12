@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import type { PublicAmenity } from "@/types";
-import { Users, Info } from "lucide-react";
+import { Users, Info, Home, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useTheme } from "next-themes";
 
 const amenityImages: Record<string, string> = {
   clubhouse:
@@ -21,12 +22,17 @@ const amenityImages: Record<string, string> = {
 };
 
 export function ExternalRentalsPage() {
+  const { theme, setTheme } = useTheme();
   const [amenities, setAmenities] = useState<PublicAmenity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     loadAmenities();
+    setMounted(true);
   }, []);
+
+  const isDark = mounted && theme === "dark";
 
   async function loadAmenities() {
     try {
@@ -52,7 +58,28 @@ export function ExternalRentalsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-gray-950">
+      {/* Header with theme toggle and home link */}
+      <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
+        <Link to="/">
+          <Button variant="outline" size="icon" title="Back to Home">
+            <Home className="w-4 h-4" />
+          </Button>
+        </Link>
+        <button
+          onClick={() => setTheme(isDark ? "light" : "dark")}
+          className="w-10 h-10 rounded-lg border-2 border-border bg-background hover:bg-accent hover:text-accent-foreground transition-all shadow-sm"
+          aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
+        >
+          {mounted && (
+            <>
+              <Sun className="h-[1.3rem] w-[1.3rem] rotate-0 scale-100 transition-all duration-300 dark:-rotate-90 dark:scale-0 text-amber-500" />
+              <Moon className="absolute h-[1.3rem] w-[1.3rem] rotate-90 scale-0 transition-all duration-300 dark:rotate-0 dark:scale-100 text-indigo-400" />
+            </>
+          )}
+        </button>
+      </div>
+
       {/* Hero Section */}
       <div className="bg-primary text-primary-foreground py-16 px-4">
         <div className="max-w-6xl mx-auto text-center">
@@ -60,8 +87,8 @@ export function ExternalRentalsPage() {
             Rent Our Amenities for Your Events
           </h1>
           <p className="text-lg md:text-xl opacity-90 max-w-2xl mx-auto">
-            Celebrate at Laguna Hills! Book our clubhouse, pool, or sports
-            courts for your special occasions.
+            Celebrate at Laguna Hills! Book our clubhouse or pool for your
+            special occasions.
           </p>
         </div>
       </div>
@@ -117,15 +144,15 @@ export function ExternalRentalsPage() {
 
       {/* Info Section */}
       <div className="max-w-4xl mx-auto px-4 py-12">
-        <Card className="bg-blue-50 border-blue-200 text-gray-900">
+        <Card className="bg-blue-50 dark:bg-gray-800 border-blue-200 dark:border-gray-700 text-gray-900 dark:text-gray-100">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-900">
+            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
               <Info className="w-5 h-5" />
               How It Works
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <ol className="list-decimal list-inside space-y-2 text-sm text-gray-800">
+            <ol className="list-decimal list-inside space-y-2 text-sm text-gray-800 dark:text-gray-200">
               <li>
                 Browse our amenities and check availability for your preferred
                 date
