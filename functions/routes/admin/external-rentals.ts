@@ -54,6 +54,16 @@ async function requireAdmin(c: any, env: Env): Promise<{ userId: string; role: s
   return authUser;
 }
 
+// Helper to format time as "8:23 AM" or "2:15 PM"
+function formatTimeOfDay(isoString: string): string {
+  const date = new Date(isoString);
+  return date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+}
+
 // GET / - List all external rentals (admin/staff)
 externalRentalsRouter.get('/', async (c) => {
   const authUser = await requireAdminOrStaff(c, c.env);
@@ -448,4 +458,196 @@ externalRentalsRouter.delete('/:id', async (c) => {
   await c.env.DB.prepare('DELETE FROM external_rentals WHERE id = ?').bind(id).run();
 
   return c.json({ success: true });
+});
+
+// PUT /:id/approve - Approve booking and block slot
+externalRentalsRouter.put('/:id/approve', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const id = c.req.param('id');
+  const body = await c.req.json();
+  const autoReject = body.auto_reject === true;
+
+  // Get booking
+  const booking = await c.env.DB.prepare(
+    'SELECT * FROM external_rentals WHERE id = ?'
+  ).bind(id).first();
+
+  if (!booking) {
+    return c.json({ error: 'Booking not found' }, 404);
+  }
+
+  if (booking.booking_status === 'confirmed') {
+    return c.json({ error: 'Booking is already confirmed' }, 400);
+  }
+
+  // Check for conflicts with confirmed bookings
+  const conflict = await c.env.DB.prepare(
+    `SELECT id FROM booking_blocked_dates
+     WHERE amenity_type = ? AND booking_date = ? AND slot = ?`
+  ).bind(booking.amenity_type, booking.date, booking.slot).first();
+
+  if (conflict) {
+    return c.json({ error: 'This time slot is no longer available' }, 409);
+  }
+
+  // Update booking status
+  await c.env.DB.prepare(
+    `UPDATE external_rentals
+     SET booking_status = 'confirmed', payment_status = 'paid'
+     WHERE id = ?`
+  ).bind(id).run();
+
+  // Create blocked_dates entry
+  const blockedId = crypto.randomUUID();
+  await c.env.DB.prepare(
+    `INSERT INTO booking_blocked_dates (id, booking_id, amenity_type, booking_date, slot)
+     VALUES (?, ?, ?, ?, ?)`
+  ).bind(blockedId, id, booking.amenity_type, booking.date, booking.slot).run();
+
+  // Auto-reject other pending requests for same slot if requested
+  if (autoReject) {
+    await c.env.DB.prepare(
+      `UPDATE external_rentals
+       SET booking_status = 'rejected',
+           rejection_reason = 'First come, first served - another booking was confirmed.'
+       WHERE amenity_type = ? AND date = ? AND slot = ?
+       AND booking_status IN ('pending_payment', 'pending_verification')
+       AND id != ?`
+    ).bind(booking.amenity_type, booking.date, booking.slot, id).run();
+  }
+
+  // Get other pending requests for warning
+  const otherPending = await c.env.DB.prepare(
+    `SELECT id, guest_name, created_at FROM external_rentals
+     WHERE amenity_type = ? AND date = ? AND slot = ?
+     AND booking_status IN ('pending_payment', 'pending_verification')
+     AND id != ?
+     ORDER BY created_at ASC`
+  ).bind(booking.amenity_type, booking.date, booking.slot, id).all();
+
+  const updated = await c.env.DB.prepare(
+    'SELECT * FROM external_rentals WHERE id = ?'
+  ).bind(id).first();
+
+  // TODO: Send confirmation email to guest
+
+  return c.json({
+    data: {
+      booking: updated,
+      other_pending: otherPending.results || [],
+    }
+  });
+});
+
+// PUT /:id/reject - Reject booking
+externalRentalsRouter.put('/:id/reject', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const id = c.req.param('id');
+  const body = await c.req.json();
+  const reason = body.reason || 'Booking declined';
+
+  // Get booking
+  const booking = await c.env.DB.prepare(
+    'SELECT * FROM external_rentals WHERE id = ?'
+  ).bind(id).first();
+
+  if (!booking) {
+    return c.json({ error: 'Booking not found' }, 404);
+  }
+
+  if (booking.booking_status === 'confirmed') {
+    // Remove from blocked_dates if exists
+    await c.env.DB.prepare(
+      `DELETE FROM booking_blocked_dates WHERE booking_id = ?`
+    ).bind(id).run();
+  }
+
+  // Update booking status
+  await c.env.DB.prepare(
+    `UPDATE external_rentals
+     SET booking_status = 'rejected', rejection_reason = ?
+     WHERE id = ?`
+  ).bind(reason, id).run();
+
+  const updated = await c.env.DB.prepare(
+    'SELECT * FROM external_rentals WHERE id = ?'
+  ).bind(id).first();
+
+  // TODO: Send rejection email to guest
+
+  return c.json({ data: { booking: updated } });
+});
+
+// GET /pending - Get pending requests with timestamp info
+externalRentalsRouter.get('/pending', async (c) => {
+  const authUser = await requireAdminOrStaff(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const amenityType = c.req.query('amenity_type');
+  const date = c.req.query('date');
+  const slot = c.req.query('slot');
+  const status = c.req.query('status') || 'pending_verification';
+
+  let query = 'SELECT * FROM external_rentals WHERE booking_status = ?';
+  const params: any[] = [status];
+
+  if (amenityType) {
+    query += ' AND amenity_type = ?';
+    params.push(amenityType);
+  }
+  if (date) {
+    query += ' AND date = ?';
+    params.push(date);
+  }
+  if (slot) {
+    query += ' AND slot = ?';
+    params.push(slot);
+  }
+
+  query += ' ORDER BY created_at ASC';
+
+  const result = await c.env.DB.prepare(query).bind(...params).all();
+
+  // Add is_first flag and time_of_day formatting
+  const requests = (result.results || []).map((r: any, idx: number) => ({
+    ...r,
+    reference_number: `EXT-${new Date(r.created_at).getFullYear()}${String(new Date(r.created_at).getMonth() + 1).padStart(2, '0')}${String(new Date(r.created_at).getDate()).padStart(2, '0')}-${r.id.slice(-3)}`,
+    time_of_day: formatTimeOfDay(r.created_at),
+    is_first: idx === 0,
+  }));
+
+  // Check for conflicts
+  let conflicts = null;
+  if (amenityType && date && slot) {
+    const conflictCount = await c.env.DB.prepare(
+      `SELECT COUNT(*) as count FROM external_rentals
+       WHERE amenity_type = ? AND date = ? AND slot = ?
+       AND booking_status IN ('pending_payment', 'pending_verification')`
+    ).bind(amenityType, date, slot).first();
+
+    conflicts = {
+      amenity_type: amenityType,
+      date: date,
+      slot: slot,
+      pending_count: (conflictCount?.count as number) || 0,
+    };
+  }
+
+  return c.json({
+    data: {
+      requests,
+      total: requests.length,
+      conflicts,
+    }
+  });
 });
