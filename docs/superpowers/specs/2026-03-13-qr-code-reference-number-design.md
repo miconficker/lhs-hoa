@@ -1,7 +1,7 @@
 # QR Code and Reference Number System for Visitor Bookings
 
 **Date**: 2026-03-13
-**Status**: Design Approved
+**Status**: Design (Draft)
 **Related**: External Rentals System (Public External Booking)
 
 ## Overview
@@ -68,13 +68,28 @@ Keep the existing format already implemented in the system:
 pnpm add qrcode.react
 ```
 
+**Download Implementation**:
+```typescript
+// Using canvas.toDataURL() for download
+const downloadQR = () => {
+  const canvas = document.querySelector('canvas');
+  if (!canvas) return;
+
+  const url = canvas.toDataURL('image/png');
+  const link = document.createElement('a');
+  link.download = `qr-${referenceNumber}.png`;
+  link.href = url;
+  link.click();
+};
+```
+
 ## Frontend Components
 
 ### New Components
 
 #### 1. `QRCodeDisplay.tsx`
 
-**Location**: `src/components/public-rentals/QRCodeDisplay.tsx`
+**Location**: `src/components/public/QRCodeDisplay.tsx`
 
 **Props**:
 ```typescript
@@ -89,11 +104,22 @@ interface QRCodeDisplayProps {
 - Display QR code centered
 - Show reference number below QR
 - "Download QR Code" button
-- Fallback to reference number if QR fails
+- Accessible with proper ARIA attributes
+- Memoized for performance (React.memo)
+
+**TypeScript Interface** (add to `src/types/index.ts`):
+```typescript
+export interface QRCodeDisplayProps {
+  bookingId: string;
+  referenceNumber: string;
+  size?: number;
+  className?: string;
+}
+```
 
 #### 2. `QRScanPage.tsx`
 
-**Location**: `src/pages/public-rentals/QRScanPage.tsx`
+**Location**: `src/pages/public/QRScanPage.tsx`
 
 **Route**: `/external-rentals/qr/:id`
 
@@ -104,13 +130,14 @@ interface QRCodeDisplayProps {
   - Green: Confirmed
   - Yellow: Pending
   - Red: Rejected/Cancelled
+- Reuses existing `statusConfig` from `ConfirmationPage.tsx` for consistency
 - Key info display:
   - Amenity name
   - Date
   - Time slot
   - Guest name
 - "View Full Details" button → confirmation page
-- "Save to Photos" button
+- "Download QR" button for saving QR code image
 - Minimal branding (logo only)
 - No navigation/footer
 
@@ -131,7 +158,7 @@ interface QRCodeDisplayProps {
 │  Ref: EXT-202503... │
 │                     │
 │ [View Details]      │
-│ [Save QR]           │
+│ [Download QR]       │
 └─────────────────────┘
 ```
 
@@ -139,7 +166,7 @@ interface QRCodeDisplayProps {
 
 #### 1. `SuccessPage.tsx`
 
-**Location**: `src/pages/public-rentals/SuccessPage.tsx`
+**Location**: `src/pages/public/SuccessPage.tsx`
 
 **Changes**:
 - Add `QRCodeDisplay` component
@@ -149,7 +176,7 @@ interface QRCodeDisplayProps {
 
 #### 2. `ConfirmationPage.tsx`
 
-**Location**: `src/pages/public-rentals/ConfirmationPage.tsx`
+**Location**: `src/pages/public/ConfirmationPage.tsx`
 
 **Changes**:
 - Add `QRCodeDisplay` component in sidebar/aside
@@ -163,9 +190,28 @@ interface QRCodeDisplayProps {
 - `GET /api/public/bookings/:id/status` - Already returns booking info including reference number
 - `GET /api/public/amenities` - For amenity details
 
+## Route Registration
+
+Add new route to `App.tsx`:
+
+```typescript
+// Around line 246-249 in App.tsx
+const QRScanPage = lazy(() => import('./pages/public/QRScanPage'));
+
+// In routes configuration:
+<Route path="/external-rentals/qr/:id" element={<QRScanPage />} />
+```
+
 **Optional Enhancement** (future):
+
 - `POST /api/public/bookings/:id/scan` - Log QR scans for analytics
-  - Add `scan_count` and `last_scanned_at` columns to `external_rentals` table
+  - Add columns to `external_rentals` table:
+
+```sql
+-- Migration for scan analytics (future)
+ALTER TABLE external_rentals ADD COLUMN scan_count INTEGER DEFAULT 0;
+ALTER TABLE external_rentals ADD COLUMN last_scanned_at TEXT;
+```
 
 ## Data Flow
 
@@ -233,19 +279,59 @@ ConfirmationPage (/external-rentals/confirmation/:id)
 - **High contrast**: Black on white for best scanability
 - **Reference visible**: Always show reference number below QR
 
+## Accessibility
+
+**QR Code Component**:
+- `role="img"` attribute on canvas wrapper
+- `aria-label="QR code for booking {referenceNumber}"`
+- Alt text fallback: "QR code - Scan to view booking status"
+- Reference number in plain text for screen readers
+
+**Status Indicators**:
+- Use `status` role for booking status badge
+- Color + text (never color alone)
+- ARIA live regions for status updates
+
+**Keyboard Navigation**:
+- Download button focusable with visible focus state
+- "View Details" button focusable
+- Minimum 44px touch targets
+
+**Screen Reader Support**:
+```tsx
+<div role="img" aria-label={`QR code for booking ${referenceNumber}`}>
+  <QRCodeCanvas value={qrUrl} size={size} />
+</div>
+<p className="sr-only">Scan this QR code to view your booking status</p>
+```
+
 ## Implementation Checklist
 
+### Dependencies
 - [ ] Install `qrcode.react` package
-- [ ] Create `QRCodeDisplay.tsx` component
-- [ ] Create `QRScanPage.tsx` component
-- [ ] Add QR display to `SuccessPage.tsx`
-- [ ] Add QR display to `ConfirmationPage.tsx`
-- [ ] Add `/external-rentals/qr/:id` route
-- [ ] Implement download functionality
-- [ ] Add error handling and fallbacks
-- [ ] Test on mobile devices
-- [ ] Test QR scanning with different camera apps
-- [ ] Update documentation
+
+### New Components
+- [ ] Create `src/components/public/QRCodeDisplay.tsx`
+- [ ] Create `src/pages/public/QRScanPage.tsx`
+- [ ] Add TypeScript interfaces to `src/types/index.ts`
+
+### Modified Components
+- [ ] Update `src/pages/public/SuccessPage.tsx` with QR display
+- [ ] Update `src/pages/public/ConfirmationPage.tsx` with QR display
+- [ ] Update `src/App.tsx` to add `/external-rentals/qr/:id` route
+
+### Testing
+- [ ] Test QR generation in browser
+- [ ] Test download functionality
+- [ ] Test QR scanning with iOS Camera
+- [ ] Test QR scanning with Android Google Lens
+- [ ] Test mobile responsiveness
+- [ ] Test accessibility with screen reader
+- [ ] Test error states (invalid booking, network error)
+
+### Documentation
+- [ ] Update CLAUDE.md with new components
+- [ ] Update ARCHITECTURE.md if needed
 
 ## Future Enhancements
 
