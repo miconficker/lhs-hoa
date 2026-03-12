@@ -207,7 +207,7 @@ export function DashboardPage() {
             {announcements.map((announcement) => (
               <div key={announcement.id} className="p-6">
                 <div className="flex items-start gap-3">
-                  {announcement.is_pinned && (
+                  {!!announcement.is_pinned && (
                     <AlertTriangle className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">

@@ -78,6 +78,15 @@ import type {
   DemandGenerationResponse,
   MarkDelinquentRequest,
   WaiveDelinquencyRequest,
+  // Public booking types
+  PublicAmenity,
+  AvailabilitySlot,
+  PricingCalculation,
+  PaymentDetails,
+  PublicBookingRequest,
+  PublicBookingResponse,
+  BookingBlockedDate,
+  ExtendedExternalRental,
 } from "@/types";
 
 import { logger } from "@/lib/logger";
@@ -1905,6 +1914,112 @@ export const api = {
     // Get current user's delinquency status
     getMyStatus: async () => {
       return apiRequest<DelinquencyStatus>("/my-lots/delinquency-status");
+    },
+  },
+  // Public API (no auth required)
+  public: {
+    getAmenities: () =>
+      apiRequest<{ amenities: PublicAmenity[] }>("/public/amenities"),
+    getAvailability: (
+      amenityType: string,
+      startDate?: string,
+      endDate?: string,
+    ) => {
+      const params = new URLSearchParams();
+      if (startDate) params.append("start", startDate);
+      if (endDate) params.append("end", endDate);
+      const query = params.toString();
+      return apiRequest<{ available: AvailabilitySlot[] }>(
+        `/public/availability/${amenityType}${query ? "?" + query : ""}`,
+      );
+    },
+    getPricing: (
+      amenityType: string,
+      date: string,
+      slot: string,
+      isResident?: boolean,
+    ) => {
+      const params = new URLSearchParams({ date, slot });
+      if (isResident) params.append("resident", "true");
+      return apiRequest<PricingCalculation>(
+        `/public/pricing/${amenityType}?${params.toString()}`,
+      );
+    },
+    getPaymentDetails: () =>
+      apiRequest<PaymentDetails>("/public/payment-details"),
+    createBooking: (bookingData: PublicBookingRequest) =>
+      apiRequest<{ booking: PublicBookingResponse }>("/public/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bookingData),
+      }),
+    uploadPaymentProof: (bookingId: string, proofUrl: string) =>
+      apiRequest<{ booking: PublicBookingResponse }>(
+        `/public/bookings/${bookingId}/proof`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ proof_url: proofUrl }),
+        },
+      ),
+    getBookingStatus: (bookingId: string) =>
+      apiRequest<{ booking: PublicBookingResponse }>(
+        `/public/bookings/${bookingId}/status`,
+      ),
+  },
+  // Admin API for public bookings
+  adminPublicBookings: {
+    getPending: async (filters?: {
+      status?: string;
+      amenity_type?: string;
+      date?: string;
+      slot?: string;
+    }) => {
+      const hoa_token = localStorage.getItem("hoa_token");
+      const params = new URLSearchParams(filters || {});
+      const response = await fetch(
+        `/api/admin/external-rentals/pending?${params.toString()}`,
+        {
+          headers: { Authorization: `Bearer ${hoa_token}` },
+        },
+      );
+      const data = await response.json();
+      if (data.error) return { error: data.error };
+      return { data: data.data };
+    },
+    approveBooking: async (bookingId: string, autoReject?: boolean) => {
+      const hoa_token = localStorage.getItem("hoa_token");
+      const response = await fetch(
+        `/api/admin/external-rentals/${bookingId}/approve`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${hoa_token}`,
+          },
+          body: JSON.stringify({ auto_reject: autoReject || false }),
+        },
+      );
+      const data = await response.json();
+      if (data.error) return { error: data.error };
+      return { data: data.data };
+    },
+    rejectBooking: async (bookingId: string, reason: string) => {
+      const hoa_token = localStorage.getItem("hoa_token");
+      const response = await fetch(
+        `/api/admin/external-rentals/${bookingId}/reject`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${hoa_token}`,
+          },
+          body: JSON.stringify({ reason }),
+        },
+      );
+      const data = await response.json();
+      if (data.error) return { error: data.error };
+      return { data: data.data };
     },
   },
 };

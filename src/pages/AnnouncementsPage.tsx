@@ -194,7 +194,7 @@ export function AnnouncementsPage() {
                   Expires At
                 </label>
                 <input
-                  type="datetime-local"
+                  type="date"
                   value={formData.expires_at}
                   onChange={(e) => updateField("expires_at", e.target.value)}
                   className="w-full px-3 py-2 border border-border rounded-lg focus:ring-primary-500 focus:border-primary-500"
