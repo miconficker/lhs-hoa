@@ -14,6 +14,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +45,7 @@ import type {
   CreateExternalRentalInput,
   RecordPaymentInput,
   RentalPaymentStatus,
+  ExtendedExternalRental,
 } from "@/types";
 
 interface ExternalRentalsTabProps {
@@ -121,9 +131,29 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
   const [paymentForm, setPaymentForm] =
     useState<PaymentFormData>(emptyPaymentForm);
 
+  // Pending queue state
+  const [pendingRequests, setPendingRequests] = useState<
+    ExtendedExternalRental[]
+  >([]);
+  const [showPendingQueue, setShowPendingQueue] = useState(false);
+  const [selectedRequest, setSelectedRequest] =
+    useState<ExtendedExternalRental | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [isApproving, setIsApproving] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [autoRejectOthers, setAutoRejectOthers] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+
   useEffect(() => {
     loadRentals();
   }, []);
+
+  // Add useEffect to load pending requests when tab is active
+  useEffect(() => {
+    if (showPendingQueue) {
+      loadPendingRequests();
+    }
+  }, [showPendingQueue]);
 
   const loadRentals = async () => {
     try {
@@ -147,6 +177,98 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
       toast.error("Failed to load external rentals");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Add function to load pending requests
+  const loadPendingRequests = async () => {
+    try {
+      const hoa_token = localStorage.getItem("hoa_token");
+      const response = await fetch("/api/admin/external-rentals/pending", {
+        headers: { Authorization: `Bearer ${hoa_token}` },
+      });
+
+      if (!response.ok) throw new Error("Failed to load pending requests");
+
+      const data = await response.json();
+      setPendingRequests(data.data.requests || []);
+    } catch (error) {
+      console.error("Error loading pending requests:", error);
+      toast.error("Failed to load pending requests");
+    }
+  };
+
+  // Add approve handler
+  const handleApprove = async (request: ExtendedExternalRental) => {
+    if (!confirm(`Approve booking from ${request.guest_name}?`)) return;
+
+    try {
+      setIsApproving(true);
+      const hoa_token = localStorage.getItem("hoa_token");
+
+      const response = await fetch(
+        `/api/admin/external-rentals/${request.id}/approve`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${hoa_token}`,
+          },
+          body: JSON.stringify({ auto_reject: autoRejectOthers }),
+        },
+      );
+
+      if (!response.ok) throw new Error("Failed to approve booking");
+
+      await loadPendingRequests();
+      await loadRentals();
+      toast.success("Booking approved successfully");
+      setSelectedRequest(null);
+    } catch (error) {
+      console.error("Error approving booking:", error);
+      toast.error("Failed to approve booking");
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  // Add reject handler
+  const handleReject = async () => {
+    if (!selectedRequest) return;
+    if (!rejectReason.trim()) {
+      toast.error("Please provide a rejection reason");
+      return;
+    }
+
+    try {
+      setIsRejecting(true);
+      const hoa_token = localStorage.getItem("hoa_token");
+
+      const response = await fetch(
+        `/api/admin/external-rentals/${selectedRequest.id}/reject`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${hoa_token}`,
+          },
+          body: JSON.stringify({ reason: rejectReason }),
+        },
+      );
+
+      if (!response.ok) throw new Error("Failed to reject booking");
+
+      await loadPendingRequests();
+      await loadRentals();
+      toast.success("Booking rejected");
+      setSelectedRequest(null);
+      setShowRejectDialog(false);
+      setRejectReason("");
+    } catch (error) {
+      console.error("Error rejecting booking:", error);
+      toast.error("Failed to reject booking");
+    } finally {
+      setIsRejecting(false);
     }
   };
 
@@ -485,6 +607,95 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
           </div>
         </div>
       </div>
+
+      {/* Pending Queue Toggle */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-semibold">All Bookings</h3>
+          {pendingRequests.length > 0 && (
+            <Badge variant="destructive" className="ml-2">
+              {pendingRequests.length} pending
+            </Badge>
+          )}
+        </div>
+        <Button
+          variant={showPendingQueue ? "default" : "outline"}
+          onClick={() => setShowPendingQueue(!showPendingQueue)}
+        >
+          {showPendingQueue ? "Show All" : "Show Pending Queue"}
+        </Button>
+      </div>
+
+      {/* Pending Queue */}
+      {showPendingQueue && pendingRequests.length > 0 && (
+        <Card className="mb-6 border-orange-200 bg-orange-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Clock className="w-5 h-5 text-orange-600" />
+              Pending Approval Queue
+            </CardTitle>
+            <CardDescription>
+              Sorted by request time (oldest first)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {pendingRequests.map((request) => (
+                <div
+                  key={request.id}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    request.is_first
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 bg-white"
+                  }`}
+                >
+                  {request.is_first && (
+                    <Badge className="mb-2" variant="default">
+                      First Request
+                    </Badge>
+                  )}
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <p className="font-semibold">{request.guest_name}</p>
+                        <Badge variant="outline">{request.amenity_type}</Badge>
+                        <Badge variant="secondary">{request.slot}</Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        <p>
+                          Date: {new Date(request.date).toLocaleDateString()}
+                        </p>
+                        <p>Requested: {request.time_of_day}</p>
+                        <p>Email: {request.guest_email}</p>
+                        <p>Phone: {request.guest_phone}</p>
+                        <p className="font-medium">
+                          Amount: ₱{request.amount?.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedRequest(request)}
+                      >
+                        View
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleApprove(request)}
+                        disabled={isApproving}
+                      >
+                        Approve
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Rentals Table */}
       {rentals.length === 0 ? (
@@ -871,6 +1082,166 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Approval/Rejection Dialog */}
+      {selectedRequest && (
+        <Dialog
+          open={!!selectedRequest}
+          onOpenChange={() => setSelectedRequest(null)}
+        >
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Review Booking Request</DialogTitle>
+              <DialogDescription>
+                {selectedRequest.guest_name} -{" "}
+                {amenityLabels[selectedRequest.amenity_type]} on{" "}
+                {new Date(selectedRequest.date).toLocaleDateString()}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Time Slot</p>
+                  <p className="font-medium">
+                    {slotLabels[selectedRequest.slot]}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Amount</p>
+                  <p className="font-medium">
+                    ₱{selectedRequest.amount?.toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Email</p>
+                  <p className="font-medium">{selectedRequest.guest_email}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Phone</p>
+                  <p className="font-medium">{selectedRequest.guest_phone}</p>
+                </div>
+              </div>
+
+              {selectedRequest.proof_of_payment_url && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Proof of Payment
+                  </p>
+                  <a
+                    href={selectedRequest.proof_of_payment_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline text-sm"
+                  >
+                    View proof →
+                  </a>
+                </div>
+              )}
+
+              {selectedRequest.is_first && (
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    This is the first request for this time slot.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedRequest(null);
+                  setRejectReason("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setShowRejectDialog(true);
+                }}
+                disabled={isApproving}
+              >
+                Reject
+              </Button>
+              <Button
+                onClick={() => {
+                  handleApprove(selectedRequest);
+                }}
+                disabled={isApproving}
+              >
+                {isApproving ? "Approving..." : "Approve Booking"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Reject Dialog */}
+      {showRejectDialog && selectedRequest && (
+        <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reject Booking</DialogTitle>
+              <DialogDescription>
+                Please provide a reason for rejecting this booking
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="reason">Rejection Reason *</Label>
+                <Textarea
+                  id="reason"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Explain why this booking is being rejected..."
+                  rows={3}
+                  required
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="autoReject"
+                  checked={autoRejectOthers}
+                  onCheckedChange={(v) => setAutoRejectOthers(!!v)}
+                />
+                <label htmlFor="autoReject" className="text-sm cursor-pointer">
+                  Also auto-reject {pendingRequests.length - 1} other pending
+                  request(s) for this slot
+                </label>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRejectDialog(false);
+                  setRejectReason("");
+                  setSelectedRequest(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setShowRejectDialog(false);
+                  handleReject();
+                }}
+                disabled={isRejecting || !rejectReason.trim()}
+              >
+                {isRejecting ? "Rejecting..." : "Reject Booking"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
