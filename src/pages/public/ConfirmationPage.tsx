@@ -21,37 +21,43 @@ import {
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { toast } from "sonner";
+import { PublicPageHeader } from "@/components/public/PublicPageHeader";
 
 const statusConfig = {
   pending_payment: {
     icon: Clock,
     label: "Pending Payment",
-    color: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    color:
+      "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-800",
     description: "Please upload your proof of payment to proceed",
   },
   pending_verification: {
     icon: Clock,
     label: "Under Review",
-    color: "bg-orange-100 text-orange-800 border-orange-200",
+    color:
+      "bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-800",
     description:
       "We are verifying your payment. You will receive an update within 24-48 hours.",
   },
   confirmed: {
     icon: CheckCircle2,
     label: "Confirmed",
-    color: "bg-green-100 text-green-800 border-green-200",
+    color:
+      "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border-green-200 dark:border-green-800",
     description: "Your booking has been confirmed! See details below.",
   },
   rejected: {
     icon: XCircle,
     label: "Rejected",
-    color: "bg-red-100 text-red-800 border-red-200",
+    color:
+      "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border-red-200 dark:border-red-800",
     description: "Your booking request has been declined.",
   },
   cancelled: {
     icon: AlertCircle,
     label: "Cancelled",
-    color: "bg-gray-100 text-gray-800 border-gray-200",
+    color:
+      "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700",
     description: "This booking has been cancelled.",
   },
 };
@@ -121,7 +127,7 @@ export function ConfirmationPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -129,17 +135,20 @@ export function ConfirmationPage() {
 
   if (!booking) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-12 text-center">
-        <AlertCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-        <h1 className="text-2xl font-bold text-muted-foreground mb-2">
-          Booking Not Found
-        </h1>
-        <p className="text-muted-foreground mb-6">
-          The booking you're looking for doesn't exist.
-        </p>
-        <Link to="/external-rentals">
-          <Button>Browse Amenities</Button>
-        </Link>
+      <div className="min-h-screen bg-background">
+        <PublicPageHeader showBackButton backTo="/external-rentals" />
+        <div className="max-w-2xl mx-auto px-4 py-12 text-center">
+          <AlertCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-muted-foreground mb-2">
+            Booking Not Found
+          </h1>
+          <p className="text-muted-foreground mb-6">
+            The booking you're looking for doesn't exist.
+          </p>
+          <Link to="/external-rentals">
+            <Button>Browse Amenities</Button>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -150,26 +159,28 @@ export function ConfirmationPage() {
   const StatusIcon = status.icon;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-3xl mx-auto px-4">
+    <div className="min-h-screen bg-background">
+      <PublicPageHeader
+        title="Booking Status"
+        showBackButton
+        backTo="/external-rentals"
+      />
+
+      <div className="max-w-3xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
-          <Link
-            to="/external-rentals"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            ← Back to Amenities
-          </Link>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={refreshing}
-          >
-            <RefreshCw
-              className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </Button>
+          <div className="flex-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={refreshing}
+            >
+              <RefreshCw
+                className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+              />
+              Refresh Status
+            </Button>
+          </div>
         </div>
 
         {/* Status Banner */}
@@ -181,7 +192,7 @@ export function ConfirmationPage() {
                 <h2 className="text-xl font-bold mb-1">{status.label}</h2>
                 <p className="text-sm opacity-80">{status.description}</p>
                 {booking.rejection_reason && (
-                  <div className="mt-3 p-3 bg-white/50 rounded-lg">
+                  <div className="mt-3 p-3 bg-background/50 rounded-lg border border-border">
                     <p className="text-sm font-medium">Reason:</p>
                     <p className="text-sm">{booking.rejection_reason}</p>
                   </div>
@@ -238,14 +249,14 @@ export function ConfirmationPage() {
               </div>
             </div>
             {booking.time_of_day && (
-              <div className="pt-3 border-t">
+              <div className="pt-3 border-t border-border">
                 <p className="text-xs text-muted-foreground">
                   Request received at {booking.time_of_day}
                 </p>
               </div>
             )}
             {booking.admin_notes && (
-              <div className="pt-3 border-t">
+              <div className="pt-3 border-t border-border">
                 <p className="text-sm text-muted-foreground mb-1">
                   Admin Notes:
                 </p>
@@ -291,7 +302,7 @@ export function ConfirmationPage() {
                   {uploading ? "Uploading..." : "Upload Proof"}
                 </Button>
               )}
-              <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                 <p className="text-sm font-medium mb-2">Payment Details:</p>
                 <p className="text-sm">
                   GCash: 0917-XXX-XXXX (Laguna Hills HOA)
@@ -306,12 +317,12 @@ export function ConfirmationPage() {
 
         {/* Confirmed State Info */}
         {booking.status === "confirmed" && (
-          <Card className="bg-green-50 border-green-200">
+          <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
             <CardContent className="pt-6">
-              <h3 className="font-semibold text-green-900 mb-2">
+              <h3 className="font-semibold text-green-900 dark:text-green-100 mb-2">
                 What's Next?
               </h3>
-              <ul className="text-sm text-green-800 space-y-1">
+              <ul className="text-sm text-green-800 dark:text-green-200 space-y-1">
                 <li>• Arrive 15 minutes before your scheduled time</li>
                 <li>• Present your booking confirmation upon arrival</li>
                 <li>• Follow all HOA rules and regulations</li>

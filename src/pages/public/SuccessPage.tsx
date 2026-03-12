@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PublicPageHeader } from "@/components/public/PublicPageHeader";
 
 export function SuccessPage() {
   const { id } = useParams<{ id: string }>();
@@ -17,37 +18,41 @@ export function SuccessPage() {
   }, [id]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center p-4">
-      <Card className="max-w-md w-full">
-        <CardContent className="pt-12 pb-8 text-center">
-          <CheckCircle2 className="w-20 h-20 text-green-500 mx-auto mb-6" />
-          <h1 className="text-2xl font-bold mb-2">
-            Booking Request Submitted!
-          </h1>
-          <p className="text-muted-foreground mb-8">
-            Your booking request has been received. Please upload your proof of
-            payment to proceed with confirmation.
-          </p>
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-background dark:from-green-950/20 dark:to-background">
+      <PublicPageHeader showBackButton backTo="/external-rentals" />
 
-          <div className="bg-muted p-4 rounded-lg mb-6">
-            <p className="text-sm text-muted-foreground">Booking Reference</p>
-            <p className="text-lg font-mono font-bold">
-              {id?.slice(0, 8).toUpperCase()}
+      <div className="flex items-center justify-center p-4 min-h-[calc(100vh-4rem)]">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-12 pb-8 text-center">
+            <CheckCircle2 className="w-20 h-20 text-green-500 mx-auto mb-6" />
+            <h1 className="text-2xl font-bold mb-2">
+              Booking Request Submitted!
+            </h1>
+            <p className="text-muted-foreground mb-8">
+              Your booking request has been received. Please upload your proof
+              of payment to proceed with confirmation.
             </p>
-          </div>
 
-          <Link to={`/external-rentals/confirmation/${id}`}>
-            <Button className="w-full">
-              View Booking Status
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </Link>
+            <div className="bg-muted p-4 rounded-lg mb-6">
+              <p className="text-sm text-muted-foreground">Booking Reference</p>
+              <p className="text-lg font-mono font-bold">
+                {id?.slice(0, 8).toUpperCase()}
+              </p>
+            </div>
 
-          <p className="text-xs text-muted-foreground mt-4">
-            Redirecting automatically...
-          </p>
-        </CardContent>
-      </Card>
+            <Link to={`/external-rentals/confirmation/${id}`}>
+              <Button className="w-full" size="lg">
+                View Booking Status
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+
+            <p className="text-xs text-muted-foreground mt-4">
+              Redirecting automatically...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -9,7 +9,7 @@ import type {
   PaymentDetails,
   PublicBookingRequest,
 } from "@/types";
-import { ArrowLeft, Upload, CheckCircle2 } from "lucide-react";
+import { Upload, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,12 +31,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { PublicPageHeader } from "@/components/public/PublicPageHeader";
 
-const amenityLabels: Record<AmenityType, string> = {
+const amenityLabels: Record<string, string> = {
   clubhouse: "Clubhouse",
   pool: "Swimming Pool",
-  "basketball-court": "Basketball Court",
-  "tennis-court": "Tennis Court",
 };
 
 const slotLabels: Record<TimeBlockSlot, string> = {
@@ -198,7 +197,7 @@ export function BookingPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -206,29 +205,34 @@ export function BookingPage() {
 
   if (!pricing) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-12 text-center">
-        <h1 className="text-2xl font-bold text-muted-foreground">
-          Unable to load pricing
-        </h1>
-        <Link to="/external-rentals">
-          <Button variant="link">Back to Amenities</Button>
-        </Link>
+      <div className="min-h-screen bg-background">
+        <PublicPageHeader showBackButton backTo="/external-rentals" />
+        <div className="max-w-2xl mx-auto px-4 py-12 text-center">
+          <h1 className="text-2xl font-bold text-muted-foreground">
+            Unable to load pricing
+          </h1>
+          <Link to="/external-rentals">
+            <Button variant="link">Back to Amenities</Button>
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <Link
-          to={`/external-rentals/${amenityType}`}
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to {amenityLabels[amenityType]}
-        </Link>
+    <div className="min-h-screen bg-background">
+      <PublicPageHeader
+        title="Book Amenity"
+        showBackButton
+        backTo={`/external-rentals/${amenityType}`}
+      />
 
-        <h1 className="text-3xl font-bold mb-8">Complete Your Booking</h1>
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-2">Complete Your Booking</h1>
+        <p className="text-muted-foreground mb-8">
+          Fill in your details to submit a booking request for{" "}
+          <strong>{amenityLabels[amenityType]}</strong>
+        </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Booking Summary */}
@@ -258,6 +262,12 @@ export function BookingPage() {
                 <span className="text-muted-foreground">Time Slot</span>
                 <span className="font-medium">{slotLabels[slot]}</span>
               </div>
+              {user && pricing.resident_discount > 0 && (
+                <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+                  <span>Resident Discount</span>
+                  <span>-{pricing.resident_discount * 100}%</span>
+                </div>
+              )}
               <div className="pt-2 border-t flex justify-between font-bold text-lg">
                 <span>Total Amount</span>
                 <span>₱{pricing.final_price.toLocaleString()}</span>
@@ -378,7 +388,7 @@ export function BookingPage() {
 
           {/* Payment Instructions */}
           {paymentDetails && (
-            <Card className="border-blue-200 bg-blue-50">
+            <Card className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20">
               <CardHeader>
                 <CardTitle>Payment Instructions</CardTitle>
                 <CardDescription>
@@ -388,7 +398,7 @@ export function BookingPage() {
               <CardContent className="space-y-4">
                 <div>
                   <h4 className="font-medium mb-2">GCash</h4>
-                  <div className="bg-white p-3 rounded-lg border">
+                  <div className="bg-background p-3 rounded-lg border">
                     <p className="text-sm">
                       <strong>Name:</strong> {paymentDetails.gcash.name}
                     </p>
@@ -399,7 +409,7 @@ export function BookingPage() {
                 </div>
                 <div>
                   <h4 className="font-medium mb-2">Bank Transfer</h4>
-                  <div className="bg-white p-3 rounded-lg border">
+                  <div className="bg-background p-3 rounded-lg border">
                     <p className="text-sm">
                       <strong>Bank:</strong>{" "}
                       {paymentDetails.bank_transfer.bank_name}
@@ -471,13 +481,13 @@ export function BookingPage() {
                   )}
                 </>
               ) : (
-                <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                  <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-green-900">
+                    <p className="text-sm font-medium text-green-900 dark:text-green-100">
                       Proof uploaded
                     </p>
-                    <p className="text-xs text-green-700">
+                    <p className="text-xs text-green-700 dark:text-green-300">
                       You can upload again if needed
                     </p>
                   </div>
@@ -538,7 +548,12 @@ export function BookingPage() {
             >
               Go Back
             </Button>
-            <Button type="submit" className="flex-1" disabled={submitting}>
+            <Button
+              type="submit"
+              className="flex-1"
+              size="lg"
+              disabled={submitting}
+            >
               {submitting ? "Submitting..." : "Submit Booking Request"}
             </Button>
           </div>

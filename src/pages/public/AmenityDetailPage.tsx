@@ -8,12 +8,7 @@ import type {
   AvailabilitySlot,
   PricingCalculation,
 } from "@/types";
-import {
-  Calendar as CalendarIcon,
-  Clock,
-  DollarSign,
-  ArrowLeft,
-} from "lucide-react";
+import { Calendar as CalendarIcon, Clock, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -24,10 +19,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { PublicPageHeader } from "@/components/public/PublicPageHeader";
 import { cn } from "@/lib/utils";
 
 const amenityInfo: Record<
-  AmenityType,
+  string,
   { name: string; image: string; description: string }
 > = {
   clubhouse: {
@@ -43,18 +39,6 @@ const amenityInfo: Record<
       "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=1200",
     description:
       "Olympic-sized pool with kiddie area. Great for summer parties and swimming events.",
-  },
-  "basketball-court": {
-    name: "Basketball Court",
-    image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=1200",
-    description:
-      "Full-size court with lighting. Perfect for tournaments and friendly games.",
-  },
-  "tennis-court": {
-    name: "Tennis Court",
-    image: "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=1200",
-    description:
-      "Professional clay court. Great for private lessons and matches.",
   },
 };
 
@@ -155,13 +139,16 @@ export function AmenityDetailPage() {
 
   if (!info) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-12 text-center">
-        <h1 className="text-2xl font-bold text-muted-foreground">
-          Amenity not found
-        </h1>
-        <Link to="/external-rentals">
-          <Button variant="link">Back to Amenities</Button>
-        </Link>
+      <div className="min-h-screen bg-background">
+        <PublicPageHeader showBackButton backTo="/external-rentals" />
+        <div className="max-w-4xl mx-auto px-4 py-12 text-center">
+          <h1 className="text-2xl font-bold text-muted-foreground">
+            Amenity not found
+          </h1>
+          <Link to="/external-rentals">
+            <Button variant="link">Back to Amenities</Button>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -191,26 +178,25 @@ export function AmenityDetailPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+    <div className="min-h-screen bg-background">
+      <PublicPageHeader
+        title={info.name}
+        showBackButton
+        backTo="/external-rentals"
+      />
+
+      {/* Hero Image */}
       <div className="relative h-64 md:h-80">
         <img
           src={info.image}
           alt={info.name}
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-6 text-foreground">
           <div className="max-w-6xl mx-auto">
-            <Link
-              to="/external-rentals"
-              className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-4"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Amenities
-            </Link>
             <h1 className="text-3xl md:text-4xl font-bold">{info.name}</h1>
-            <p className="text-white/90 mt-2">{info.description}</p>
+            <p className="text-muted-foreground mt-2">{info.description}</p>
           </div>
         </div>
       </div>
@@ -265,8 +251,8 @@ export function AmenityDetailPage() {
                                     isSelected
                                       ? "bg-primary text-primary-foreground border-primary"
                                       : isToday
-                                        ? "bg-blue-100 border-blue-300 hover:bg-blue-200"
-                                        : "bg-white border-gray-200 hover:bg-gray-50",
+                                        ? "bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/50"
+                                        : "bg-card border-border hover:bg-accent hover:text-accent-foreground",
                                   )}
                                 >
                                   <div className="font-medium">{day}</div>
@@ -325,7 +311,7 @@ export function AmenityDetailPage() {
                           "w-full p-4 text-left rounded-lg border transition-colors",
                           selectedSlot === slot
                             ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-white border-gray-200 hover:bg-gray-50",
+                            : "bg-card border-border hover:bg-accent hover:text-accent-foreground",
                         )}
                       >
                         <div className="font-medium">
@@ -338,7 +324,11 @@ export function AmenityDetailPage() {
             )}
 
             {pricing && (
-              <Card className={cn("border-2", user ? "border-green-200" : "")}>
+              <Card
+                className={cn(
+                  user ? "border-green-200 dark:border-green-800" : "",
+                )}
+              >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <DollarSign className="w-5 h-5" />
@@ -378,7 +368,7 @@ export function AmenityDetailPage() {
                     </div>
                   )}
                   {pricing.resident_discount > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
+                    <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
                       <span>Resident Discount</span>
                       <span>-{pricing.resident_discount * 100}%</span>
                     </div>
@@ -395,11 +385,6 @@ export function AmenityDetailPage() {
                   >
                     Proceed to Booking
                   </Button>
-                  {!user && (
-                    <p className="text-xs text-center text-muted-foreground">
-                      Log in to get 50% resident discount
-                    </p>
-                  )}
                 </CardContent>
               </Card>
             )}

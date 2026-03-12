@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import type { PublicAmenity } from "@/types";
-import { Users, Info, Home, Moon, Sun } from "lucide-react";
+import { Users, Info, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { useTheme } from "next-themes";
+import { PublicPageHeader } from "@/components/public/PublicPageHeader";
 
 const amenityImages: Record<string, string> = {
   clubhouse:
@@ -22,17 +22,12 @@ const amenityImages: Record<string, string> = {
 };
 
 export function ExternalRentalsPage() {
-  const { theme, setTheme } = useTheme();
   const [amenities, setAmenities] = useState<PublicAmenity[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     loadAmenities();
-    setMounted(true);
   }, []);
-
-  const isDark = mounted && theme === "dark";
 
   async function loadAmenities() {
     try {
@@ -51,34 +46,15 @@ export function ExternalRentalsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <LoadingSpinner size="lg" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-gray-900 dark:to-gray-950">
-      {/* Header with theme toggle and home link */}
-      <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
-        <Link to="/">
-          <Button variant="outline" size="icon" title="Back to Home">
-            <Home className="w-4 h-4" />
-          </Button>
-        </Link>
-        <button
-          onClick={() => setTheme(isDark ? "light" : "dark")}
-          className="w-10 h-10 rounded-lg border-2 border-border bg-background hover:bg-accent hover:text-accent-foreground transition-all shadow-sm"
-          aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
-        >
-          {mounted && (
-            <>
-              <Sun className="h-[1.3rem] w-[1.3rem] rotate-0 scale-100 transition-all duration-300 dark:-rotate-90 dark:scale-0 text-amber-500" />
-              <Moon className="absolute h-[1.3rem] w-[1.3rem] rotate-90 scale-0 transition-all duration-300 dark:rotate-0 dark:scale-100 text-indigo-400" />
-            </>
-          )}
-        </button>
-      </div>
+    <div className="min-h-screen bg-background">
+      <PublicPageHeader title="External Rentals" showBackButton backTo="/" />
 
       {/* Hero Section */}
       <div className="bg-primary text-primary-foreground py-16 px-4">
@@ -107,7 +83,7 @@ export function ExternalRentalsPage() {
             {amenities.map((amenity) => (
               <Card
                 key={amenity.amenity_type}
-                className="overflow-hidden hover:shadow-lg transition-shadow"
+                className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
               >
                 <div className="h-48 overflow-hidden">
                   <img
@@ -116,7 +92,7 @@ export function ExternalRentalsPage() {
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <CardHeader>
+                <CardHeader className="flex-1">
                   <CardTitle>{amenity.name}</CardTitle>
                   <CardDescription className="line-clamp-2">
                     {amenity.description}
@@ -133,7 +109,10 @@ export function ExternalRentalsPage() {
                     to={`/external-rentals/${amenity.amenity_type}`}
                     className="w-full"
                   >
-                    <Button className="w-full">Check Availability</Button>
+                    <Button className="w-full" size="lg">
+                      <Calendar className="w-4 h-4 mr-2" />
+                      Book Now
+                    </Button>
                   </Link>
                 </CardFooter>
               </Card>
@@ -144,15 +123,15 @@ export function ExternalRentalsPage() {
 
       {/* Info Section */}
       <div className="max-w-4xl mx-auto px-4 py-12">
-        <Card className="bg-blue-50 dark:bg-gray-800 border-blue-200 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+        <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+            <CardTitle className="flex items-center gap-2">
               <Info className="w-5 h-5" />
               How It Works
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <ol className="list-decimal list-inside space-y-2 text-sm text-gray-800 dark:text-gray-200">
+            <ol className="list-decimal list-inside space-y-2 text-sm">
               <li>
                 Browse our amenities and check availability for your preferred
                 date
