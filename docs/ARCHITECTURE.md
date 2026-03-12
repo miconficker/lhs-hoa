@@ -34,18 +34,20 @@ The Laguna Hills HOA system is a **serverless, full-stack web application** desi
 
 ### Core Functional Areas
 
-1. **User Management**: Authentication, roles, Google OAuth SSO
-2. **Household & Lot Management**: Property records, lot mapping
-3. **Service Requests**: Maintenance request tracking
-4. **Reservations**: Amenity booking system
+1. **Public Landing Page**: Entry point with resident (login) and visitor (book) paths
+2. **User Management**: Authentication, roles, Google OAuth SSO
+3. **Household & Lot Management**: Property records, lot mapping
+4. **Service Requests**: Maintenance request tracking
+5. **Reservations**: Amenity booking system
    - **Internal**: Resident bookings with instant confirmation
    - **External (Public)**: Non-resident bookings with approval workflow
-5. **Payments**: Dues management, payment tracking, verification queue
-6. **Communications**: Announcements, events, notifications, messaging threads
-7. **Polling**: Community voting system
-8. **Document Repository**: HOA rules, forms, minutes
-9. **Pass Management**: Employee and vehicle pass system
-10. **Admin Tools**: System configuration, bulk operations
+6. **Payments**: Dues management, payment tracking, verification queue
+7. **Communications**: Announcements, events, notifications, messaging threads
+8. **Polling**: Community voting system
+9. **Document Repository**: HOA rules, forms, minutes
+10. **Pass Management**: Employee and vehicle pass system
+11. **Admin Tools**: System configuration, bulk operations
+12. **Theme Support**: Dark mode toggle on public pages with `next-themes` integration
 
 ---
 
@@ -160,10 +162,11 @@ lhs-hoa/
 │   │   │   └── reservations/     # Reservation management
 │   │   │       └── ExternalRentalsTab.tsx  # External rentals with pending queue
 │   │   ├── public/              # Public pages (no authentication)
-│   │   │   ├── ExternalRentalsPage.tsx    # Browse amenities
-│   │   │   ├── AmenityDetailPage.tsx     # Calendar & pricing
-│   │   │   ├── BookingPage.tsx            # Guest booking form
-│   │   │   ├── ConfirmationPage.tsx       # Status tracking
+│   │   │   ├── LandingPage.tsx             # Landing page with resident/visitor options
+│   │   │   ├── ExternalRentalsPage.tsx     # Browse amenities (with dark mode)
+│   │   │   ├── AmenityDetailPage.tsx      # Calendar & pricing
+│   │   │   ├── BookingPage.tsx             # Guest booking form
+│   │   │   ├── ConfirmationPage.tsx        # Status tracking
 │   │   │   └── SuccessPage.tsx             # Booking success with auto-redirect
 │   │   ├── LoginPage.tsx
 │   │   ├── DashboardPage.tsx     # Resident dashboard (user-centric)
@@ -251,6 +254,7 @@ The app uses **React Router v6** with nested routes:
 
 ```
 / (public)
+├── / (public)                                          # Landing page - choose resident/visitor
 ├── /login (public)
 ├── /external-rentals (public)                         # Browse amenities (non-residents)
 ├── /external-rentals/:amenityType (public)            # Amenity details with calendar
@@ -1550,6 +1554,9 @@ Based on **Radix UI** primitives with Tailwind styling:
 - Chart components dynamically detect theme changes using MutationObserver
 - Consistent color patterns: `bg-background`, `text-muted-foreground`, `border-input`, `bg-primary text-primary-foreground`
 - Status colors use CSS variables for automatic theme adaptation: `bg-[hsl(var(--status-success-bg))]`
+- Public pages (LandingPage, ExternalRentalsPage) include dark mode toggle in top-right corner
+- Theme toggle uses `next-themes` library with `useTheme()` hook for consistent theme management
+- Dark mode gradients: `dark:from-gray-900 dark:to-gray-950` for public page backgrounds
 
 **StatusBadge Usage**:
 ```typescript
@@ -2165,9 +2172,27 @@ jobs:
 ## Document Metadata
 
 **Last Updated**: 2026-03-12
-**Version**: 1.8.0
+**Version**: 1.9.0
 **Status**: Production System (Audit Complete)
 **Maintained By**: Development Team
+
+**Recent Updates (v1.9.0)**:
+- Public landing page with resident/visitor path selection
+  - Created `LandingPage.tsx` as new root route (/) with dual-path entry
+  - Residents can click "Resident Login" to access the member portal
+  - Visitors can click "Book Amenity" to browse and book amenities without authentication
+  - Added dark mode toggle button to landing page (top-right corner)
+  - Responsive two-card layout with feature lists for each user type
+- Dark mode support for external bookings
+  - Added theme toggle to `ExternalRentalsPage.tsx` with sun/moon icon animation
+  - Added "Back to Home" button for navigation from external rentals to landing page
+  - Dark mode gradients: `dark:from-gray-900 dark:to-gray-950` for page backgrounds
+  - Fixed "How It Works" card with proper dark mode colors (`dark:bg-gray-800 dark:text-gray-100`)
+- Updated navigation flow
+  - Root path (/) now redirects to landing page instead of dashboard
+  - LoginPage includes "Book Amenity as Visitor" button for non-resident bookings
+  - Clear separation between resident portal and public booking system
+  - All public pages support dark mode via `next-themes` integration
 
 **Recent Updates (v1.8.0)**:
 - Structured delinquency flagging with bylaw-compliant reason codes
