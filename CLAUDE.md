@@ -19,6 +19,8 @@ From the concept paper, the system aims to:
 5. **Document management** - HOA rules, regulations, forms, and important documents
 6. **Online payments** - Settlement of dues and fees through user accounts
 7. **Amenity reservations** - Automated booking system for common areas
+   - **Internal**: Resident bookings with instant confirmation
+   - **External (NEW)**: Non-resident bookings with admin approval workflow
 
 ## Key Features to Implement
 
@@ -50,10 +52,12 @@ From the concept paper, the system aims to:
 
 ```bash
 # Run both frontend and backend together
-npm run dev:all
+pnpm run dev:all
 # or
 ./dev.sh
 ```
+
+**Package Manager**: This project uses **pnpm** (not npm) for faster installs and disk efficiency.
 
 - **Git worktrees**: Use `.worktrees/` directory for feature branch isolation (already gitignored).
   ```bash
@@ -64,7 +68,10 @@ npm run dev:all
 
 ```bash
 # Run D1 migrations (local)
-npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0001_schema.sql --local
+pnpm wrangler d1 execute laguna_hills_hoa --file=./migrations/0001_schema.sql --local
+
+# Run all migrations including public booking system
+pnpm wrangler d1 execute laguna_hills_hoa --file=./migrations/0020_public_external_bookings.sql --local
 ```
 
 ### Test Users
@@ -76,7 +83,7 @@ npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0001_schema.sql --l
 
 - **Location**: `src/components/ui/`
 - **Utils**: `src/lib/utils.ts` exports `cn()` for className merging (clsx + tailwind-merge)
-- **Available**: Button, Card, Badge, Input, Label, RadioGroup, Select, Dialog, Tabs
+- **Available**: Button, Card, Badge, Input, Label, RadioGroup, Select, Dialog, Tabs, Textarea, Checkbox
 - **Theming**: CSS variables in `src/index.css` under `:root` for colors, radius, etc.
 
 ## Important Gotchas
@@ -109,6 +116,113 @@ npx wrangler d1 execute laguna_hills_hoa --file=./migrations/0001_schema.sql --l
 
 - **Late fee configuration**: Fully configurable via UI at Admin Panel → Payments → Settings (see `LateFeeConfig.tsx`)
 
+## Public External Booking System
+
+The system supports **non-resident amenity rentals** through a separate public-facing workflow:
+
+### Key Features
+
+1. **No Authentication Required**: Public can browse and book without logging in
+2. **Dynamic Pricing**: Rates vary by day type (weekday/weekend/holiday) and season
+3. **Resident Discount**: Logged-in residents get 50% off automatically
+4. **Pending Approval Workflow**:
+   - Multiple requests allowed for same slot (timestamped for fairness)
+   - Admin reviews pending queue sorted by request time
+   - "First request" badge indicates priority
+   - Auto-reject option for conflicting requests
+5. **Proof of Payment**: Guests upload payment receipt before confirmation
+6. **Status Tracking**: Public confirmation page shows real-time booking status
+
+### Database Tables (Migration 0020)
+
+**`external_rentals`** - Stores all booking requests (pending and confirmed):
+- `booking_status`: pending_payment → pending_verification → confirmed/rejected/cancelled
+- `guest_*`: Guest contact information (name, email, phone)
+- `proof_of_payment_url`: R2 storage URL for payment receipt
+- `created_ip`: IP address retained for 90 days (GDPR compliance)
+- No UNIQUE constraint on (amenity_type, date, slot) - allows multiple pending requests
+
+**`booking_blocked_dates`** - Only confirmed bookings block slots:
+- UNIQUE constraint ensures one confirmed booking per slot
+- References external_rentals.id
+- Deleted when booking is cancelled
+
+### Public Pages
+
+All under `/external-rentals/` route (no authentication):
+
+- **Browse** (`/external-rentals`) - Amenity listing with images, capacity, descriptions
+- **Detail** (`/external-rentals/:amenityType`) - Calendar view, available slots, pricing calculator
+- **Book** (`/external-rentals/book`) - Guest information form, payment instructions
+- **Confirm** (`/external-rentals/confirmation/:id`) - Status tracking, proof upload
+- **Success** (`/external-rentals/success/:id`) - Auto-redirects to confirmation page
+
+### Admin: Pending Queue Management
+
+Located in Admin Panel → Reservations → External Rentals tab:
+
+- **Toggle button**: "Show Pending Queue" / "Show All"
+- **Pending badge**: Shows count of pending requests
+- **Queue list**: Sorted by request time (oldest first)
+- **First Request badge**: Highlights earliest request for each slot
+- **Review dialog**: View guest details, proof of payment
+- **Actions**: Approve (with auto-reject option), Reject (with reason)
+
+### Rate Limiting
+
+Public booking endpoints are rate-limited (using `lib/rate-limit.ts`):
+- Max 3 bookings per hour per IP address
+- IP address retained in `created_ip` field for 90 days (GDPR)
+
+### API Endpoints
+
+**Public** (`/api/public/*` - No authentication):
+- `GET /amenities` - List available amenities
+- `GET /availability/:amenityType` - Check available dates
+- `GET /pricing/:amenityType` - Calculate pricing for date/slot
+- `GET /payment-details` - Payment instructions (GCash, bank transfer)
+- `POST /bookings` - Create booking request
+- `POST /bookings/:id/proof` - Upload payment proof
+- `GET /bookings/:id/status` - Check booking status
+
+**Admin** (`/api/admin/external-rentals/*`):
+- `GET /pending` - Get pending queue with timestamp sorting
+- `PUT /:id/approve` - Approve booking (auto-reject conflicts)
+- `PUT /:id/reject` - Reject booking with reason
+
+### Pricing System
+
+Configuration stored in `system_settings` table:
+
+```sql
+-- Base rates per amenity
+INSERT INTO system_settings (key, value) VALUES
+  ('base_rate.clubhouse', 500),
+  ('base_rate.pool', 300),
+  ('base_rate.basketball-court', 200),
+  ('base_rate.tennis-court', 250);
+
+-- Multipliers
+('day_multiplier.weekday', 1.0),
+('day_multiplier.weekend', 1.2),
+('season_multiplier.peak', 1.5),
+('season_multiplier.off_peak', 0.8);
+
+-- Resident discount
+('resident_discount_rate', 0.5);  -- 50% off
+```
+
+### Fair Approval Process
+
+When multiple requests exist for the same slot:
+
+1. **Queue sorted by**: `created_at` timestamp (oldest first)
+2. **Admin sees**: "First Request" badge on earliest request
+3. **Conflict detection**: If conflicts exist, admin can auto-reject others
+4. **Decision**: Approve first → booking confirmed → conflicting requests auto-rejected
+
+This ensures "first come, first served" while allowing admins to make exceptions if needed.
+
 ## Development Standards
 
 ### Process Safety Rules
@@ -139,10 +253,10 @@ If an `ARCHITECTURE.md` file exists in the working directory, you MUST read it b
 
 Before marking any task complete or claiming code works:
 
-1. **Dependencies**: If `package.json` changed, run `npm install` (or project's package manager)
-2. **Lint**: Run the project's linter and fix all errors/warnings (`npm run lint`)
+1. **Dependencies**: If `package.json` changed, run `pnpm install` (project uses pnpm)
+2. **Lint**: Run the project's linter and fix all errors/warnings (`pnpm run lint`)
 3. **Type-check**: Run TypeScript type checking if applicable (`rtk tsc`)
-4. **Build**: Run `npm run build` to verify no compilation errors
+4. **Build**: Run `pnpm run build` to verify no compilation errors
 5. **Test**: Run targeted tests for modified code
 
 Only after all checks pass should you consider work complete.

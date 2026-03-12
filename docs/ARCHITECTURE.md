@@ -38,6 +38,8 @@ The Laguna Hills HOA system is a **serverless, full-stack web application** desi
 2. **Household & Lot Management**: Property records, lot mapping
 3. **Service Requests**: Maintenance request tracking
 4. **Reservations**: Amenity booking system
+   - **Internal**: Resident bookings with instant confirmation
+   - **External (Public)**: Non-resident bookings with approval workflow
 5. **Payments**: Dues management, payment tracking, verification queue
 6. **Communications**: Announcements, events, notifications, messaging threads
 7. **Polling**: Community voting system
@@ -115,6 +117,7 @@ lhs-hoa/
 │   │   ├── polls.ts              # /api/polls/*
 │   │   ├── reservations.ts       # /api/reservations/*
 │   │   ├── service-requests.ts   # /api/service-requests/*
+│   │   ├── public.ts             # /api/public/* (no authentication - external bookings)
 │   │   └── admin.ts              # /api/admin/* (admin-only)
 │   └── types/
 │       └── index.ts              # Shared TypeScript types
@@ -154,6 +157,13 @@ lhs-hoa/
 │   │   │   │   └── BoardMembersTab.tsx
 │   │   │   ├── MemberApprovalsPage.tsx
 │   │   │   └── reservations/     # Reservation management
+│   │   │       └── ExternalRentalsTab.tsx  # External rentals with pending queue
+│   │   ├── public/              # Public pages (no authentication)
+│   │   │   ├── ExternalRentalsPage.tsx    # Browse amenities
+│   │   │   ├── AmenityDetailPage.tsx     # Calendar & pricing
+│   │   │   ├── BookingPage.tsx            # Guest booking form
+│   │   │   ├── ConfirmationPage.tsx       # Status tracking
+│   │   │   └── SuccessPage.tsx             # Booking success with auto-redirect
 │   │   ├── LoginPage.tsx
 │   │   ├── DashboardPage.tsx     # Resident dashboard (user-centric)
 │   │   ├── MapPage.tsx
@@ -239,6 +249,11 @@ The app uses **React Router v6** with nested routes:
 ```
 / (public)
 ├── /login (public)
+├── /external-rentals (public)                         # Browse amenities (non-residents)
+├── /external-rentals/:amenityType (public)            # Amenity details with calendar
+├── /external-rentals/book (public)                    # Guest booking form
+├── /external-rentals/confirmation/:id (public)       # Booking status tracker
+├── /external-rentals/success/:id (public)             # Booking success page
 └── / (protected - MainLayout)
     ├── /dashboard              # Resident dashboard (user-centric)
     ├── /map
@@ -574,7 +589,7 @@ CREATE TABLE payments (
 );
 ```
 
-#### `reservations`
+#### `reservations` (Internal - Residents)
 ```sql
 CREATE TABLE reservations (
   id TEXT PRIMARY KEY,
@@ -588,6 +603,63 @@ CREATE TABLE reservations (
   UNIQUE(household_id, amenity_type, date, slot)
 );
 ```
+
+#### `external_rentals` (Public - Non-Residents)
+```sql
+CREATE TABLE external_rentals (
+  id TEXT PRIMARY KEY,
+  amenity_type TEXT NOT NULL CHECK(amenity_type IN ('clubhouse', 'pool', 'basketball-court', 'tennis-court')),
+  date DATE NOT NULL,
+  slot TEXT NOT NULL CHECK(slot IN ('AM', 'PM', 'FULL_DAY')),
+  renter_name TEXT NOT NULL,
+  renter_contact TEXT,
+  amount REAL NOT NULL,
+  payment_status TEXT DEFAULT 'unpaid' CHECK(payment_status IN ('unpaid', 'partial', 'paid', 'overdue')),
+  notes TEXT,
+  -- Public booking fields (migration 0020)
+  guest_name TEXT,
+  guest_email TEXT,
+  guest_phone TEXT,
+  proof_of_payment_url TEXT,
+  booking_status TEXT DEFAULT 'pending_payment' CHECK(
+    booking_status IN ('pending_payment', 'pending_verification', 'confirmed', 'rejected', 'cancelled')
+  ),
+  rejection_reason TEXT,
+  created_ip TEXT,
+  guest_notes TEXT,
+  admin_notes TEXT,
+  ip_retained_until DATE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  -- NOTE: No UNIQUE constraint on (amenity_type, date, slot) - allows multiple pending requests
+  -- Confirmed bookings are tracked in booking_blocked_dates table
+);
+```
+
+#### `booking_blocked_dates` (Confirmed Bookings Only)
+```sql
+CREATE TABLE booking_blocked_dates (
+  id TEXT PRIMARY KEY,
+  amenity_type TEXT NOT NULL CHECK(amenity_type IN ('clubhouse', 'pool', 'basketball-court', 'tennis-court')),
+  booking_date DATE NOT NULL,
+  slot TEXT NOT NULL CHECK(slot IN ('AM', 'PM', 'FULL_DAY')),
+  external_rental_id TEXT REFERENCES external_rentals(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(amenity_type, booking_date, slot)  -- Only confirmed bookings block slots
+);
+```
+
+**Design Difference - Internal vs External Bookings**:
+
+| Aspect | Internal (`reservations`) | External (`external_rentals`) |
+|--------|--------------------------|------------------------------|
+| **Who** | Residents | Non-residents/public |
+| **Auth Required** | Yes | No |
+| **Confirmation** | Instant (if available) | Manual approval by admin |
+| **Slot Blocking** | Blocks immediately on booking | Only blocks when confirmed |
+| **Multiple Pending** | Not allowed (UNIQUE constraint) | Allowed with timestamp sorting |
+| **Payment Flow** | Record payment after booking | Upload proof before confirmation |
+| **Discount** | N/A | 50% resident discount when logged in |
+| **Reference Number** | N/A | Generated format: `EXT-YYYYMMDD-XXX` |
 
 #### `polls` & `poll_votes`
 ```sql
