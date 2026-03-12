@@ -68,7 +68,7 @@ export function ExternalRentalsPage() {
 
       {/* Amenities Grid */}
       <div className="max-w-7xl mx-auto px-4 py-12">
-        <h2 className="text-2xl font-bold mb-8 text-center">
+        <h2 className="text-2xl font-bold mb-8 text-center text-foreground">
           Available Amenities
         </h2>
         {amenities.length === 0 ? (
@@ -117,15 +117,15 @@ export function ExternalRentalsPage() {
 
       {/* Info Section */}
       <div className="max-w-4xl mx-auto px-4 py-12">
-        <Card className="bg-blue-50 border-blue-200">
+        <Card className="bg-blue-50 border-blue-200 text-gray-900">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-gray-900">
               <Info className="w-5 h-5" />
               How It Works
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <ol className="list-decimal list-inside space-y-2 text-sm">
+            <ol className="list-decimal list-inside space-y-2 text-sm text-gray-800">
               <li>
                 Browse our amenities and check availability for your preferred
                 date
