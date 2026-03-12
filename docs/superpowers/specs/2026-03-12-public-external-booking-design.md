@@ -468,6 +468,104 @@ UPDATE external_rentals SET booking_status = 'rejected', rejection_reason = ? WH
 
 ---
 
+## Handling Multiple Pending Requests
+
+### Request Timestamping
+
+**Critical:** Each booking request is timestamped with `created_at`. When multiple pending requests exist for the same slot, the admin must see which was received first to make a fair approval decision.
+
+### Admin Interface: Pending Queue Display
+
+**Location:** `/admin/financials/external-rentals?status=pending_verification`
+
+**Display Columns (in order of priority):**
+1. **Received At** - `created_at` timestamp (primary sorting key)
+2. **Time of Day** - Show as "8:23 AM" or "2:15 PM" for easy comparison
+3. **Reference #** - Reference number for identification
+4. **Guest Name** - Who made the request
+5. **Slot** - Date and time slot
+6. **Event Type** - Wedding, birthday, etc.
+7. **Attendees** - Expected number of people
+8. **Amount** - Total booking amount
+
+**Sorting:**
+- Default: Sort by `created_at` ASC (oldest first)
+- Option to sort by: date, slot, amount, or event type
+
+### Approval Decision Process
+
+When approving a booking, the admin should see:
+1. **Warning message** if other pending requests exist for same slot:
+   > "Note: 2 other pending requests exist for this slot. First request received at 8:23 AM by Juan Dela Cruz."
+
+2. **Auto-reject option:** When confirming a booking, optionally auto-reject all other pending requests for the same slot with reason "First come, first served - another booking was confirmed."
+
+### Database Query for Conflicting Pending Requests
+
+```sql
+-- Find other pending requests for the same amenity/date/slot
+SELECT id, reference_number, guest_name, created_at
+FROM external_rentals
+WHERE amenity_type = ?
+  AND date = ?
+  AND slot = ?
+  AND booking_status IN ('pending_payment', 'pending_verification')
+  AND id != ?
+ORDER BY created_at ASC;
+```
+
+### API Response: Pending Queue With Context
+
+```typescript
+// GET /api/admin/external-rentals?status=pending_verification&amenity=clubhouse&date=2026-03-15&slot=FULL_DAY
+
+{
+  "data": {
+    "requests": [
+      {
+        "id": "ext-001",
+        "reference_number": "EXT-2026-0312-001",
+        "guest_name": "Juan Dela Cruz",
+        "created_at": "2026-03-12T08:23:45.000Z",
+        "time_of_day": "8:23 AM",
+        "amenity_type": "clubhouse",
+        "date": "2026-03-15",
+        "slot": "FULL_DAY",
+        "event_type": "wedding",
+        "attendees": 50,
+        "amount": 7020,
+        "is_first": true
+      },
+      {
+        "id": "ext-002",
+        "reference_number": "EXT-2026-0312-002",
+        "guest_name": "Maria Santos",
+        "created_at": "2026-03-12T09:15:22.000Z",
+        "time_of_day": "9:15 AM",
+        "amenity_type": "clubhouse",
+        "date": "2026-03-15",
+        "slot": "FULL_DAY",
+        "event_type": "birthday",
+        "attendees": 30,
+        "amount": 7020,
+        "is_first": false
+      }
+    ],
+    "total": 2,
+    "conflicts": {
+      "amenity_type": "clubhouse",
+      "date": "2026-03-15",
+      "slot": "FULL_DAY",
+      "pending_count": 2
+    }
+  }
+}
+```
+
+**Note:** The `is_first` flag indicates which request was received first for easy visual highlighting.
+
+---
+
 ## Security & Validation
 
 ### Rate Limiting
