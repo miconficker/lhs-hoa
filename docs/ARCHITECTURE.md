@@ -151,6 +151,9 @@ lhs-hoa/
 │   │   ├── logger.ts             # Client-side logging
 │   │   ├── content/              # i18n labels & messages
 │   │   └── paymentExport.ts      # CSV export utilities
+│   ├── public/                   # Public-facing components
+│   │   ├── PublicPageHeader.tsx  # Shared header with dark mode toggle
+│   │   └── PublicLayout.tsx      # Layout wrapper for public pages
 │   ├── pages/                    # Page components
 │   │   ├── admin/                # Admin-specific pages
 │   │   │   ├── AdminLayout.tsx   # Admin layout wrapper with persistent sidebar
@@ -2171,10 +2174,26 @@ jobs:
 
 ## Document Metadata
 
-**Last Updated**: 2026-03-12
-**Version**: 1.9.0
+**Last Updated**: 2026-03-13
+**Version**: 1.10.0
 **Status**: Production System (Audit Complete)
 **Maintained By**: Development Team
+
+**Recent Updates (v1.10.0)**:
+- Public layout wrapper for consistent browsing experience
+  - Created `PublicLayout.tsx` component that wraps `PublicPageHeader` with consistent container
+  - All public booking pages now use `PublicLayout` for uniform spacing, max-width, and navigation
+  - Hero sections on amenity pages use negative margins to extend beyond container (`-mx-4 sm:-mx-8 mt-[-2rem]`)
+  - Centered amenity cards grid (2 columns instead of 4) for better visual balance
+  - Prominent "Book Now" buttons with Calendar icon and larger size (`size="lg"`)
+- Enhanced dark mode support for all public booking pages
+  - Updated status colors in `ConfirmationPage` with proper dark mode variants
+  - Fixed all colored cards (green, blue, yellow, orange, red) with dark theme support
+  - Replaced hardcoded colors with semantic CSS variables (`bg-background`, `bg-card`, `border-border`)
+  - `SuccessPage` gradient now respects dark mode (`dark:from-green-950/20 dark:to-background`)
+- Fixed double data wrapper bug in payment-details endpoint
+  - Backend now returns `{ gcash: {...}, bank_transfer: {...} }` instead of `{ data: {...} }`
+  - Prevents `TypeError: can't access property "name", d.gcash is undefined`
 
 **Recent Updates (v1.9.0)**:
 - Public landing page with resident/visitor path selection
