@@ -117,6 +117,7 @@ lhs-hoa/
 │   │   ├── polls.ts              # /api/polls/*
 │   │   ├── reservations.ts       # /api/reservations/*
 │   │   ├── service-requests.ts   # /api/service-requests/*
+│   │   ├── delinquency.ts        # /api/admin/delinquency/*
 │   │   ├── public.ts             # /api/public/* (no authentication - external bookings)
 │   │   └── admin.ts              # /api/admin/* (admin-only)
 │   └── types/
@@ -206,7 +207,9 @@ lhs-hoa/
 │   ├── 0005_late_fee_config.sql
 │   ├── 0006_poll_votes_indexes.sql
 │   ├── 0007_system_settings.sql
-│   └── 0008_seed_data.sql
+│   ├── 0008_seed_data.sql
+│   ├── 0019_manual_delinquencies.sql  # Manual delinquency tracking
+│   └── 0020_delinquency_reason_codes.sql  # Structured reason codes (bylaw grounds)
 │
 ├── scripts/                      # Utility scripts
 │   ├── svg-to-geojson.ts         # Convert SVG map to GeoJSON
@@ -698,6 +701,50 @@ CREATE TABLE notifications (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 ```
+
+#### `manual_delinquencies`
+```sql
+CREATE TABLE manual_delinquencies (
+  id TEXT PRIMARY KEY,
+  lot_member_id TEXT NOT NULL REFERENCES lot_members(id),
+  is_active BOOLEAN NOT NULL DEFAULT 1,
+  reason TEXT,                         -- Human-readable reason (backward compat)
+  reason_code TEXT CHECK(reason_code IN (  -- Bylaw grounds (structured)
+    'failure_to_pay',                  -- Failure to pay dues despite repeated demands
+    'repeated_violation',              -- Repeated violation or noncompliance
+    'detrimental_conduct',             -- Commission of detrimental conduct
+    'failure_to_attend'                -- Failure to attend 3 consecutive general memberships
+  )),
+  reason_detail TEXT,                 -- Supplementary detail (e.g., rule citation for repeated_violation)
+  marked_by TEXT NOT NULL REFERENCES users(id),
+  marked_at TEXT NOT NULL,
+  waived_by TEXT REFERENCES users(id),
+  waived_at TEXT,
+  waiver_reason TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (lot_member_id) REFERENCES lot_members(id) ON DELETE CASCADE
+);
+```
+
+**Purpose**: Track manual delinquency overrides with full audit trail.
+
+**Bylaw Grounds** (`reason_code` values):
+1. **failure_to_pay**: Failure to pay dues despite repeated demands
+2. **repeated_violation**: Repeated violation or noncompliance (requires `reason_detail` with rule citation)
+3. **detrimental_conduct**: Commission of detrimental conduct
+4. **failure_to_attend**: Failure to attend 3 consecutive general memberships without justifiable reasons
+
+**Key Behaviors**:
+- When a member is marked delinquent, `lot_members.can_vote` is set to `0`
+- When waived, voting eligibility is recalculated based on payment status
+- `reason` field stores human-readable text for display (legacy compatibility)
+- `reason_code` + `reason_detail` provide structured, queryable data
+
+**API Endpoints**:
+- `GET /api/admin/delinquency/members` - List all delinquents (manual + automatic)
+- `GET /api/admin/delinquency/member-search?q=` - Search members for flagging
+- `POST /api/admin/delinquency/mark` - Flag member as delinquent (requires `reason_code` + optional `reason_detail`)
+- `POST /api/admin/delinquency/waive/:id` - Waive manual delinquency
 
 #### `pass_employees` & `pass_vehicles`
 ```sql
@@ -1388,6 +1435,35 @@ PUT    /api/admin/lot-members/:id/verify      # Verify household member
 DELETE /api/admin/lot-members/:id             # Remove household member
 GET    /api/admin/lot-members/lots/unassigned # Get lots without members
 GET    /api/admin/lot-members/pending          # Get pending (unverified) members
+```
+
+#### Delinquency Management
+```
+# Public (member-facing)
+GET    /api/my-lots/delinquency-status        # Get current user's delinquency status
+
+# Admin endpoints
+GET    /api/admin/delinquency/members           # List all delinquents (manual + automatic)
+GET    /api/admin/delinquency/members?type=manual&year=2025  # Filter by type/year
+GET    /api/admin/delinquency/member-search?q=john   # Search members for flagging
+POST   /api/admin/delinquency/mark             # Flag member as delinquent (requires reason_code + reason_detail)
+POST   /api/admin/delinquency/waive/:id         # Waive manual delinquency
+POST   /api/admin/delinquency/demands          # Generate payment demands for a year
+```
+
+**Delinquency Reason Codes** (`reason_code`):
+- `failure_to_pay` - Failure to pay dues despite repeated demands
+- `repeated_violation` - Repeated violation or noncompliance (requires `reason_detail`)
+- `detrimental_conduct` - Commission of detrimental conduct
+- `failure_to_attend` - Failure to attend 3 consecutive general memberships without justifiable reasons
+
+**Mark Delinquent Request**:
+```json
+{
+  "lot_member_id": "uuid",
+  "reason_code": "repeated_violation",
+  "reason_detail": "Section 5.3 - Noise ordinance violation"  // Required for repeated_violation
+}
 ```
 
 #### Admin (Role-Protected)
@@ -2088,10 +2164,19 @@ jobs:
 
 ## Document Metadata
 
-**Last Updated**: 2026-03-11
-**Version**: 1.7.0
+**Last Updated**: 2026-03-12
+**Version**: 1.8.0
 **Status**: Production System (Audit Complete)
 **Maintained By**: Development Team
+
+**Recent Updates (v1.8.0)**:
+- Structured delinquency flagging with bylaw-compliant reason codes
+  - Added `reason_code` and `reason_detail` columns to `manual_delinquencies` table (migration 0020)
+  - Implemented four bylaw grounds: failure_to_pay, repeated_violation, detrimental_conduct, failure_to_attend
+  - Added member search endpoint for admin flagging workflow
+  - Created FlagMemberDialog component with 3-step wizard (search → reason → confirm)
+  - Updated mark endpoint to validate structured reasons (repeated_violation requires rule citation)
+  - Added "Flag Member" button to DelinquencyPage with destructive variant styling
 
 **Recent Updates (v1.7.0)**:
 - Comprehensive dark mode consistency improvements

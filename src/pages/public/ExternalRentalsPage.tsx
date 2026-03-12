@@ -18,10 +18,6 @@ const amenityImages: Record<string, string> = {
   clubhouse:
     "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800",
   pool: "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=800",
-  "basketball-court":
-    "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800",
-  "tennis-court":
-    "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800",
 };
 
 export function ExternalRentalsPage() {

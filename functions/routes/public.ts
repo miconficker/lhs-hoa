@@ -12,7 +12,7 @@ export const publicRouter = new Hono<{ Bindings: Env }>();
 
 // Validation schemas
 const bookingRequestSchema = z.object({
-  amenity_type: z.enum(['clubhouse', 'pool', 'basketball-court', 'tennis-court']),
+  amenity_type: z.enum(['clubhouse', 'pool']),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   slot: z.enum(['AM', 'PM', 'FULL_DAY']),
   guest_name: z.string().min(1),
@@ -50,8 +50,6 @@ publicRouter.get('/amenities', async (c) => {
   const amenities = [
     { amenity_type: 'clubhouse', name: 'Clubhouse', description: 'Perfect for weddings, parties, and meetings', capacity: 100, image: '/images/clubhouse.jpg' },
     { amenity_type: 'pool', name: 'Swimming Pool', description: 'Olympic-sized pool with kiddie area', capacity: 50, image: '/images/pool.jpg' },
-    { amenity_type: 'basketball-court', name: 'Basketball Court', description: 'Full-size court with lighting', capacity: 20, image: '/images/basketball.jpg' },
-    { amenity_type: 'tennis-court', name: 'Tennis Court', description: 'Professional clay court', capacity: 4, image: '/images/tennis.jpg' },
   ];
 
   return c.json({ amenities });
