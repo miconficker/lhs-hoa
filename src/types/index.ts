@@ -1182,6 +1182,12 @@ export interface MessageResponse {
 }
 
 // Delinquency Management
+export type DelinquencyReasonCode =
+  | "failure_to_pay"
+  | "repeated_violation"
+  | "detrimental_conduct"
+  | "failure_to_attend";
+
 export interface ManualDelinquency {
   id: string;
   lot_member_id: string;
@@ -1245,7 +1251,30 @@ export interface DemandGenerationResponse {
 
 export interface MarkDelinquentRequest {
   lot_member_id: string;
-  reason: string;
+  reason_code: DelinquencyReasonCode;
+  reason_detail?: string; // Required when reason_code === 'repeated_violation'
+}
+
+export const DELINQUENCY_REASON_LABELS: Record<DelinquencyReasonCode, string> =
+  {
+    failure_to_pay: "Failure to pay dues despite repeated demands",
+    repeated_violation: "Repeated violation or noncompliance (specify rule)",
+    detrimental_conduct: "Commission of detrimental conduct",
+    failure_to_attend:
+      "Failure to attend 3 consecutive general memberships without justifiable reasons",
+  };
+
+export interface MemberSearchResult {
+  lot_member_id: string;
+  member_type: "primary_owner" | "secondary";
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  block: string;
+  lot: string;
+  address: string;
+  already_flagged: 0 | 1;
 }
 
 export interface WaiveDelinquencyRequest {

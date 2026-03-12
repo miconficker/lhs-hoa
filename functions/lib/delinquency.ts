@@ -17,6 +17,8 @@ export interface ManualDelinquency {
   lot_member_id: string;
   is_active: boolean;
   reason: string | null;
+  reason_code?: string | null;
+  reason_detail?: string | null;
   marked_by: string;
   marked_at: string;
   waived_by: string | null;
@@ -147,15 +149,17 @@ export async function markDelinquent(
   DB: D1Database,
   lotMemberId: string,
   markedBy: string,
-  reason: string
+  reason: string,
+  reasonCode?: string | null,
+  reasonDetail?: string | null
 ): Promise<ManualDelinquency> {
   const id = crypto.randomUUID();
   const markedAt = new Date().toISOString();
 
   await DB.prepare(
-    `INSERT INTO manual_delinquencies (id, lot_member_id, is_active, reason, marked_by, marked_at)
-     VALUES (?, ?, 1, ?, ?, ?)`
-  ).bind(id, lotMemberId, reason, markedBy, markedAt).run();
+    `INSERT INTO manual_delinquencies (id, lot_member_id, is_active, reason, reason_code, reason_detail, marked_by, marked_at)
+     VALUES (?, ?, 1, ?, ?, ?, ?, ?)`
+  ).bind(id, lotMemberId, reason, reasonCode || null, reasonDetail || null, markedBy, markedAt).run();
 
   // Set can_vote to false
   await DB.prepare(
@@ -167,6 +171,8 @@ export async function markDelinquent(
     lot_member_id: lotMemberId,
     is_active: true,
     reason,
+    reason_code: reasonCode || null,
+    reason_detail: reasonDetail || null,
     marked_by: markedBy,
     marked_at: markedAt,
     waived_by: null,

@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { DelinquentMember, DelinquencySummary } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
-import { Receipt, UserCheck, AlertCircle } from "lucide-react";
+import { Receipt, UserCheck, AlertCircle, UserX } from "lucide-react";
 import { DemandGenerationModal } from "./DemandGenerationModal";
 import { DelinquentTable } from "./DelinquentTable";
+import { FlagMemberDialog } from "./FlagMemberDialog";
 import { Button } from "@/components/ui/button";
 
 export function DelinquencyPage() {
@@ -14,6 +15,7 @@ export function DelinquencyPage() {
   const [summary, setSummary] = useState<DelinquencySummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDemandModal, setShowDemandModal] = useState(false);
+  const [showFlagDialog, setShowFlagDialog] = useState(false);
 
   useEffect(() => {
     loadDelinquents();
@@ -53,10 +55,16 @@ export function DelinquencyPage() {
             Manage delinquent homeowners and payment demands
           </p>
         </div>
-        <Button onClick={() => setShowDemandModal(true)}>
-          <Receipt className="w-4 h-4 mr-2" />
-          Generate Demands
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="destructive" onClick={() => setShowFlagDialog(true)}>
+            <UserX className="w-4 h-4 mr-2" />
+            Flag Member
+          </Button>
+          <Button onClick={() => setShowDemandModal(true)}>
+            <Receipt className="w-4 h-4 mr-2" />
+            Generate Demands
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -116,6 +124,13 @@ export function DelinquencyPage() {
         open={showDemandModal}
         onOpenChange={setShowDemandModal}
         onComplete={loadDelinquents}
+      />
+
+      {/* Flag Member Dialog */}
+      <FlagMemberDialog
+        open={showFlagDialog}
+        onOpenChange={setShowFlagDialog}
+        onSuccess={loadDelinquents}
       />
     </div>
   );

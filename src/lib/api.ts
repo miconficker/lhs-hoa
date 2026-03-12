@@ -77,6 +77,7 @@ import type {
   DemandGenerationRequest,
   DemandGenerationResponse,
   MarkDelinquentRequest,
+  MemberSearchResult,
   WaiveDelinquencyRequest,
   // Public booking types
   PublicAmenity,
@@ -1884,6 +1885,13 @@ export const api = {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         },
+      );
+    },
+
+    // Admin: Search members for flagging as delinquent
+    searchMembers: async (q: string) => {
+      return apiRequest<{ members: MemberSearchResult[] }>(
+        `/admin/delinquency/member-search?q=${encodeURIComponent(q)}`,
       );
     },
 

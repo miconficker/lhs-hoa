@@ -16,6 +16,71 @@ function generateId(): string {
   return crypto.randomUUID();
 }
 
+// Valid reason codes for manual delinquency
+const VALID_REASON_CODES = [
+  'failure_to_pay',
+  'repeated_violation',
+  'detrimental_conduct',
+  'failure_to_attend'
+] as const;
+
+// Human-readable labels for reason codes
+const REASON_LABELS: Record<string, string> = {
+  failure_to_pay: 'Failure to pay dues despite repeated demands',
+  repeated_violation: 'Repeated violation or noncompliance',
+  detrimental_conduct: 'Commission of detrimental conduct',
+  failure_to_attend: 'Failure to attend 3 consecutive general memberships without justifiable reasons',
+};
+
+// Admin: Search members for flagging as delinquent
+app.get('/admin/delinquency/member-search', async (c) => {
+  const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
+
+  if (!authUser || authUser.role !== 'admin') {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const q = (c.req.query('q') || '').trim();
+  if (q.length < 2) {
+    return c.json({ members: [] });
+  }
+
+  const pattern = `%${q}%`;
+
+  const results = await c.env.DB.prepare(`
+    SELECT
+      lm.id            AS lot_member_id,
+      lm.member_type,
+      u.id             AS user_id,
+      u.first_name,
+      u.last_name,
+      u.email,
+      h.block,
+      h.lot,
+      h.address,
+      -- Check if already actively flagged
+      EXISTS (
+        SELECT 1 FROM manual_delinquencies md
+        WHERE md.lot_member_id = lm.id AND md.is_active = 1
+      ) AS already_flagged
+    FROM lot_members lm
+    INNER JOIN users u     ON lm.user_id      = u.id
+    INNER JOIN households h ON lm.household_id = h.id
+    WHERE lm.member_type = 'primary_owner'
+      AND (
+        u.email      LIKE ?
+        OR u.first_name || ' ' || u.last_name LIKE ?
+        OR h.block   LIKE ?
+        OR h.lot     LIKE ?
+        OR h.address LIKE ?
+      )
+    ORDER BY h.block, h.lot
+    LIMIT 15
+  `).bind(pattern, pattern, pattern, pattern, pattern).all();
+
+  return c.json({ members: results.results || [] });
+});
+
 // Admin: List all delinquent members
 app.get('/admin/delinquency/members', async (c) => {
   const authUser = await getUserFromRequest(c.req.raw, c.env.JWT_SECRET);
@@ -132,15 +197,25 @@ app.post('/admin/delinquency/mark', async (c) => {
   }
 
   try {
-    const { lot_member_id, reason } = await c.req.json();
+    const { lot_member_id, reason_code, reason_detail } = await c.req.json();
 
     if (!lot_member_id) {
       return c.json({ error: 'lot_member_id is required' }, 400);
     }
 
-    if (!reason || reason.trim().length === 0) {
-      return c.json({ error: 'Reason is required for audit trail' }, 400);
+    if (!reason_code || !VALID_REASON_CODES.includes(reason_code)) {
+      return c.json({ error: 'Valid reason_code is required' }, 400);
     }
+
+    // For repeated_violation, reason_detail (rule citation) is required
+    if (reason_code === 'repeated_violation' && (!reason_detail || reason_detail.trim().length === 0)) {
+      return c.json({ error: 'reason_detail (rule citation) is required for repeated violation' }, 400);
+    }
+
+    // Build human-readable reason string for the existing `reason` column (backward compat)
+    const reason = reason_code === 'repeated_violation'
+      ? `${REASON_LABELS[reason_code]}: ${reason_detail?.trim()}`
+      : REASON_LABELS[reason_code];
 
     // Check if already manually delinquent
     const existing = await c.env.DB.prepare(
@@ -155,7 +230,9 @@ app.post('/admin/delinquency/mark', async (c) => {
       c.env.DB,
       lot_member_id,
       authUser.id,
-      reason.trim()
+      reason,
+      reason_code,
+      reason_detail?.trim() || null
     );
 
     return c.json({ delinquency: result });
