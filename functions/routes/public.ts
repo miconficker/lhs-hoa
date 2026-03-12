@@ -237,16 +237,14 @@ publicRouter.get('/payment-details', async (c) => {
   ).first();
 
   return c.json({
-    data: {
-      gcash: {
-        number: gcashNumber?.setting_value || '0917-XXX-XXXX',
-        name: gcashName?.setting_value || 'Laguna Hills HOA',
-      },
-      bank_transfer: {
-        bank_name: bankName?.setting_value || 'BPI',
-        account_name: accountName?.setting_value || 'Laguna Hills HOA Association',
-        account_number: accountNumber?.setting_value || 'XXXX-XXXX-XXXX',
-      }
+    gcash: {
+      number: gcashNumber?.setting_value || '0917-XXX-XXXX',
+      name: gcashName?.setting_value || 'Laguna Hills HOA',
+    },
+    bank_transfer: {
+      bank_name: bankName?.setting_value || 'BPI',
+      account_name: accountName?.setting_value || 'Laguna Hills HOA Association',
+      account_number: accountNumber?.setting_value || 'XXXX-XXXX-XXXX',
     }
   });
 });
