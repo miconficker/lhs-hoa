@@ -75,42 +75,48 @@ export function ExternalRentalsPage() {
         <h2 className="text-2xl font-bold mb-8 text-center">
           Available Amenities
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {amenities.map((amenity) => (
-            <Card
-              key={amenity.amenity_type}
-              className="overflow-hidden hover:shadow-lg transition-shadow"
-            >
-              <div className="h-48 overflow-hidden">
-                <img
-                  src={amenityImages[amenity.amenity_type] || amenity.image}
-                  alt={amenity.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <CardHeader>
-                <CardTitle>{amenity.name}</CardTitle>
-                <CardDescription className="line-clamp-2">
-                  {amenity.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Users className="w-4 h-4" />
-                  <span>Up to {amenity.capacity} guests</span>
+        {amenities.length === 0 ? (
+          <p className="text-center text-muted-foreground">
+            No amenities available at this time.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {amenities.map((amenity) => (
+              <Card
+                key={amenity.amenity_type}
+                className="overflow-hidden hover:shadow-lg transition-shadow"
+              >
+                <div className="h-48 overflow-hidden">
+                  <img
+                    src={amenityImages[amenity.amenity_type] || amenity.image}
+                    alt={amenity.name}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-              </CardContent>
-              <CardFooter>
-                <Link
-                  to={`/external-rentals/${amenity.amenity_type}`}
-                  className="w-full"
-                >
-                  <Button className="w-full">Check Availability</Button>
-                </Link>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+                <CardHeader>
+                  <CardTitle>{amenity.name}</CardTitle>
+                  <CardDescription className="line-clamp-2">
+                    {amenity.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Users className="w-4 h-4" />
+                    <span>Up to {amenity.capacity} guests</span>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Link
+                    to={`/external-rentals/${amenity.amenity_type}`}
+                    className="w-full"
+                  >
+                    <Button className="w-full">Check Availability</Button>
+                  </Link>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Info Section */}

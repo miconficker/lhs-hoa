@@ -54,7 +54,7 @@ publicRouter.get('/amenities', async (c) => {
     { amenity_type: 'tennis-court', name: 'Tennis Court', description: 'Professional clay court', capacity: 4, image: '/images/tennis.jpg' },
   ];
 
-  return c.json({ data: { amenities } });
+  return c.json({ amenities });
 });
 
 // GET /api/public/availability/:amenityType - Check availability
@@ -110,7 +110,7 @@ publicRouter.get('/availability/:amenityType', async (c) => {
     current.setDate(current.getDate() + 1);
   }
 
-  return c.json({ data: { available } });
+  return c.json({ available });
 });
 
 // GET /api/public/pricing/:amenityType - Get pricing with multipliers
@@ -189,17 +189,15 @@ publicRouter.get('/pricing/:amenityType', async (c) => {
   const finalPrice = isResident ? total * (1 - discountPercent) : total;
 
   return c.json({
-    data: {
-      base_rate: baseRate,
-      duration,
-      day_type: isHoliday ? 'holiday' : isWeekend ? 'weekend' : 'weekday',
-      day_multiplier: dayMultiplier,
-      season_type: isPeak ? 'peak' : 'off_peak',
-      season_multiplier: seasonMultiplier,
-      subtotal: total,
-      resident_discount: isResident ? discountPercent : 0,
-      final_price: Math.round(finalPrice),
-    }
+    base_rate: baseRate,
+    duration,
+    day_type: isHoliday ? 'holiday' : isWeekend ? 'weekend' : 'weekday',
+    day_multiplier: dayMultiplier,
+    season_type: isPeak ? 'peak' : 'off_peak',
+    season_multiplier: seasonMultiplier,
+    subtotal: total,
+    resident_discount: isResident ? discountPercent : 0,
+    final_price: Math.round(finalPrice),
   });
 });
 
