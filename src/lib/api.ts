@@ -86,8 +86,6 @@ import type {
   PaymentDetails,
   PublicBookingRequest,
   PublicBookingResponse,
-  BookingBlockedDate,
-  ExtendedExternalRental,
 } from "@/types";
 
 import { logger } from "@/lib/logger";
