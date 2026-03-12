@@ -9,7 +9,7 @@ import type {
   PaymentDetails,
   PublicBookingRequest,
 } from "@/types";
-import { Upload, CheckCircle2 } from "lucide-react";
+import { Upload, CheckCircle2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { PublicPageHeader } from "@/components/public/PublicPageHeader";
+import { PublicLayout } from "@/components/public/PublicLayout";
 
 const amenityLabels: Record<string, string> = {
   clubhouse: "Clubhouse",
@@ -197,17 +197,18 @@ export function BookingPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <LoadingSpinner size="lg" />
-      </div>
+      <PublicLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <LoadingSpinner size="lg" />
+        </div>
+      </PublicLayout>
     );
   }
 
   if (!pricing) {
     return (
-      <div className="min-h-screen bg-background">
-        <PublicPageHeader showBackButton backTo="/external-rentals" />
-        <div className="max-w-2xl mx-auto px-4 py-12 text-center">
+      <PublicLayout showBackButton backTo="/external-rentals">
+        <div className="max-w-2xl mx-auto py-12 text-center">
           <h1 className="text-2xl font-bold text-muted-foreground">
             Unable to load pricing
           </h1>
@@ -215,19 +216,17 @@ export function BookingPage() {
             <Button variant="link">Back to Amenities</Button>
           </Link>
         </div>
-      </div>
+      </PublicLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <PublicPageHeader
-        title="Book Amenity"
-        showBackButton
-        backTo={`/external-rentals/${amenityType}`}
-      />
-
-      <div className="max-w-4xl mx-auto px-4 py-8">
+    <PublicLayout
+      title="Book Amenity"
+      showBackButton
+      backTo={`/external-rentals/${amenityType}`}
+    >
+      <div className="max-w-4xl mx-auto py-8">
         <h1 className="text-3xl font-bold mb-2">Complete Your Booking</h1>
         <p className="text-muted-foreground mb-8">
           Fill in your details to submit a booking request for{" "}
@@ -546,6 +545,7 @@ export function BookingPage() {
               className="flex-1"
               disabled={submitting}
             >
+              <ArrowLeft className="w-4 h-4 mr-2" />
               Go Back
             </Button>
             <Button
@@ -559,6 +559,6 @@ export function BookingPage() {
           </div>
         </form>
       </div>
-    </div>
+    </PublicLayout>
   );
 }

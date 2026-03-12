@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
-interface PublicPageHeaderProps {
+export interface PublicPageHeaderProps {
   title?: string;
   showBackButton?: boolean;
   backTo?: string;

@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { PublicPageHeader } from "@/components/public/PublicPageHeader";
+import { PublicLayout } from "@/components/public/PublicLayout";
 
 const amenityImages: Record<string, string> = {
   clubhouse:
@@ -46,18 +46,18 @@ export function ExternalRentalsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <LoadingSpinner size="lg" />
-      </div>
+      <PublicLayout title="External Rentals" showBackButton backTo="/">
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <LoadingSpinner size="lg" />
+        </div>
+      </PublicLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <PublicPageHeader title="External Rentals" showBackButton backTo="/" />
-
+    <PublicLayout title="External Rentals" showBackButton backTo="/">
       {/* Hero Section */}
-      <div className="bg-primary text-primary-foreground py-16 px-4">
+      <div className="bg-primary text-primary-foreground py-16 px-4 -mx-4 sm:-mx-8 mt-[-2rem] sm:mt-[-2.5rem]">
         <div className="max-w-6xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Rent Our Amenities for Your Events
@@ -70,7 +70,7 @@ export function ExternalRentalsPage() {
       </div>
 
       {/* Amenities Grid */}
-      <div className="max-w-7xl mx-auto px-4 py-12">
+      <div className="py-12">
         <h2 className="text-2xl font-bold mb-8 text-center text-foreground">
           Available Amenities
         </h2>
@@ -122,8 +122,8 @@ export function ExternalRentalsPage() {
       </div>
 
       {/* Info Section */}
-      <div className="max-w-4xl mx-auto px-4 py-12">
-        <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+      <div className="pb-12">
+        <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 max-w-4xl mx-auto">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Info className="w-5 h-5" />
@@ -145,6 +145,6 @@ export function ExternalRentalsPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PublicLayout>
   );
 }

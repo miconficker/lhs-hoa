@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { toast } from "sonner";
-import { PublicPageHeader } from "@/components/public/PublicPageHeader";
+import { PublicLayout } from "@/components/public/PublicLayout";
 
 const statusConfig = {
   pending_payment: {
@@ -127,17 +127,18 @@ export function ConfirmationPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <LoadingSpinner size="lg" />
-      </div>
+      <PublicLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <LoadingSpinner size="lg" />
+        </div>
+      </PublicLayout>
     );
   }
 
   if (!booking) {
     return (
-      <div className="min-h-screen bg-background">
-        <PublicPageHeader showBackButton backTo="/external-rentals" />
-        <div className="max-w-2xl mx-auto px-4 py-12 text-center">
+      <PublicLayout showBackButton backTo="/external-rentals">
+        <div className="max-w-2xl mx-auto py-12 text-center">
           <AlertCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-muted-foreground mb-2">
             Booking Not Found
@@ -149,7 +150,7 @@ export function ConfirmationPage() {
             <Button>Browse Amenities</Button>
           </Link>
         </div>
-      </div>
+      </PublicLayout>
     );
   }
 
@@ -159,28 +160,24 @@ export function ConfirmationPage() {
   const StatusIcon = status.icon;
 
   return (
-    <div className="min-h-screen bg-background">
-      <PublicPageHeader
-        title="Booking Status"
-        showBackButton
-        backTo="/external-rentals"
-      />
-
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={refreshing}
-            >
-              <RefreshCw
-                className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
-              />
-              Refresh Status
-            </Button>
-          </div>
+    <PublicLayout
+      title="Booking Status"
+      showBackButton
+      backTo="/external-rentals"
+    >
+      <div className="max-w-3xl mx-auto py-8">
+        <div className="mb-6">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={refreshing}
+          >
+            <RefreshCw
+              className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+            />
+            Refresh Status
+          </Button>
         </div>
 
         {/* Status Banner */}
@@ -351,6 +348,6 @@ export function ConfirmationPage() {
           )}
         </div>
       </div>
-    </div>
+    </PublicLayout>
   );
 }

@@ -19,7 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { PublicPageHeader } from "@/components/public/PublicPageHeader";
+import { PublicLayout } from "@/components/public/PublicLayout";
 import { cn } from "@/lib/utils";
 
 const amenityInfo: Record<
@@ -139,8 +139,7 @@ export function AmenityDetailPage() {
 
   if (!info) {
     return (
-      <div className="min-h-screen bg-background">
-        <PublicPageHeader showBackButton backTo="/external-rentals" />
+      <PublicLayout showBackButton backTo="/external-rentals">
         <div className="max-w-4xl mx-auto px-4 py-12 text-center">
           <h1 className="text-2xl font-bold text-muted-foreground">
             Amenity not found
@@ -149,7 +148,7 @@ export function AmenityDetailPage() {
             <Button variant="link">Back to Amenities</Button>
           </Link>
         </div>
-      </div>
+      </PublicLayout>
     );
   }
 
@@ -178,15 +177,9 @@ export function AmenityDetailPage() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      <PublicPageHeader
-        title={info.name}
-        showBackButton
-        backTo="/external-rentals"
-      />
-
+    <PublicLayout title={info.name} showBackButton backTo="/external-rentals">
       {/* Hero Image */}
-      <div className="relative h-64 md:h-80">
+      <div className="relative h-64 md:h-80 -mx-4 sm:-mx-8 mt-[-2rem] sm:mt-[-2.5rem]">
         <img
           src={info.image}
           alt={info.name}
@@ -201,7 +194,7 @@ export function AmenityDetailPage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Calendar Section */}
           <div className="lg:col-span-2">
@@ -391,6 +384,6 @@ export function AmenityDetailPage() {
           </div>
         </div>
       </div>
-    </div>
+    </PublicLayout>
   );
 }

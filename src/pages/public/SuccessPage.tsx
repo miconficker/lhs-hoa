@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { PublicPageHeader } from "@/components/public/PublicPageHeader";
+import { PublicLayout } from "@/components/public/PublicLayout";
 
 export function SuccessPage() {
   const { id } = useParams<{ id: string }>();
@@ -18,10 +18,8 @@ export function SuccessPage() {
   }, [id]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-background dark:from-green-950/20 dark:to-background">
-      <PublicPageHeader showBackButton backTo="/external-rentals" />
-
-      <div className="flex items-center justify-center p-4 min-h-[calc(100vh-4rem)]">
+    <PublicLayout showBackButton backTo="/external-rentals">
+      <div className="flex items-center justify-center min-h-[50vh]">
         <Card className="max-w-md w-full">
           <CardContent className="pt-12 pb-8 text-center">
             <CheckCircle2 className="w-20 h-20 text-green-500 mx-auto mb-6" />
@@ -53,6 +51,6 @@ export function SuccessPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PublicLayout>
   );
 }
