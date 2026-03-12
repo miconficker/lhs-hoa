@@ -1,7 +1,7 @@
 # QR Code and Reference Number System for Visitor Bookings
 
 **Date**: 2026-03-13
-**Status**: Design (Draft)
+**Status**: Design Approved
 **Related**: External Rentals System (Public External Booking)
 
 ## Overview
