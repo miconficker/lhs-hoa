@@ -241,6 +241,108 @@ export interface RecordPaymentInput {
 }
 
 // =============================================================================
+// Public External Bookings
+// =============================================================================
+
+export interface PublicAmenity {
+  amenity_type: AmenityType;
+  name: string;
+  description: string;
+  capacity: number;
+  image: string;
+}
+
+export interface AvailabilitySlot {
+  date: string;
+  available_slots: TimeBlockSlot[];
+}
+
+export interface PricingCalculation {
+  base_rate: number;
+  duration: number;
+  day_type: "weekday" | "weekend" | "holiday";
+  day_multiplier: number;
+  season_type: "peak" | "off_peak";
+  season_multiplier: number;
+  subtotal: number;
+  resident_discount: number;
+  final_price: number;
+}
+
+export interface PaymentDetails {
+  gcash: {
+    number: string;
+    name: string;
+  };
+  bank_transfer: {
+    bank_name: string;
+    account_name: string;
+    account_number: string;
+  };
+}
+
+export interface PublicBookingRequest {
+  amenity_type: AmenityType;
+  date: string;
+  slot: TimeBlockSlot;
+  guest_name: string;
+  guest_email: string;
+  guest_phone: string;
+  event_type: "wedding" | "birthday" | "meeting" | "sports" | "other";
+  attendees: number;
+  purpose: string;
+  proof_of_payment_url?: string;
+}
+
+export interface PublicBookingResponse {
+  id: string;
+  reference_number: string;
+  status:
+    | "pending_payment"
+    | "pending_verification"
+    | "confirmed"
+    | "rejected"
+    | "cancelled";
+  amenity_type: AmenityType;
+  date: string;
+  slot: TimeBlockSlot;
+  amount: number;
+  time_of_day?: string;
+  rejection_reason?: string;
+  admin_notes?: string;
+}
+
+export interface BookingBlockedDate {
+  id: string;
+  booking_id: string;
+  amenity_type: AmenityType;
+  booking_date: string;
+  slot: TimeBlockSlot;
+  created_at: string;
+}
+
+// Extended ExternalRental with public booking fields
+export interface ExtendedExternalRental extends ExternalRental {
+  guest_name?: string;
+  guest_email?: string;
+  guest_phone?: string;
+  proof_of_payment_url?: string;
+  booking_status?:
+    | "pending_payment"
+    | "pending_verification"
+    | "confirmed"
+    | "rejected"
+    | "cancelled";
+  rejection_reason?: string;
+  created_ip?: string;
+  guest_notes?: string;
+  admin_notes?: string;
+  ip_retained_until?: string;
+  time_of_day?: string;
+  is_first?: boolean;
+}
+
+// =============================================================================
 // Board Members
 // =============================================================================
 
