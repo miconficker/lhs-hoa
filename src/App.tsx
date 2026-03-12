@@ -81,6 +81,33 @@ const HelpPage = lazy(() =>
   import("./pages/HelpPage").then((m) => ({ default: m.HelpPage })),
 );
 
+// Public pages (no authentication required)
+const ExternalRentalsPage = lazy(() =>
+  import("./pages/public/ExternalRentalsPage").then((m) => ({
+    default: m.ExternalRentalsPage,
+  })),
+);
+const AmenityDetailPage = lazy(() =>
+  import("./pages/public/AmenityDetailPage").then((m) => ({
+    default: m.AmenityDetailPage,
+  })),
+);
+const BookingPage = lazy(() =>
+  import("./pages/public/BookingPage").then((m) => ({
+    default: m.BookingPage,
+  })),
+);
+const ConfirmationPage = lazy(() =>
+  import("./pages/public/ConfirmationPage").then((m) => ({
+    default: m.ConfirmationPage,
+  })),
+);
+const SuccessPage = lazy(() =>
+  import("./pages/public/SuccessPage").then((m) => ({
+    default: m.SuccessPage,
+  })),
+);
+
 // Loading component for lazy-loaded pages
 function PageLoader() {
   return (
@@ -197,6 +224,22 @@ function App() {
             />
             <Route path="help" element={<HelpPage />} />
           </Route>
+
+          {/* Public routes - no authentication required */}
+          <Route path="/external-rentals" element={<ExternalRentalsPage />} />
+          <Route
+            path="/external-rentals/:amenityType"
+            element={<AmenityDetailPage />}
+          />
+          <Route path="/external-rentals/book" element={<BookingPage />} />
+          <Route
+            path="/external-rentals/confirmation/:id"
+            element={<ConfirmationPage />}
+          />
+          <Route
+            path="/external-rentals/success/:id"
+            element={<SuccessPage />}
+          />
         </Routes>
       </Suspense>
     </BrowserRouter>
