@@ -455,7 +455,11 @@ externalRentalsRouter.delete('/:id', async (c) => {
     return c.json({ error: 'Rental not found' }, 404);
   }
 
+  // Delete the rental
   await c.env.DB.prepare('DELETE FROM external_rentals WHERE id = ?').bind(id).run();
+
+  // Also delete from booking_blocked_dates if it exists (for confirmed bookings)
+  await c.env.DB.prepare('DELETE FROM booking_blocked_dates WHERE booking_id = ?').bind(id).run();
 
   return c.json({ success: true });
 });

@@ -27,7 +27,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -74,7 +73,7 @@ export function InquiryPage() {
     guest_phone: "",
     event_type: "" as any,
     attendees: "",
-    purpose: "",
+    other_event_type: "",
     terms_agreed: false,
   });
 
@@ -141,15 +140,15 @@ export function InquiryPage() {
       return;
     }
 
-    // Validate purpose (at least 10 characters)
-    if (!formData.purpose || formData.purpose.trim().length < 10) {
-      toast.error("Please provide a description (at least 10 characters)");
-      return;
-    }
-
     // Validate event type
     if (!formData.event_type) {
       toast.error("Please select an event type");
+      return;
+    }
+
+    // If "other" is selected, require additional details
+    if (formData.event_type === "other" && !formData.other_event_type.trim()) {
+      toast.error("Please specify the event type");
       return;
     }
 
@@ -163,9 +162,13 @@ export function InquiryPage() {
         guest_name: formData.guest_name.trim(),
         guest_email: formData.guest_email.trim(),
         guest_phone: formData.guest_phone.trim(),
-        event_type: formData.event_type,
+        event_type:
+          formData.event_type === "other" ? "other" : formData.event_type,
         attendees: attendeeCount,
-        purpose: formData.purpose.trim(),
+        purpose:
+          formData.event_type === "other"
+            ? formData.other_event_type.trim()
+            : formData.event_type,
       };
 
       const result = await api.public.createInquiry(inquiryData);
@@ -175,9 +178,18 @@ export function InquiryPage() {
         return;
       }
 
+      // Extract inquiry data from response
+      const createdInquiry =
+        (result.data as any)?.data?.inquiry || (result.data as any)?.inquiry;
+
+      if (!createdInquiry?.id) {
+        toast.error("Failed to create inquiry. Please try again.");
+        return;
+      }
+
       toast.success("Inquiry submitted!");
       // Redirect to inquiry pending page instead of success page
-      navigate(`/external-rentals/inquiry/${result.data?.inquiry.id}/pending`);
+      navigate(`/external-rentals/inquiry/${createdInquiry.id}/pending`);
     } catch (error) {
       console.error("Error submitting inquiry:", error);
       toast.error("Failed to submit inquiry");
@@ -329,7 +341,11 @@ export function InquiryPage() {
                 <Select
                   value={formData.event_type}
                   onValueChange={(v) =>
-                    setFormData({ ...formData, event_type: v })
+                    setFormData({
+                      ...formData,
+                      event_type: v,
+                      other_event_type: "",
+                    })
                   }
                   required
                 >
@@ -345,6 +361,24 @@ export function InquiryPage() {
                   </SelectContent>
                 </Select>
               </div>
+              {formData.event_type === "other" && (
+                <div className="space-y-2">
+                  <Label htmlFor="other_event_type">Specify Event Type *</Label>
+                  <Input
+                    id="other_event_type"
+                    type="text"
+                    value={formData.other_event_type}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        other_event_type: e.target.value,
+                      })
+                    }
+                    placeholder="e.g., Corporate Training, Family Reunion"
+                    required
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="attendees">
                   Expected Number of Attendees *
@@ -359,19 +393,6 @@ export function InquiryPage() {
                     setFormData({ ...formData, attendees: e.target.value })
                   }
                   placeholder="50"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="purpose">Event Purpose/Description *</Label>
-                <Textarea
-                  id="purpose"
-                  value={formData.purpose}
-                  onChange={(e) =>
-                    setFormData({ ...formData, purpose: e.target.value })
-                  }
-                  placeholder="Describe your event..."
-                  rows={3}
                   required
                 />
               </div>

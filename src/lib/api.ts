@@ -1974,7 +1974,7 @@ export const api = {
         `/public/bookings/${bookingId}/status`,
       ),
     createInquiry: (inquiryData: PublicInquiryRequest) =>
-      apiRequest<{ inquiry: any }>("/public/inquiries", {
+      apiRequest<{ data: { inquiry: any } }>("/public/inquiries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(inquiryData),

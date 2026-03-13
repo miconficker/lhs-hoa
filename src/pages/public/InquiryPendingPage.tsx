@@ -41,7 +41,22 @@ export function InquiryPendingPage() {
           return;
         }
 
-        const inquiryData = result.data?.inquiry;
+        // Handle both response structures: { data: { inquiry: {...} } } or { data: { data: { inquiry: {...} } } }
+        let inquiryData = result.data?.inquiry;
+        if (!inquiryData && (result.data as any)?.data?.inquiry) {
+          inquiryData = (result.data as any).data.inquiry;
+        }
+
+        // Debug logging
+        console.log("[InquiryPendingPage] API result:", result);
+        console.log("[InquiryPendingPage] inquiryData:", inquiryData);
+
+        if (!inquiryData) {
+          setError("Inquiry data not found in response");
+          setLoading(false);
+          return;
+        }
+
         setInquiry(inquiryData);
 
         // If status changed, redirect appropriately

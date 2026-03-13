@@ -71,6 +71,11 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
     ) => {
       let inputValue = e.target.value.replace(/\D/g, ""); // Remove non-digits
 
+      // Limit to 10 digits for PH numbers
+      if (countryCode === "+63") {
+        inputValue = inputValue.slice(0, 10);
+      }
+
       // Auto-format as XXX XXX XXX or XXXX XXX for PH
       if (countryCode === "+63" && inputValue.length <= 10) {
         if (inputValue.length >= 7) {
@@ -127,6 +132,7 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
             placeholder={placeholder}
             required={required}
             className="flex-1"
+            maxLength={15} // Limit input length
           />
         </div>
         <p className="text-xs text-muted-foreground mt-1">

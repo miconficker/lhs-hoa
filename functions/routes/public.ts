@@ -20,7 +20,7 @@ const bookingRequestSchema = z.object({
   guest_phone: z.string().min(10),
   event_type: z.enum(['wedding', 'birthday', 'meeting', 'sports', 'other']),
   attendees: z.number().int().positive().max(500),
-  purpose: z.string().min(10),
+  purpose: z.string().min(1).optional(), // Purpose is optional, defaults to event_type if not provided
   proof_of_payment_url: z.string().optional(),
 });
 
@@ -78,6 +78,22 @@ publicRouter.get('/availability/:amenityType', async (c) => {
     console.warn('booking_blocked_dates table not available:', e);
   }
 
+  // Also check external_rentals table for confirmed bookings directly
+  // This handles cases where booking_blocked_dates might be out of sync
+  try {
+    const confirmedBookings = await c.env.DB.prepare(
+      `SELECT date, slot FROM external_rentals
+       WHERE amenity_type = ? AND date BETWEEN ? AND ?
+       AND booking_status = 'confirmed'`
+    ).bind(amenityType, startDate, endDate).all();
+
+    for (const b of (confirmedBookings.results || [])) {
+      blockedSet.add(`${b.date}-${b.slot}`);
+    }
+  } catch (e) {
+    console.warn('external_rentals table not available:', e);
+  }
+
   // Check resident reservations - handle missing table gracefully
   try {
     const residentBlocked = await c.env.DB.prepare(
@@ -107,6 +123,28 @@ publicRouter.get('/availability/:amenityType', async (c) => {
     console.warn('time_blocks table not available:', e);
   }
 
+  // Apply cascading block logic for slot relationships
+  // - If AM is blocked → FULL_DAY should also be blocked
+  // - If PM is blocked → FULL_DAY should also be blocked
+  // - If FULL_DAY is blocked → both AM and PM should be blocked
+  const cascadedBlockedSet = new Set<string>();
+  for (const blocked of blockedSet) {
+    cascadedBlockedSet.add(blocked);
+    const [date, slot] = blocked.split('-');
+
+    if (slot === 'AM') {
+      cascadedBlockedSet.add(`${date}-FULL_DAY`);
+    } else if (slot === 'PM') {
+      cascadedBlockedSet.add(`${date}-FULL_DAY`);
+    } else if (slot === 'FULL_DAY') {
+      cascadedBlockedSet.add(`${date}-AM`);
+      cascadedBlockedSet.add(`${date}-PM`);
+    }
+  }
+
+  // Debug logging for blocked slots
+  console.log(`[Availability] Amenity: ${amenityType}, Blocked slots:`, Array.from(cascadedBlockedSet));
+
   // Generate available dates
   const available: any[] = [];
   const current = new Date(startDate);
@@ -114,7 +152,7 @@ publicRouter.get('/availability/:amenityType', async (c) => {
 
   while (current <= end) {
     const dateStr = current.toISOString().split('T')[0];
-    const slots = ['AM', 'PM', 'FULL_DAY'].filter(slot => !blockedSet.has(`${dateStr}-${slot}`));
+    const slots = ['AM', 'PM', 'FULL_DAY'].filter(slot => !cascadedBlockedSet.has(`${dateStr}-${slot}`));
 
     if (slots.length > 0) {
       available.push({ date: dateStr, available_slots: slots });

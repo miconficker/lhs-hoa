@@ -72,6 +72,40 @@ const paymentStatusLabels: Record<RentalPaymentStatus, string> = {
   overdue: "Overdue",
 };
 
+// Booking status labels for public inquiries
+const bookingStatusLabels: Record<string, string> = {
+  inquiry_submitted: "Inquiry",
+  pending_approval: "Pending Approval",
+  pending_payment: "Pending Payment",
+  pending_verification: "Verifying",
+  confirmed: "Confirmed",
+  rejected: "Rejected",
+  cancelled: "Cancelled",
+};
+
+const bookingStatusBadgeVariant: Record<
+  string,
+  "default" | "secondary" | "destructive" | "outline"
+> = {
+  inquiry_submitted: "secondary",
+  pending_approval: "outline",
+  pending_payment: "outline",
+  pending_verification: "default",
+  confirmed: "default",
+  rejected: "destructive",
+  cancelled: "secondary",
+};
+
+// Helper function to get customer name from either renter_name or guest_name
+function getCustomerName(rental: ExtendedExternalRental): string {
+  return rental.guest_name || rental.renter_name || "Unknown";
+}
+
+// Helper function to get contact info
+function getCustomerContact(rental: ExtendedExternalRental): string {
+  return rental.guest_phone || rental.renter_contact || "";
+}
+
 const paymentStatusBadgeVariant: Record<
   RentalPaymentStatus,
   "default" | "secondary" | "destructive" | "outline"
@@ -115,7 +149,7 @@ const emptyPaymentForm: PaymentFormData = {
 };
 
 export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
-  const [rentals, setRentals] = useState<ExternalRental[]>([]);
+  const [rentals, setRentals] = useState<ExtendedExternalRental[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
@@ -278,7 +312,7 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
     setIsDialogOpen(true);
   };
 
-  const openEditDialog = (rental: ExternalRental) => {
+  const openEditDialog = (rental: ExtendedExternalRental) => {
     setEditingRental(rental);
     setFormData({
       amenity_type: rental.amenity_type,
@@ -390,7 +424,7 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
     }
   };
 
-  const openPaymentDialog = (rental: ExternalRental) => {
+  const openPaymentDialog = (rental: ExtendedExternalRental) => {
     setPaymentRental(rental);
     const remainingBalance = rental.amount - rental.amount_paid;
     setPaymentForm({
@@ -428,7 +462,7 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
       };
 
       const response = await fetch(
-        `/api/admin/external-rentals/${paymentRental.id}/payment`,
+        `/api/admin/external-rentals/${paymentRental.id}/pay`,
         {
           method: "POST",
           headers: {
@@ -773,11 +807,11 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
                         <td className="px-4 py-3">
                           <div>
                             <p className="text-sm font-medium">
-                              {rental.renter_name}
+                              {getCustomerName(rental)}
                             </p>
-                            {rental.renter_contact && (
+                            {getCustomerContact(rental) && (
                               <p className="text-xs text-muted-foreground">
-                                {rental.renter_contact}
+                                {getCustomerContact(rental)}
                               </p>
                             )}
                           </div>
@@ -785,31 +819,54 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
                         <td className="px-4 py-3">
                           <div>
                             <p className="text-sm font-medium">
-                              ₱{rental.amount.toFixed(2)}
+                              Total: ₱{rental.amount.toFixed(2)}
                             </p>
-                            {rental.amount_paid > 0 && (
-                              <p className="text-xs text-muted-foreground">
-                                Paid: ₱{rental.amount_paid.toFixed(2)}
-                              </p>
-                            )}
-                            {rental.amount - rental.amount_paid > 0 && (
-                              <p className="text-xs text-destructive">
-                                Balance: ₱
-                                {(rental.amount - rental.amount_paid).toFixed(
-                                  2,
-                                )}
-                              </p>
-                            )}
+                            <div className="flex flex-col gap-0.5 mt-1">
+                              {rental.amount_paid > 0 ? (
+                                <>
+                                  <p className="text-xs text-green-600 dark:text-green-400">
+                                    Paid: ₱{rental.amount_paid.toFixed(2)}
+                                  </p>
+                                  {rental.amount - rental.amount_paid > 0 && (
+                                    <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                                      Balance: ₱
+                                      {(
+                                        rental.amount - rental.amount_paid
+                                      ).toFixed(2)}
+                                    </p>
+                                  )}
+                                </>
+                              ) : (
+                                <p className="text-xs text-destructive font-medium">
+                                  Unpaid
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <Badge
-                            variant={
-                              paymentStatusBadgeVariant[rental.payment_status]
-                            }
-                          >
-                            {paymentStatusLabels[rental.payment_status]}
-                          </Badge>
+                          <div className="flex flex-col gap-1">
+                            {rental.booking_status && (
+                              <Badge
+                                variant={
+                                  bookingStatusBadgeVariant[
+                                    rental.booking_status
+                                  ]
+                                }
+                                className="text-xs"
+                              >
+                                {bookingStatusLabels[rental.booking_status]}
+                              </Badge>
+                            )}
+                            <Badge
+                              variant={
+                                paymentStatusBadgeVariant[rental.payment_status]
+                              }
+                              className="text-xs"
+                            >
+                              {paymentStatusLabels[rental.payment_status]}
+                            </Badge>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-2">
@@ -991,9 +1048,10 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
             <DialogDescription>
               {paymentRental && (
                 <>
-                  Record payment for {paymentRental.renter_name} -{" "}
+                  Record payment for {getCustomerName(paymentRental)} -{" "}
                   {amenityLabels[paymentRental.amenity_type]} on{" "}
-                  {new Date(paymentRental.date).toLocaleDateString()}
+                  {new Date(paymentRental.date).toLocaleDateString()}. Partial
+                  payments are allowed as deposits.
                 </>
               )}
             </DialogDescription>
@@ -1039,6 +1097,10 @@ export function ExternalRentalsTab({ amenityTypes }: ExternalRentalsTabProps) {
                   value={paymentForm.amount}
                   onChange={(e) => updatePaymentForm("amount", e.target.value)}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Enter partial amount for deposit or full amount for complete
+                  payment
+                </p>
               </div>
 
               <div className="space-y-2">
