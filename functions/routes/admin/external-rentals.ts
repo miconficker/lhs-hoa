@@ -500,12 +500,10 @@ externalRentalsRouter.put('/:id/approve-inquiry', async (c) => {
     'SELECT * FROM external_rentals WHERE id = ?'
   ).bind(id).first();
 
-  // TODO: Send approval email to guest with payment link
-
   return c.json({
     data: {
       inquiry: updated,
-      message: 'Inquiry approved. Payment link sent to guest.',
+      message: 'Inquiry approved. Please contact the guest for payment.',
     }
   });
 });
@@ -562,12 +560,10 @@ externalRentalsRouter.put('/:id/reject-inquiry', async (c) => {
     'SELECT * FROM external_rentals WHERE id = ?'
   ).bind(id).first();
 
-  // TODO: Send rejection email to guest
-
   return c.json({
     data: {
       inquiry: updated,
-      message: 'Inquiry rejected. Notification sent to guest.',
+      message: 'Inquiry rejected. Admin will contact the guest.',
     }
   });
 });
@@ -709,8 +705,6 @@ externalRentalsRouter.put('/:id/approve', async (c) => {
     'SELECT * FROM external_rentals WHERE id = ?'
   ).bind(id).first();
 
-  // TODO: Send confirmation email to guest
-
   return c.json({
     data: {
       booking: updated,
@@ -756,8 +750,6 @@ externalRentalsRouter.put('/:id/reject', async (c) => {
   const updated = await c.env.DB.prepare(
     'SELECT * FROM external_rentals WHERE id = ?'
   ).bind(id).first();
-
-  // TODO: Send rejection email to guest
 
   return c.json({ data: { booking: updated } });
 });

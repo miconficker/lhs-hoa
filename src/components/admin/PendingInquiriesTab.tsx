@@ -74,7 +74,7 @@ export function PendingInquiriesTab() {
         toast.error(result.error);
         return;
       }
-      toast.success("Inquiry approved. Payment link sent to guest.");
+      toast.success("Inquiry approved. Please contact the guest for payment.");
       loadInquiries();
     } catch (error) {
       console.error("Error approving inquiry:", error);

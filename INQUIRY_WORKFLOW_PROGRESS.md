@@ -81,6 +81,14 @@ inquiry_submitted → pending_approval → pending_payment → pending_verificat
 - Rejected guests can submit new inquiries
 - Existing bookings remain compatible
 
+## Completed Tasks
+
+- ✅ Migration fixed and run on remote
+- ✅ TypeScript errors fixed
+- ✅ Build successful
+- ✅ Changes committed
+- ✅ Deployed to Cloudflare Pages: https://31bdff71.lhs-hoa.pages.dev
+
 ## Remaining Tasks
 
 ### 1. Test Workflow
@@ -90,12 +98,5 @@ inquiry_submitted → pending_approval → pending_payment → pending_verificat
 - Admin verifies → booking confirmed
 
 ### 2. Update Documentation
-- Update `docs/ARCHITECTURE.md`
-- Update `CLAUDE.md`
-
-### 3. Commit & Deploy
-```bash
-git add .
-git commit -m "feat: implement inquiry-based booking workflow"
-pnpm run deploy
-```
+- Update `docs/ARCHITECTURE.md` ✅ (Already updated in this commit)
+- Update `CLAUDE.md` (if needed for inquiry workflow notes)

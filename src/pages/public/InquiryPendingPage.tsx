@@ -138,8 +138,8 @@ export function InquiryPendingPage() {
                   Inquiry Under Review
                 </CardTitle>
                 <CardDescription>
-                  We're reviewing your inquiry and will email you once it's
-                  approved.
+                  We're reviewing your inquiry and will contact you at the
+                  contact details you provided to discuss payment.
                 </CardDescription>
               </CardHeader>
             </Card>

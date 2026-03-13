@@ -343,8 +343,6 @@ publicRouter.post('/inquiries', async (c) => {
     'SELECT * FROM external_rentals WHERE id = ?'
   ).bind(id).first();
 
-  // TODO: Send inquiry notification email to admin
-
   return c.json({
     data: {
       inquiry: {
@@ -544,8 +542,6 @@ publicRouter.post('/bookings/:id/proof', async (c) => {
      SET proof_of_payment_url = ?, booking_status = 'pending_verification'
      WHERE id = ?`
   ).bind(result.data.proof_url, id).run();
-
-  // TODO: Send email notification to admin
 
   const updated = await c.env.DB.prepare(
     'SELECT * FROM external_rentals WHERE id = ?'
