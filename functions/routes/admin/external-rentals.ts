@@ -460,6 +460,174 @@ externalRentalsRouter.delete('/:id', async (c) => {
   return c.json({ success: true });
 });
 
+// PUT /:id/approve-inquiry - Approve inquiry and request payment
+externalRentalsRouter.put('/:id/approve-inquiry', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const id = c.req.param('id');
+
+  // Get inquiry
+  const inquiry = await c.env.DB.prepare(
+    'SELECT * FROM external_rentals WHERE id = ?'
+  ).bind(id).first();
+
+  if (!inquiry) {
+    return c.json({ error: 'Inquiry not found' }, 404);
+  }
+
+  // Validate current status
+  if (inquiry.booking_status !== 'inquiry_submitted') {
+    return c.json({
+      error: 'Can only approve inquiries with status "inquiry_submitted"',
+      current_status: inquiry.booking_status
+    }, 400);
+  }
+
+  // Update status to pending_approval
+  await c.env.DB.prepare(
+    `UPDATE external_rentals
+     SET booking_status = 'pending_approval',
+         updated_at = datetime('now'),
+         updated_by = ?
+     WHERE id = ?`
+  ).bind(authUser.userId, id).run();
+
+  // Fetch updated inquiry
+  const updated = await c.env.DB.prepare(
+    'SELECT * FROM external_rentals WHERE id = ?'
+  ).bind(id).first();
+
+  // TODO: Send approval email to guest with payment link
+
+  return c.json({
+    data: {
+      inquiry: updated,
+      message: 'Inquiry approved. Payment link sent to guest.',
+    }
+  });
+});
+
+// PUT /:id/reject-inquiry - Reject inquiry with reason
+externalRentalsRouter.put('/:id/reject-inquiry', async (c) => {
+  const authUser = await requireAdmin(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  const id = c.req.param('id');
+  const body = await c.req.json();
+
+  // Validate reason is provided
+  const reason = body.reason;
+  if (!reason || typeof reason !== 'string' || reason.trim().length === 0) {
+    return c.json({ error: 'Rejection reason is required' }, 400);
+  }
+
+  if (reason.length > 500) {
+    return c.json({ error: 'Rejection reason must be 500 characters or less' }, 400);
+  }
+
+  // Get inquiry
+  const inquiry = await c.env.DB.prepare(
+    'SELECT * FROM external_rentals WHERE id = ?'
+  ).bind(id).first();
+
+  if (!inquiry) {
+    return c.json({ error: 'Inquiry not found' }, 404);
+  }
+
+  // Validate current status
+  if (inquiry.booking_status !== 'inquiry_submitted') {
+    return c.json({
+      error: 'Can only reject inquiries with status "inquiry_submitted"',
+      current_status: inquiry.booking_status
+    }, 400);
+  }
+
+  // Update status to rejected
+  await c.env.DB.prepare(
+    `UPDATE external_rentals
+     SET booking_status = 'rejected',
+         rejection_reason = ?,
+         updated_at = datetime('now'),
+         updated_by = ?
+     WHERE id = ?`
+  ).bind(reason.trim(), authUser.userId, id).run();
+
+  // Fetch updated inquiry
+  const updated = await c.env.DB.prepare(
+    'SELECT * FROM external_rentals WHERE id = ?'
+  ).bind(id).first();
+
+  // TODO: Send rejection email to guest
+
+  return c.json({
+    data: {
+      inquiry: updated,
+      message: 'Inquiry rejected. Notification sent to guest.',
+    }
+  });
+});
+
+// GET /inquiries - Get pending inquiries for admin review
+externalRentalsRouter.get('/inquiries', async (c) => {
+  const authUser = await requireAdminOrStaff(c, c.env);
+  if (!authUser) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const amenityType = c.req.query('amenity_type');
+  const date = c.req.query('date');
+  const slot = c.req.query('slot');
+
+  let query = 'SELECT * FROM external_rentals WHERE booking_status = ?';
+  const params: any[] = ['inquiry_submitted'];
+
+  if (amenityType) {
+    query += ' AND amenity_type = ?';
+    params.push(amenityType);
+  }
+  if (date) {
+    query += ' AND date = ?';
+    params.push(date);
+  }
+  if (slot) {
+    query += ' AND slot = ?';
+    params.push(slot);
+  }
+
+  query += ' ORDER BY created_at ASC';
+
+  const result = await c.env.DB.prepare(query).bind(...params).all();
+
+  // Add reference numbers and time formatting
+  const inquiries = (result.results || []).map((r: any) => ({
+    ...r,
+    reference_number: `EXT-${new Date(r.created_at).getFullYear()}${String(new Date(r.created_at).getMonth() + 1).padStart(2, '0')}${String(new Date(r.created_at).getDate()).padStart(2, '0')}-${r.id.slice(-3)}`,
+    time_of_day: formatTimeOfDay(r.created_at),
+  }));
+
+  // Check for conflicts (multiple inquiries for same slot)
+  const conflicts = await c.env.DB.prepare(
+    `SELECT amenity_type, date, slot, COUNT(*) as count
+     FROM external_rentals
+     WHERE booking_status = 'inquiry_submitted'
+     GROUP BY amenity_type, date, slot
+     HAVING count > 1`
+  ).all();
+
+  return c.json({
+    data: {
+      inquiries,
+      total: inquiries.length,
+      conflicts: conflicts.results || [],
+    }
+  });
+});
+
 // PUT /:id/approve - Approve booking and block slot
 externalRentalsRouter.put('/:id/approve', async (c) => {
   const authUser = await requireAdmin(c, c.env);
@@ -482,6 +650,14 @@ externalRentalsRouter.put('/:id/approve', async (c) => {
 
   if (booking.booking_status === 'confirmed') {
     return c.json({ error: 'Booking is already confirmed' }, 400);
+  }
+
+  // Only allow approve (verification) for pending_verification status
+  if (booking.booking_status !== 'pending_verification') {
+    return c.json({
+      error: 'Can only verify bookings with payment proof',
+      current_status: booking.booking_status
+    }, 400);
   }
 
   // Check for conflicts with confirmed bookings

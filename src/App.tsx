@@ -97,9 +97,19 @@ const AmenityDetailPage = lazy(() =>
     default: m.AmenityDetailPage,
   })),
 );
-const BookingPage = lazy(() =>
-  import("./pages/public/BookingPage").then((m) => ({
-    default: m.BookingPage,
+const InquiryPage = lazy(() =>
+  import("./pages/public/InquiryPage").then((m) => ({
+    default: m.InquiryPage,
+  })),
+);
+const InquiryPendingPage = lazy(() =>
+  import("./pages/public/InquiryPendingPage").then((m) => ({
+    default: m.InquiryPendingPage,
+  })),
+);
+const InquiryPaymentPage = lazy(() =>
+  import("./pages/public/InquiryPaymentPage").then((m) => ({
+    default: m.InquiryPaymentPage,
   })),
 );
 const ConfirmationPage = lazy(() =>
@@ -238,7 +248,15 @@ function App() {
             path="/external-rentals/:amenityType"
             element={<AmenityDetailPage />}
           />
-          <Route path="/external-rentals/book" element={<BookingPage />} />
+          <Route path="/external-rentals/book" element={<InquiryPage />} />
+          <Route
+            path="/external-rentals/inquiry/:id/pending"
+            element={<InquiryPendingPage />}
+          />
+          <Route
+            path="/external-rentals/inquiry/:id/payment"
+            element={<InquiryPaymentPage />}
+          />
           <Route
             path="/external-rentals/confirmation/:id"
             element={<ConfirmationPage />}

@@ -249,6 +249,163 @@ publicRouter.get('/payment-details', async (c) => {
   });
 });
 
+// POST /api/public/inquiries - Submit inquiry (creates booking with status: "inquiry_submitted")
+publicRouter.post('/inquiries', async (c) => {
+  // Rate limit check (max 3 inquiries per hour per IP)
+  const clientIp = getClientIp(c.req.raw);
+  const rateLimitResult = await checkRateLimit(c.env.DB, clientIp, { maxRequests: 3, windowSeconds: 3600 });
+
+  if (!rateLimitResult.allowed) {
+    return c.json({ error: 'Too many inquiry attempts. Please try again later.' }, 429);
+  }
+
+  const body = await c.req.json();
+  const result = bookingRequestSchema.safeParse(body);
+
+  if (!result.success) {
+    return c.json({ error: 'Invalid input', details: result.error.flatten() }, 400);
+  }
+
+  const data = result.data;
+
+  // Calculate pricing (same as booking flow)
+  const pricingResponse = await c.env.DB.prepare(
+    `SELECT setting_value FROM system_settings WHERE setting_key = 'external_pricing_${data.amenity_type}_hourly'`
+  ).first();
+
+  const baseRate = parseFloat(pricingResponse?.setting_value as string) || 500;
+  const durations: Record<string, number> = { AM: 4, PM: 4, FULL_DAY: 9 };
+
+  // Get day multipliers for accurate pricing
+  const dayMultipliersResult = await c.env.DB.prepare(
+    `SELECT setting_value FROM system_settings WHERE setting_key = 'external_pricing_day_multipliers'`
+  ).first();
+  const dayMultipliers = JSON.parse(dayMultipliersResult?.setting_value as string || '{"weekday": 1.0, "weekend": 1.2, "holiday": 1.5}');
+
+  // Get season multipliers
+  const seasonMultipliersResult = await c.env.DB.prepare(
+    `SELECT setting_value FROM system_settings WHERE setting_key = 'external_pricing_season_multipliers'`
+  ).first();
+  const seasonMultipliers = JSON.parse(seasonMultipliersResult?.setting_value as string || '{"peak": 1.3, "off_peak": 1.0}');
+
+  // Get peak months
+  const peakMonthsResult = await c.env.DB.prepare(
+    `SELECT setting_value FROM system_settings WHERE setting_key = 'external_pricing_peak_months'`
+  ).first();
+  const peakMonths = (peakMonthsResult?.setting_value as string || '12,1,2,3,4,5').split(',').map(Number);
+
+  // Get holidays
+  const holidaysResult = await c.env.DB.prepare(
+    `SELECT setting_value FROM system_settings WHERE setting_key = 'external_pricing_holidays_2026'`
+  ).first();
+  const holidays = (holidaysResult?.setting_value as string || '').split(',').map(s => s.trim());
+
+  // Calculate multipliers
+  const bookingDate = new Date(data.date);
+  const dayOfWeek = bookingDate.getDay();
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  const isHoliday = holidays.includes(data.date);
+  const month = bookingDate.getMonth() + 1;
+  const isPeak = peakMonths.includes(month);
+
+  let dayMultiplier = dayMultipliers.weekday;
+  if (isHoliday) dayMultiplier = dayMultipliers.holiday;
+  else if (isWeekend) dayMultiplier = dayMultipliers.weekend;
+
+  const seasonMultiplier = isPeak ? seasonMultipliers.peak : seasonMultipliers.off_peak;
+  const duration = durations[data.slot] || 9;
+  const amount = Math.round(baseRate * duration * dayMultiplier * seasonMultiplier);
+
+  // Generate inquiry ID and reference number
+  const id = crypto.randomUUID();
+  const now = new Date();
+  const refNum = `EXT-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+
+  // Get client IP
+  const clientIP = getClientIp(c.req.raw);
+
+  // Insert inquiry with status "inquiry_submitted"
+  await c.env.DB.prepare(
+    `INSERT INTO external_rentals (
+      id, amenity_type, date, slot, amount, payment_status,
+      guest_name, guest_email, guest_phone, guest_notes,
+      booking_status, created_ip, ip_retained_until
+    ) VALUES (?, ?, ?, ?, ?, 'unpaid', ?, ?, ?, ?, 'inquiry_submitted', ?, ?)`
+  ).bind(
+    id, data.amenity_type, data.date, data.slot, amount,
+    data.guest_name, data.guest_email, data.guest_phone, data.purpose,
+    clientIP,
+    getIPRetentionDate()
+  ).run();
+
+  // Fetch created inquiry
+  const inquiry = await c.env.DB.prepare(
+    'SELECT * FROM external_rentals WHERE id = ?'
+  ).bind(id).first();
+
+  // TODO: Send inquiry notification email to admin
+
+  return c.json({
+    data: {
+      inquiry: {
+        ...inquiry,
+        reference_number: refNum,
+        time_of_day: formatTimeOfDay(inquiry.created_at as string),
+      }
+    }
+  }, 201);
+});
+
+// GET /api/public/inquiries/:id/status - Check inquiry/booking status
+publicRouter.get('/inquiries/:id/status', async (c) => {
+  const id = c.req.param('id');
+
+  const inquiry = await c.env.DB.prepare(
+    'SELECT * FROM external_rentals WHERE id = ?'
+  ).bind(id).first();
+
+  if (!inquiry) {
+    return c.json({ error: 'Inquiry not found' }, 404);
+  }
+
+  // Generate reference number
+  const createdDate = new Date(inquiry.created_at as string);
+  const refNum = `EXT-${createdDate.getFullYear()}${String(createdDate.getMonth() + 1).padStart(2, '0')}${String(createdDate.getDate()).padStart(2, '0')}-${inquiry.id.slice(-3)}`;
+
+  // Map status to user-friendly message
+  const statusMessages: Record<string, string> = {
+    inquiry_submitted: 'Your inquiry is being reviewed.',
+    pending_approval: 'Your inquiry has been approved! Please proceed with payment.',
+    pending_payment: 'Please complete your payment to confirm your booking.',
+    pending_verification: 'Payment received. Your booking is being verified.',
+    confirmed: 'Your booking is confirmed!',
+    rejected: 'Your inquiry has been rejected.',
+    cancelled: 'Your booking has been cancelled.',
+  };
+
+  // Determine next action based on status
+  const nextActions: Record<string, { action: string; link?: string }> = {
+    inquiry_submitted: { action: 'Wait for approval' },
+    pending_approval: { action: 'Proceed to payment', link: `/external-rentals/inquiry/${id}/payment` },
+    pending_payment: { action: 'Complete payment', link: `/external-rentals/inquiry/${id}/payment` },
+    pending_verification: { action: 'Wait for verification' },
+    confirmed: { action: 'View booking details', link: `/external-rentals/confirmation/${id}` },
+    rejected: { action: 'Submit new inquiry', link: '/external-rentals' },
+    cancelled: { action: 'Submit new inquiry', link: '/external-rentals' },
+  };
+
+  return c.json({
+    data: {
+      inquiry: {
+        ...inquiry,
+        reference_number: refNum,
+      },
+      status_message: statusMessages[inquiry.booking_status as string] || 'Unknown status',
+      next_action: nextActions[inquiry.booking_status as string] || { action: 'Contact support' },
+    }
+  });
+});
+
 // POST /api/public/bookings - Create booking request
 publicRouter.post('/bookings', async (c) => {
   // Rate limit check (max 3 bookings per hour per IP)
@@ -371,6 +528,14 @@ publicRouter.post('/bookings/:id/proof', async (c) => {
 
   if (booking.booking_status === 'rejected') {
     return c.json({ error: 'Booking has been rejected' }, 400);
+  }
+
+  // Only allow proof upload for pending_payment status
+  if (booking.booking_status !== 'pending_payment') {
+    return c.json({
+      error: 'Payment proof can only be uploaded after approval',
+      current_status: booking.booking_status
+    }, 400);
   }
 
   // Update booking

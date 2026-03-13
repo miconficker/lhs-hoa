@@ -109,8 +109,12 @@ export function PaymentChart({ data, height = 300 }: PaymentChartProps) {
               borderRadius: "8px",
               color: colors.tooltipText,
             }}
-            formatter={(value: number | undefined) => [
-              formatCurrency(value ?? 0),
+            formatter={(value) => [
+              formatCurrency(
+                typeof value === "number"
+                  ? value
+                  : parseFloat(String(value ?? 0)),
+              ),
               "",
             ]}
             labelStyle={{ color: colors.tooltipText }}

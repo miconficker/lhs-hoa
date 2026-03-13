@@ -86,6 +86,7 @@ import type {
   PaymentDetails,
   PublicBookingRequest,
   PublicBookingResponse,
+  PublicInquiryRequest,
 } from "@/types";
 
 import { logger } from "@/lib/logger";
@@ -1972,6 +1973,22 @@ export const api = {
       apiRequest<{ booking: PublicBookingResponse }>(
         `/public/bookings/${bookingId}/status`,
       ),
+    createInquiry: (inquiryData: PublicInquiryRequest) =>
+      apiRequest<{ inquiry: any }>("/public/inquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(inquiryData),
+      }),
+    getInquiryStatus: (inquiryId: string) =>
+      apiRequest<{ inquiry: any; status_message: string; next_action: any }>(
+        `/public/inquiries/${inquiryId}/status`,
+      ),
+    uploadProof: (bookingId: string, data: { proof_url: string }) =>
+      apiRequest<{ booking: any }>(`/public/bookings/${bookingId}/proof`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
   },
   // Admin API for public bookings
   adminPublicBookings: {
@@ -2026,6 +2043,48 @@ export const api = {
       const data = await response.json();
       if (data.error) return { error: data.error };
       return { data: data.data };
+    },
+    getPendingInquiries: async () => {
+      const hoa_token = localStorage.getItem("hoa_token");
+      const response = await fetch(`/api/admin/external-rentals/inquiries`, {
+        headers: { Authorization: `Bearer ${hoa_token}` },
+      });
+      const data = await response.json();
+      if (data.error) return { error: data.error };
+      return { data: data.data };
+    },
+    approveInquiry: async (inquiryId: string) => {
+      const hoa_token = localStorage.getItem("hoa_token");
+      const response = await fetch(
+        `/api/admin/external-rentals/${inquiryId}/approve-inquiry`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${hoa_token}`,
+          },
+        },
+      );
+      const data = await response.json();
+      if (data.error) return { error: data.error };
+      return { data: data.data };
+    },
+    rejectInquiry: async (inquiryId: string, data: { reason: string }) => {
+      const hoa_token = localStorage.getItem("hoa_token");
+      const response = await fetch(
+        `/api/admin/external-rentals/${inquiryId}/reject-inquiry`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${hoa_token}`,
+          },
+          body: JSON.stringify(data),
+        },
+      );
+      const result = await response.json();
+      if (result.error) return { error: result.error };
+      return { data: result.data };
     },
   },
 };

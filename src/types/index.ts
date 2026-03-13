@@ -294,6 +294,18 @@ export interface PublicBookingRequest {
   proof_of_payment_url?: string;
 }
 
+export interface PublicInquiryRequest {
+  amenity_type: AmenityType;
+  date: string;
+  slot: TimeBlockSlot;
+  guest_name: string;
+  guest_email: string;
+  guest_phone: string;
+  event_type: "wedding" | "birthday" | "meeting" | "sports" | "other";
+  attendees: number;
+  purpose: string;
+}
+
 export interface PublicBookingResponse {
   id: string;
   reference_number: string;
