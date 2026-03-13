@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { PublicLayout } from "@/components/public/PublicLayout";
+import { QRCodeDisplay } from "@/components/public/QRCodeDisplay";
 
 const amenityLabels: Record<string, string> = {
   clubhouse: "Clubhouse",
@@ -333,6 +334,20 @@ export function InquiryPaymentPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* QR Code for Status Check */}
+            {isApproved && (
+              <Card>
+                <CardContent className="pt-6">
+                  <QRCodeDisplay
+                    value={`${window.location.origin}/status/${inquiry.id}`}
+                    title="Quick Status Check"
+                    description="Scan this QR code to check your booking status anytime"
+                    size={180}
+                  />
+                </CardContent>
+              </Card>
+            )}
           </>
         )}
       </div>

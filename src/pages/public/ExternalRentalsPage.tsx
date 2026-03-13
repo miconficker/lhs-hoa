@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import type { PublicAmenity } from "@/types";
-import { Users, Info, Calendar } from "lucide-react";
+import { Users, Info, Calendar, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -142,6 +142,32 @@ export function ExternalRentalsPage() {
               <li>Upload proof of payment</li>
               <li>We'll verify and confirm your booking within 24-48 hours</li>
             </ol>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Check Status Section */}
+      <div className="pb-12">
+        <Card className="max-w-4xl mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="w-5 h-5" />
+              Already Have a Booking?
+            </CardTitle>
+            <CardDescription>
+              Check the status of your existing booking or inquiry
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link to="/status" className="block">
+              <Button variant="outline" className="w-full" size="lg">
+                <Search className="w-4 h-4 mr-2" />
+                Check Booking Status
+              </Button>
+            </Link>
+            <p className="text-xs text-center text-muted-foreground mt-2">
+              Enter your reference number to see your booking progress
+            </p>
           </CardContent>
         </Card>
       </div>

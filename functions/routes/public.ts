@@ -511,6 +511,19 @@ publicRouter.post('/bookings/:id/proof', async (c) => {
     return c.json({ error: 'Invalid input' }, 400);
   }
 
+  const proofUrl = result.data.proof_url;
+  const verificationToken = body.verification_token as string | undefined;
+
+  // Verify ownership if token is provided
+  if (verificationToken) {
+    const verifiedBookingId = await verifyToken(c.env.DB, verificationToken);
+    if (!verifiedBookingId || verifiedBookingId !== id) {
+      return c.json({
+        error: 'Invalid or expired verification token. Please verify again.'
+      }, 401);
+    }
+  }
+
   // Check if booking exists
   const booking = await c.env.DB.prepare(
     'SELECT * FROM external_rentals WHERE id = ?'
@@ -541,7 +554,7 @@ publicRouter.post('/bookings/:id/proof', async (c) => {
     `UPDATE external_rentals
      SET proof_of_payment_url = ?, booking_status = 'pending_verification'
      WHERE id = ?`
-  ).bind(result.data.proof_url, id).run();
+  ).bind(proofUrl, id).run();
 
   const updated = await c.env.DB.prepare(
     'SELECT * FROM external_rentals WHERE id = ?'
@@ -576,6 +589,239 @@ publicRouter.get('/bookings/:id/status', async (c) => {
         admin_notes: booking.admin_notes,
         time_of_day: formatTimeOfDay(booking.created_at as string),
       }
+    }
+  });
+});
+
+// GET /api/public/status/:identifier - Get booking status by UUID or reference number
+// This is a public endpoint for checking status without authentication
+publicRouter.get('/status/:identifier', async (c) => {
+  const identifier = c.req.param('identifier');
+
+  // Try to find by ID first (UUID), then by reference number
+  // For reference number, we need to generate it from the created_at date
+  let booking = await c.env.DB.prepare(
+    'SELECT * FROM external_rentals WHERE id = ?'
+  ).bind(identifier).first();
+
+  // If not found by ID, try to find by reference number pattern
+  if (!booking && identifier.startsWith('EXT-')) {
+    // Reference number format: EXT-YYYYMMDD-XXX
+    // Extract date part and search
+    const match = identifier.match(/^EXT-(\d{4})(\d{2})(\d{2})-(\d+)$/);
+    if (match) {
+      const year = parseInt(match[1]);
+      const month = parseInt(match[2]) - 1; // 0-indexed
+      const day = parseInt(match[3]);
+      const suffix = match[4];
+
+      // Create date range for the query
+      const startDate = new Date(year, month, day);
+      const endDate = new Date(year, month, day + 1);
+
+      // Query for bookings created on that date
+      const bookings = await c.env.DB.prepare(
+        `SELECT * FROM external_rentals
+         WHERE created_at >= ? AND created_at < ?
+         ORDER BY created_at ASC`
+      ).bind(startDate.toISOString(), endDate.toISOString()).all();
+
+      // Find the booking that matches the reference number suffix
+      // The suffix is the last 3 characters of the booking ID
+      for (const b of (bookings.results || [])) {
+        const bookingId = b.id as string;
+        if (bookingId.slice(-3) === suffix) {
+          booking = b;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!booking) {
+    return c.json({ error: 'Booking not found. Please check your reference number.' }, 404);
+  }
+
+  // Generate reference number
+  const createdDate = new Date(booking.created_at as string);
+  const refNum = `EXT-${createdDate.getFullYear()}${String(createdDate.getMonth() + 1).padStart(2, '0')}${String(createdDate.getDate()).padStart(2, '0')}-${(booking.id as string).slice(-3)}`;
+
+  // Map status to phase information
+  const phaseMap: Record<string, { phase: number; phase_name: string; description: string; next_step: string }> = {
+    inquiry_submitted: {
+      phase: 1,
+      phase_name: 'Submitted',
+      description: 'Your inquiry has been submitted successfully. Our team will review your request.',
+      next_step: 'Wait for our team to review your inquiry. You\'ll receive an update within 24-48 hours.'
+    },
+    pending_approval: {
+      phase: 2,
+      phase_name: 'Under Review',
+      description: 'Your inquiry is being reviewed by our admin team. We\'ll check availability and approve shortly.',
+      next_step: 'Once approved, you\'ll receive payment instructions to complete your booking.'
+    },
+    pending_payment: {
+      phase: 3,
+      phase_name: 'Payment Required',
+      description: 'Your inquiry has been approved! Please complete your payment to confirm your booking.',
+      next_step: 'Upload proof of payment via the link provided, or contact admin for assistance.'
+    },
+    pending_verification: {
+      phase: 4,
+      phase_name: 'Verifying Payment',
+      description: 'Payment received! Our team is verifying your payment proof.',
+      next_step: 'We\'ll confirm your booking within 24-48 hours after verification.'
+    },
+    confirmed: {
+      phase: 5,
+      phase_name: 'Confirmed',
+      description: 'Your booking has been confirmed! We look forward to hosting you.',
+      next_step: 'Arrive 15 minutes before your scheduled time. Present your booking confirmation upon arrival.'
+    },
+    rejected: {
+      phase: 0,
+      phase_name: 'Rejected',
+      description: 'Your inquiry has been declined. This may be due to availability or other reasons.',
+      next_step: 'You can submit a new inquiry with different dates or contact us for more information.'
+    },
+    cancelled: {
+      phase: 0,
+      phase_name: 'Cancelled',
+      description: 'This booking has been cancelled.',
+      next_step: 'You can submit a new inquiry if you\'d like to book again.'
+    }
+  };
+
+  const status = booking.booking_status as string;
+  const phaseInfo = phaseMap[status] || phaseMap.inquiry_submitted;
+
+  return c.json({
+    data: {
+      booking: {
+        id: booking.id,
+        reference_number: refNum,
+        amenity_type: booking.amenity_type,
+        date: booking.date,
+        slot: booking.slot,
+        amount: booking.amount,
+        booking_status: booking.booking_status,
+        created_at: booking.created_at,
+      },
+      phase: phaseInfo.phase,
+      phase_name: phaseInfo.phase_name,
+      description: phaseInfo.description,
+      next_step: phaseInfo.next_step,
+      is_rejected: status === 'rejected',
+      is_cancelled: status === 'cancelled',
+    }
+  });
+});
+
+// Helper: Generate a short-lived verification token
+function generateVerificationToken(): string {
+  const array = new Uint8Array(24);
+  crypto.getRandomValues(array);
+  return Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Helper: Store verification token with 15-minute expiry
+async function storeVerificationToken(
+  db: D1Database,
+  bookingId: string,
+  token: string
+): Promise<void> {
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+  await db.prepare(
+    `INSERT INTO verification_tokens (token, booking_id, expires_at)
+     VALUES (?, ?, ?)`
+  ).bind(token, bookingId, expiresAt.toISOString()).run();
+}
+
+// Helper: Verify token and get booking ID
+async function verifyToken(
+  db: D1Database,
+  token: string
+): Promise<string | null> {
+  const result = await db.prepare(
+    `SELECT booking_id FROM verification_tokens
+     WHERE token = ? AND expires_at > datetime('now')
+     LIMIT 1`
+  ).bind(token).first();
+
+  if (result) {
+    // Delete used token
+    await db.prepare('DELETE FROM verification_tokens WHERE token = ?')
+      .bind(token).run();
+    return result.booking_id as string;
+  }
+  return null;
+}
+
+// Helper: Mask email address (show first character and domain)
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return email;
+  return `${local[0]}***@${domain}`;
+}
+
+// Helper: Mask phone number (show last 5 digits)
+function maskPhone(phone: string): string {
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length < 5) return phone;
+  const visible = cleaned.slice(-5);
+  const hidden = cleaned.slice(0, -5).replace(/\d/g, '*');
+  return `+63${hidden}${visible}`;
+}
+
+// Verification schema
+const verifyOwnershipSchema = z.object({
+  email_or_phone: z.string().min(1),
+});
+
+// POST /api/public/bookings/:id/verify - Verify ownership before proof upload
+publicRouter.post('/bookings/:id/verify', async (c) => {
+  const id = c.req.param('id');
+  const body = await c.req.json();
+  const result = verifyOwnershipSchema.safeParse(body);
+
+  if (!result.success) {
+    return c.json({ error: 'Invalid input' }, 400);
+  }
+
+  const emailOrPhone = result.data.email_or_phone.trim();
+
+  // Check if booking exists
+  const booking = await c.env.DB.prepare(
+    'SELECT * FROM external_rentals WHERE id = ?'
+  ).bind(id).first();
+
+  if (!booking) {
+    return c.json({ error: 'Booking not found' }, 404);
+  }
+
+  // Verify ownership by matching email or phone
+  const guestEmail = booking.guest_email as string;
+  const guestPhone = booking.guest_phone as string;
+
+  const isEmailMatch = emailOrPhone.toLowerCase() === guestEmail.toLowerCase();
+  const isPhoneMatch = emailOrPhone.replace(/\D/g, '') === guestPhone.replace(/\D/g, '');
+
+  if (!isEmailMatch && !isPhoneMatch) {
+    return c.json({
+      error: 'The email or phone number doesn\'t match our records.'
+    }, 400);
+  }
+
+  // Generate and store verification token
+  const token = generateVerificationToken();
+  await storeVerificationToken(c.env.DB, id, token);
+
+  return c.json({
+    data: {
+      verified: true,
+      token: token,
+      masked_email: maskEmail(guestEmail),
+      masked_phone: maskPhone(guestPhone),
     }
   });
 });

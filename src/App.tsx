@@ -122,6 +122,16 @@ const SuccessPage = lazy(() =>
     default: m.SuccessPage,
   })),
 );
+const StatusCheckPage = lazy(() =>
+  import("./pages/public/StatusCheckPage").then((m) => ({
+    default: m.StatusCheckPage,
+  })),
+);
+const StatusByRefPage = lazy(() =>
+  import("./pages/public/StatusByRefPage").then((m) => ({
+    default: m.StatusByRefPage,
+  })),
+);
 
 // Loading component for lazy-loaded pages
 function PageLoader() {
@@ -265,6 +275,8 @@ function App() {
             path="/external-rentals/success/:id"
             element={<SuccessPage />}
           />
+          <Route path="/status" element={<StatusCheckPage />} />
+          <Route path="/status/:ref" element={<StatusByRefPage />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

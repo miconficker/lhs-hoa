@@ -12,6 +12,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PhoneInput } from "@/components/ui/phone-input";
 import {
   Card,
   CardContent,
@@ -115,11 +116,40 @@ export function InquiryPage() {
       return;
     }
 
+    // Validate attendees
+    const attendeeCount = parseInt(formData.attendees);
     if (
-      formData.attendees &&
-      (parseInt(formData.attendees) < 1 || parseInt(formData.attendees) > 500)
+      !formData.attendees ||
+      isNaN(attendeeCount) ||
+      attendeeCount < 1 ||
+      attendeeCount > 500
     ) {
       toast.error("Number of attendees must be between 1 and 500");
+      return;
+    }
+
+    // Validate phone number (at least 10 digits, auto-formatted with +63)
+    const phoneDigits = formData.guest_phone.replace(/\D/g, "");
+    if (
+      !formData.guest_phone ||
+      phoneDigits.length < 10 ||
+      !phoneDigits.startsWith("63")
+    ) {
+      toast.error(
+        "Please enter a valid Philippine mobile number (auto-formatted to +63)",
+      );
+      return;
+    }
+
+    // Validate purpose (at least 10 characters)
+    if (!formData.purpose || formData.purpose.trim().length < 10) {
+      toast.error("Please provide a description (at least 10 characters)");
+      return;
+    }
+
+    // Validate event type
+    if (!formData.event_type) {
+      toast.error("Please select an event type");
       return;
     }
 
@@ -130,12 +160,12 @@ export function InquiryPage() {
         amenity_type: amenityType,
         date,
         slot,
-        guest_name: formData.guest_name,
-        guest_email: formData.guest_email,
-        guest_phone: formData.guest_phone,
+        guest_name: formData.guest_name.trim(),
+        guest_email: formData.guest_email.trim(),
+        guest_phone: formData.guest_phone.trim(),
         event_type: formData.event_type,
-        attendees: parseInt(formData.attendees) || 0,
-        purpose: formData.purpose,
+        attendees: attendeeCount,
+        purpose: formData.purpose.trim(),
       };
 
       const result = await api.public.createInquiry(inquiryData);
@@ -274,19 +304,16 @@ export function InquiryPage() {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="guest_phone">Phone Number *</Label>
-                <Input
-                  id="guest_phone"
-                  type="tel"
-                  value={formData.guest_phone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, guest_phone: e.target.value })
-                  }
-                  placeholder="+63 912 345 6789"
-                  required
-                />
-              </div>
+              <PhoneInput
+                id="guest_phone"
+                label="Phone Number"
+                value={formData.guest_phone}
+                onChange={(value) =>
+                  setFormData({ ...formData, guest_phone: value })
+                }
+                placeholder="912 345 6789"
+                required
+              />
             </CardContent>
           </Card>
 

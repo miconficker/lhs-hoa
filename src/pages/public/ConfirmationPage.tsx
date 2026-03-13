@@ -10,6 +10,7 @@ import {
   Upload,
   RefreshCw,
 } from "lucide-react";
+import { QRCodeDisplay } from "@/components/public/QRCodeDisplay";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -260,6 +261,18 @@ export function ConfirmationPage() {
                 <p className="text-sm">{booking.admin_notes}</p>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* QR Code for Status Check */}
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <QRCodeDisplay
+              value={`${window.location.origin}/status/${booking.reference_number}`}
+              title="Quick Status Check"
+              description="Scan this QR code to check your booking status anytime"
+              size={180}
+            />
           </CardContent>
         </Card>
 
