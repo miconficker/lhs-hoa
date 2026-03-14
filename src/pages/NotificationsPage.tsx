@@ -66,6 +66,18 @@ export function NotificationsPage() {
         return "📢";
       case "alert":
         return "🚨";
+      case "booking_status":
+        return "📅";
+      case "payment_reminder":
+        return "💳";
+      case "booking_reminder":
+        return "🏠";
+      case "payment_verification_requested":
+        return "🔍";
+      case "payment_verified":
+        return "✅";
+      case "payment_rejected":
+        return "❌";
       default:
         return "📌";
     }
@@ -83,6 +95,18 @@ export function NotificationsPage() {
         return "Announcement";
       case "alert":
         return "Alert";
+      case "booking_status":
+        return "Booking Status";
+      case "payment_reminder":
+        return "Payment Reminder";
+      case "booking_reminder":
+        return "Booking Reminder";
+      case "payment_verification_requested":
+        return "Payment Verification";
+      case "payment_verified":
+        return "Payment Verified";
+      case "payment_rejected":
+        return "Payment Rejected";
     }
   };
 
@@ -157,6 +181,14 @@ export function NotificationsPage() {
           <option value="late_notice">Late Notices</option>
           <option value="announcement">Announcements</option>
           <option value="alert">Alerts</option>
+          <option value="booking_status">Booking Status</option>
+          <option value="payment_reminder">Payment Reminders</option>
+          <option value="booking_reminder">Booking Reminders</option>
+          <option value="payment_verification_requested">
+            Payment Verification
+          </option>
+          <option value="payment_verified">Payment Verified</option>
+          <option value="payment_rejected">Payment Rejected</option>
         </select>
 
         {/* Read status filter */}

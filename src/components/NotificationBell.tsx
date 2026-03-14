@@ -77,6 +77,18 @@ export function NotificationBell() {
         return "📢";
       case "alert":
         return "🚨";
+      case "booking_status":
+        return "📅";
+      case "payment_reminder":
+        return "💳";
+      case "booking_reminder":
+        return "🏠";
+      case "payment_verification_requested":
+        return "🔍";
+      case "payment_verified":
+        return "✅";
+      case "payment_rejected":
+        return "❌";
       default:
         return "📌";
     }

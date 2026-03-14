@@ -9,7 +9,7 @@ type Env = {
 
 const notificationSchema = z.object({
   user_id: z.string().optional(),
-  type: z.enum(["demand_letter", "reminder", "late_notice", "announcement", "alert", "booking_status", "payment_reminder", "booking_reminder"]),
+  type: z.enum(["demand_letter", "reminder", "late_notice", "announcement", "alert", "booking_status", "payment_reminder", "booking_reminder", "payment_verification_requested", "payment_verified", "payment_rejected"]),
   title: z.string().min(1),
   content: z.string().min(1),
   link: z.string().optional(),
@@ -18,7 +18,7 @@ const notificationSchema = z.object({
 const bulkNotificationSchema = z.object({
   target: z.enum(["all", "delinquent", "specific"]),
   user_ids: z.array(z.string()).optional(),
-  type: z.enum(["demand_letter", "reminder", "late_notice", "announcement", "alert", "booking_status", "payment_reminder", "booking_reminder"]),
+  type: z.enum(["demand_letter", "reminder", "late_notice", "announcement", "alert", "booking_status", "payment_reminder", "booking_reminder", "payment_verification_requested", "payment_verified", "payment_rejected"]),
   title: z.string().min(1),
   content: z.string().min(1),
   link: z.string().optional(),
@@ -311,7 +311,7 @@ notificationsRouter.get("/admin/all", async (c) => {
 export async function createNotification(
   db: D1Database,
   userId: string,
-  type: "demand_letter" | "reminder" | "late_notice" | "announcement" | "alert" | "booking_status" | "payment_reminder" | "booking_reminder",
+  type: "demand_letter" | "reminder" | "late_notice" | "announcement" | "alert" | "booking_status" | "payment_reminder" | "booking_reminder" | "payment_verification_requested" | "payment_verified" | "payment_rejected",
   title: string,
   content: string,
   link?: string
@@ -341,7 +341,7 @@ export async function createNotification(
 export async function createBulkNotifications(
   db: D1Database,
   userIds: string[],
-  type: "demand_letter" | "reminder" | "late_notice" | "announcement" | "alert" | "booking_status" | "payment_reminder" | "booking_reminder",
+  type: "demand_letter" | "reminder" | "late_notice" | "announcement" | "alert" | "booking_status" | "payment_reminder" | "booking_reminder" | "payment_verification_requested" | "payment_verified" | "payment_rejected",
   title: string,
   content: string,
   link?: string
