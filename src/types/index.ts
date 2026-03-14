@@ -813,7 +813,10 @@ export type NotificationType =
   | "alert"
   | "payment_verification_requested"
   | "payment_verified"
-  | "payment_rejected";
+  | "payment_rejected"
+  | "booking_status"
+  | "payment_reminder"
+  | "booking_reminder";
 
 export interface Notification {
   id: string;

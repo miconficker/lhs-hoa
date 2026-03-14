@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -14,6 +14,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAdminNotificationCounts } from "@/hooks/useAdminNotificationCounts";
 
 interface NavItem {
   title: string;
@@ -21,9 +22,10 @@ interface NavItem {
   icon: React.ElementType;
   badge?: number;
   children?: NavItem[];
+  badgeKey?: keyof ReturnType<typeof useAdminNotificationCounts>["counts"];
 }
 
-const navItems: NavItem[] = [
+const baseNavItems: NavItem[] = [
   {
     title: "Dashboard",
     href: "/admin",
@@ -45,6 +47,7 @@ const navItems: NavItem[] = [
         title: "Household Approvals",
         href: "/admin/member-approvals",
         icon: CheckCircle,
+        badgeKey: "pendingHouseholdApprovals",
       },
     ],
   },
@@ -67,6 +70,7 @@ const navItems: NavItem[] = [
         title: "All Bookings",
         href: "/admin/reservations/all-bookings",
         icon: Calendar,
+        badgeKey: "pendingBookings",
       },
       {
         title: "Time Blocks",
@@ -90,8 +94,14 @@ const navItems: NavItem[] = [
         title: "Notifications",
         href: "/admin/notifications",
         icon: MessageSquare,
+        badgeKey: "unreadNotifications",
       },
-      { title: "Messages", href: "/admin/messages", icon: MessageSquare },
+      {
+        title: "Messages",
+        href: "/admin/messages",
+        icon: MessageSquare,
+        badgeKey: "unreadMessages",
+      },
     ],
   },
   {
@@ -139,9 +149,22 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
+  const { counts } = useAdminNotificationCounts();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(["reservations"]),
   );
+
+  // Memoize nav items with badges populated
+  const navItems: NavItem[] = useMemo(() => {
+    const populateBadges = (items: NavItem[]): NavItem[] => {
+      return items.map((item) => ({
+        ...item,
+        badge: item.badgeKey ? counts[item.badgeKey] : item.badge,
+        children: item.children ? populateBadges(item.children) : undefined,
+      }));
+    };
+    return populateBadges(baseNavItems);
+  }, [counts]);
 
   const toggleSection = (title: string) => {
     setExpandedSections((prev) => {

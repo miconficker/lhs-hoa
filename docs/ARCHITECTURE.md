@@ -157,7 +157,8 @@ lhs-hoa/
 │   │   ├── charts/               # Recharts wrappers
 │   │   └── skeletons/            # Loading skeletons
 │   ├── hooks/                    # Custom React hooks
-│   │   └── useAuth.ts            # Authentication state (Zustand)
+│   │   ├── useAuth.ts            # Authentication state (Zustand)
+│   │   └── useAdminNotificationCounts.ts  # Admin sidebar notification badges
 │   ├── lib/
 │   │   ├── api.ts                # API client & request helpers
 │   │   ├── booking-status.ts     # Unified booking status config
@@ -1789,6 +1790,69 @@ Based on **Radix UI** primitives with Tailwind styling:
 <IconContainer icon={CheckCircle} variant="success" size="sm" />
 ```
 
+### Admin Sidebar Notification Badges
+
+**Purpose**: Display real-time notification counts on admin sidebar navigation items.
+
+**Hook**: `useAdminNotificationCounts` (`src/hooks/useAdminNotificationCounts.ts`)
+
+**Implementation**:
+- Fetches counts from multiple API endpoints in parallel using `Promise.allSettled()`
+- Auto-refreshes every 30 seconds
+- Gracefully handles API failures (individual failures don't break the entire feature)
+
+**Badge Locations**:
+| Navigation Item | Badge Key | API Endpoint | Count Source |
+|-----------------|-----------|--------------|--------------|
+| All Bookings | `pendingBookings` | `GET /api/admin/external-rentals/pending` | Pending external rental bookings |
+| Notifications | `unreadNotifications` | `GET /api/notifications?read=false` | Unread notifications for admin |
+| Messages | `unreadMessages` | `GET /api/messages/threads` | Threads with unread messages |
+| Household Approvals | `pendingHouseholdApprovals` | `GET /api/admin/lot-members/pending` | Pending (unverified) lot members |
+
+**Usage Pattern**:
+```typescript
+// Sidebar component
+import { useAdminNotificationCounts } from "@/hooks/useAdminNotificationCounts";
+
+const { counts } = useAdminNotificationCounts();
+// counts = { pendingBookings, unreadNotifications, unreadMessages, pendingHouseholdApprovals }
+```
+
+**Badge Configuration** (`src/components/admin/Sidebar.tsx`):
+```typescript
+const baseNavItems: NavItem[] = [
+  {
+    title: "Reservations",
+    children: [
+      {
+        title: "All Bookings",
+        badgeKey: "pendingBookings",  // Maps to counts.pendingBookings
+      },
+    ],
+  },
+  // ...
+];
+```
+
+**UI Rendering**:
+- Badges appear as red circular indicators (`bg-primary`) with white text
+- Only shown when count > 0
+- Positioned with `ml-auto` to align right
+- Styled with `rounded-full px-2 py-0.5 text-xs font-medium`
+
+**Type Safety**:
+```typescript
+interface AdminNotificationCounts {
+  pendingBookings: number;
+  unreadNotifications: number;
+  unreadMessages: number;
+  pendingHouseholdApprovals: number;
+}
+
+// Badge key is type-checked against counts object
+badgeKey?: keyof ReturnType<typeof useAdminNotificationCounts>["counts"];
+```
+
 ### My Lots Components (Resident-Facing)
 
 **Purpose**: Allow primary owners to manage household members directly from the My Lots page.
@@ -2377,9 +2441,17 @@ jobs:
 ## Document Metadata
 
 **Last Updated**: 2026-03-14
-**Version**: 1.12.1
+**Version**: 1.12.2
 **Status**: Production System (Unified Booking System)
 **Maintained By**: Development Team
+
+**Recent Updates (v1.12.2)**:
+- Admin sidebar notification badges
+  - Added `useAdminNotificationCounts` hook for real-time badge counts
+  - Badges auto-refresh every 30 seconds using parallel API requests
+  - Displays counts for: pending bookings, unread notifications, unread messages, pending household approvals
+  - Graceful error handling - individual API failures don't break the feature
+  - Type-safe badge key configuration mapped to counts object
 
 **Recent Updates (v1.12.1)**:
 - Fixed foreign key constraints for unified booking system
