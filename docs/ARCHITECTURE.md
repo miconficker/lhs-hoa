@@ -802,6 +802,46 @@ CREATE VIEW external_rentals_legacy AS
   WHERE b.workflow = 'external' AND b.deleted_at IS NULL;
 ```
 
+#### `booking_blocked_dates` (Confirmed Bookings Only)
+```sql
+CREATE TABLE booking_blocked_dates (
+  id TEXT PRIMARY KEY,
+  booking_id TEXT NOT NULL,
+  amenity_type TEXT NOT NULL CHECK(amenity_type IN ('clubhouse', 'pool', 'basketball-court', 'tennis-court')),
+  booking_date DATE NOT NULL,
+  slot TEXT NOT NULL CHECK(slot IN ('AM', 'PM', 'FULL_DAY')),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+  UNIQUE(amenity_type, booking_date, slot)
+);
+```
+
+**Purpose**: Tracks confirmed bookings that block specific slots. Only confirmed bookings create records here, preventing double-booking.
+
+**Behavior**:
+- Created when booking status changes to `confirmed`
+- Automatically deleted when booking is cancelled or deleted (CASCADE)
+- UNIQUE constraint ensures only one confirmed booking per slot
+
+#### `verification_tokens` (Booking Verification Tokens)
+```sql
+CREATE TABLE verification_tokens (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  token TEXT NOT NULL UNIQUE,
+  booking_id TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
+);
+```
+
+**Purpose**: Stores verification tokens for public booking status tracking (QR codes, reference numbers).
+
+**Behavior**:
+- Generated when booking is created for external workflow
+- Used for status check without authentication
+- Automatically deleted when booking is deleted (CASCADE)
+
 #### `polls` & `poll_votes`
 ```sql
 CREATE TABLE polls (
@@ -2337,9 +2377,27 @@ jobs:
 ## Document Metadata
 
 **Last Updated**: 2026-03-14
-**Version**: 1.12.0
+**Version**: 1.12.1
 **Status**: Production System (Unified Booking System)
 **Maintained By**: Development Team
+
+**Recent Updates (v1.12.1)**:
+- Fixed foreign key constraints for unified booking system
+  - Migration 0029: Fix booking_blocked_dates FK to reference bookings(id)
+  - Migration 0030: Fix verification_tokens FK to reference bookings(id)
+  - Preserves existing data while fixing constraint violations
+- Enhanced booking status configuration
+  - Added `next_status` for workflow transitions
+  - Added `action_button_text` for status-specific actions
+  - Added `can_approve`, `can_reject`, `can_cancel` flags
+  - Improved admin workflow with clear action buttons
+- Updated all booking components to use enhanced status config
+  - UnifiedBookingForm uses next_status for workflow
+  - BookingHistory uses action_button_text for actions
+  - BookingStatusPage shows appropriate actions per status
+  - UnifiedBookingsTab uses new status config for admin actions
+- Updated useCalendarAvailability for unified bookings
+- Updated useAuth for guest authentication support
 
 **Recent Updates (v1.12.0)**:
 - Unified booking system with single `bookings` table (migration 0028)
