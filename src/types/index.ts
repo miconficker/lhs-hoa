@@ -304,7 +304,7 @@ export interface PublicInquiryRequest {
   guest_phone: string;
   event_type: "wedding" | "birthday" | "meeting" | "sports" | "other";
   attendees: number;
-  purpose: string;
+  purpose?: string | null;
 }
 
 export interface PublicBookingResponse {

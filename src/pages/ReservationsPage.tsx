@@ -178,9 +178,7 @@ export function ReservationsPage() {
       )}
 
       {/* Show booking history */}
-      {!showBookingForm && (
-        <BookingHistory key={refreshKey} />
-      )}
+      {!showBookingForm && <BookingHistory key={refreshKey} />}
     </div>
   );
 }

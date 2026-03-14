@@ -23,6 +23,7 @@ import { passManagementRouter } from './routes/pass-management';
 import { lotMembersRouter, adminLotMembersRouter } from './routes/lot-members';
 import { publicRouter } from './routes/public';
 import { bookingsRouter } from './routes/bookings';
+import { guestAuthRouter } from './routes/guestAuth';
 
 type Env = {
   DB: D1Database;
@@ -138,6 +139,7 @@ app.get('/api/data/lots.geojson', async (c) => {
 
 // API routes
 app.route('/api/auth', authRouter);
+app.route('/api/guest', guestAuthRouter);
 app.route('/api/dashboard', dashboardRouter);
 app.route('/api/announcements', announcementsRouter);
 app.route('/api/events', eventsRouter);
