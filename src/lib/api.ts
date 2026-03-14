@@ -79,15 +79,15 @@ import type {
   MarkDelinquentRequest,
   MemberSearchResult,
   WaiveDelinquencyRequest,
-  // Public booking types
-  PublicAmenity,
-  AvailabilitySlot,
-  PricingCalculation,
-  PaymentDetails,
-  PublicBookingRequest,
-  PublicBookingResponse,
-  PublicInquiryRequest,
-  // Unified bookings system types
+	  // Public booking types
+	  PublicAmenity,
+	  AvailabilitySlot,
+	  PublicPricingCalculation,
+	  PaymentDetails,
+	  PublicBookingRequest,
+	  PublicBookingResponse,
+	  PublicInquiryRequest,
+	  // Unified bookings system types
   BookingWithCustomer,
   BookingWithReference,
   UnifiedBookingStatus,
@@ -95,12 +95,14 @@ import type {
   AmenityClosure,
   CreateBookingRequest,
   UpdateBookingStatusRequest,
+  AdminBookingActionRequest,
   BookingListFilters,
   BookingListResponse,
   MyBookingsResponse,
-  BookingStatusResponse,
-  BookingAvailabilityResponse,
-} from "@/types";
+	  BookingStatusResponse,
+	  BookingAvailabilityResponse,
+	  PricingCalculation,
+	} from "@/types";
 
 import { logger } from "@/lib/logger";
 
@@ -164,11 +166,22 @@ export async function apiRequest<T>(
   }
 
   try {
-    const data = JSON.parse(text);
+    const parsed = JSON.parse(text);
     if (!response.ok) {
-      return { error: data.error || "Request failed" };
+      return { error: parsed.error || "Request failed" };
     }
-    return { data };
+
+    // Most API routes return `{ data: ... }`. Unwrap that shape so callers can
+    // work with the payload directly without repeating `.data.data` plumbing.
+    const unwrapped =
+      parsed &&
+      typeof parsed === "object" &&
+      "data" in parsed &&
+      Object.keys(parsed).length === 1
+        ? (parsed as any).data
+        : parsed;
+
+    return { data: unwrapped };
   } catch (e) {
     logger.error("JSON parse error", e, { responseText: text });
     return { error: "Invalid response from server" };
@@ -1953,18 +1966,18 @@ export const api = {
         `/public/availability/${amenityType}${query ? "?" + query : ""}`,
       );
     },
-    getPricing: (
-      amenityType: string,
-      date: string,
-      slot: string,
-      isResident?: boolean,
-    ) => {
-      const params = new URLSearchParams({ date, slot });
-      if (isResident) params.append("resident", "true");
-      return apiRequest<PricingCalculation>(
-        `/public/pricing/${amenityType}?${params.toString()}`,
-      );
-    },
+	    getPricing: (
+	      amenityType: string,
+	      date: string,
+	      slot: string,
+	      isResident?: boolean,
+	    ) => {
+	      const params = new URLSearchParams({ date, slot });
+	      if (isResident) params.append("resident", "true");
+	      return apiRequest<PublicPricingCalculation>(
+	        `/public/pricing/${amenityType}?${params.toString()}`,
+	      );
+	    },
     getPaymentDetails: () =>
       apiRequest<PaymentDetails>("/public/payment-details"),
     createBooking: (bookingData: PublicBookingRequest) =>
@@ -1982,6 +1995,14 @@ export const api = {
           body: JSON.stringify({ proof_url: proofUrl }),
         },
       ),
+    uploadPaymentProofFile: (bookingId: string, file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      return apiUpload<{ booking: PublicBookingResponse }>(
+        `/public/bookings/${bookingId}/proof-file`,
+        form,
+      );
+    },
     getBookingStatus: (bookingId: string) =>
       apiRequest<{ booking: PublicBookingResponse }>(
         `/public/bookings/${bookingId}/status`,
@@ -2002,6 +2023,14 @@ export const api = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       }),
+    uploadProofFile: (bookingId: string, file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      return apiUpload<{ booking: any }>(
+        `/public/bookings/${bookingId}/proof-file`,
+        form,
+      );
+    },
     getStatusByIdentifier: (identifier: string) =>
       apiRequest<{ booking: any }>(`/public/status/${identifier}`),
   },
@@ -2154,12 +2183,24 @@ export const api = {
         method: "PUT",
         body: JSON.stringify(data),
       }),
+    // Apply explicit admin action (admin/staff)
+    action: (id: string, data: AdminBookingActionRequest) =>
+      apiRequest<{ booking: BookingWithCustomer }>(`/bookings/${id}/action`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
     // Upload payment proof
     uploadProof: (id: string, proofUrl: string) =>
       apiRequest<{ booking: BookingWithCustomer }>(`/bookings/${id}/proof`, {
         method: "POST",
         body: JSON.stringify({ proof_url: proofUrl }),
       }),
+    // Upload payment proof file (multipart)
+    uploadProofFile: (id: string, file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      return apiUpload<{ success: boolean }>(`/bookings/${id}/proof-file`, form);
+    },
     // Cancel booking
     cancel: (id: string) =>
       apiRequest<{ booking: BookingWithCustomer }>(`/bookings/${id}/cancel`, {

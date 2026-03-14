@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import type {
   AmenityType,
   TimeBlockSlot,
-  PricingCalculation,
+  PublicPricingCalculation,
   PublicInquiryRequest,
 } from "@/types";
 import { ArrowLeft } from "lucide-react";
@@ -60,7 +60,7 @@ export function InquiryPage() {
   const date = searchParams.get("date") || "";
   const slot = searchParams.get("slot") as TimeBlockSlot;
 
-  const [pricing, setPricing] = useState<PricingCalculation | null>(null);
+  const [pricing, setPricing] = useState<PublicPricingCalculation | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -101,9 +101,9 @@ export function InquiryPage() {
         !!user,
       );
 
-      if (pricingResult.data) {
-        setPricing(pricingResult.data as PricingCalculation);
-      }
+	      if (pricingResult.data) {
+	        setPricing(pricingResult.data as PublicPricingCalculation);
+	      }
     } catch (error) {
       console.error("Error loading data:", error);
       toast.error("Failed to load booking information");
@@ -160,6 +160,11 @@ export function InquiryPage() {
     try {
       setSubmitting(true);
 
+      const purpose =
+        formData.event_type === "other"
+          ? formData.other_event_type.trim()
+          : undefined;
+
       const inquiryData: PublicInquiryRequest = {
         amenity_type: amenityType,
         date,
@@ -171,10 +176,8 @@ export function InquiryPage() {
         event_type:
           formData.event_type === "other" ? "other" : formData.event_type,
         attendees: attendeeCount,
-        purpose:
-          formData.event_type === "other"
-            ? formData.other_event_type.trim()
-            : null,
+        // Omit `purpose` entirely when not provided; backend rejects `null`.
+        purpose,
       };
 
       const result = await api.public.createInquiry(inquiryData);

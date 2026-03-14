@@ -8,6 +8,7 @@ import {
   Trash2,
   Users,
   Loader2,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { StatusPhaseIndicator } from "@/components/public/StatusPhaseIndicator";
 import { api } from "@/lib/api";
 import { getStatusConfig, getStatusColorClasses } from "@/lib/booking-status";
 import { cn } from "@/lib/utils";
@@ -77,6 +79,9 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
     useState<BookingWithCustomer | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [adminNotes, setAdminNotes] = useState("");
+  const [paymentAmount, setPaymentAmount] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<string>("");
+  const [receiptNumber, setReceiptNumber] = useState<string>("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [bookingToDelete, setBookingToDelete] =
     useState<BookingWithCustomer | null>(null);
@@ -174,6 +179,21 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
     setSelectedBooking(booking);
     setRejectionReason(booking.rejection_reason || "");
     setAdminNotes(booking.admin_notes || "");
+    const total = booking.amount || 0;
+    const paid = booking.amount_paid || 0;
+    const remaining = Math.max(0, total - paid);
+
+    // Default for payment review: suggest 50% deposit, but never more than remaining.
+    if (booking.booking_status === "payment_review" && total > 0) {
+      const deposit = Math.min(remaining, Math.round(total * 0.5 * 100) / 100);
+      setPaymentAmount(String(deposit));
+    } else if (booking.booking_status === "confirmed" && remaining > 0) {
+      setPaymentAmount(String(remaining));
+    } else {
+      setPaymentAmount("");
+    }
+    setPaymentMethod(booking.payment_method || "");
+    setReceiptNumber(booking.receipt_number || "");
     setIsStatusDialogOpen(true);
   };
 
@@ -182,6 +202,41 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
     setSelectedBooking(null);
     setRejectionReason("");
     setAdminNotes("");
+    setPaymentAmount("");
+    setPaymentMethod("");
+    setReceiptNumber("");
+  };
+
+  const getPrimaryAction = (booking: BookingWithCustomer | null): {
+    disabled: boolean;
+    label: string;
+  } => {
+    if (!booking) return { disabled: true, label: "Update" };
+
+    if (booking.booking_status === "submitted") {
+      const next = (booking.amount ?? 0) > 0 ? "Payment Due" : "Confirmed";
+      return { disabled: false, label: `Approve → ${next}` };
+    }
+
+    if (booking.booking_status === "payment_review") {
+      return { disabled: false, label: "Confirm Payment → Confirmed" };
+    }
+
+    if (booking.booking_status === "payment_due") {
+      return { disabled: true, label: "Waiting for Proof" };
+    }
+
+    if (booking.booking_status === "confirmed") {
+      const total = booking.amount || 0;
+      const paid = booking.amount_paid || 0;
+      const remaining = total - paid;
+      if (total > 0 && remaining > 0) {
+        return { disabled: false, label: "Record Payment (no status change)" };
+      }
+      return { disabled: true, label: "Fully Paid" };
+    }
+
+    return { disabled: true, label: "No Action" };
   };
 
   const handleStatusUpdate = async () => {
@@ -190,36 +245,44 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
     try {
       setIsProcessing(selectedBooking.id);
 
-      // Determine new status based on current status and customer type
-      const isExternal = selectedBooking.customer_id !== null;
-      let newStatus: UnifiedBookingStatus;
+      const action =
+        selectedBooking.booking_status === "submitted"
+          ? "approve"
+          : selectedBooking.booking_status === "payment_review"
+            ? "confirm_payment"
+            : selectedBooking.booking_status === "confirmed"
+              ? "record_payment"
+            : null;
 
-      if (isExternal) {
-        // External workflow
-        if (selectedBooking.booking_status === "inquiry_submitted") {
-          newStatus = "pending_approval";
-        } else if (selectedBooking.booking_status === "pending_approval") {
-          newStatus = "pending_payment";
-        } else if (selectedBooking.booking_status === "pending_payment") {
-          newStatus = "pending_verification";
-        } else if (selectedBooking.booking_status === "pending_verification") {
-          newStatus = "confirmed";
-        } else {
-          newStatus = selectedBooking.booking_status;
-        }
-      } else {
-        // Resident workflow
-        if (selectedBooking.booking_status === "pending_resident") {
-          newStatus = "confirmed";
-        } else {
-          newStatus = selectedBooking.booking_status;
-        }
+      if (!action) {
+        toast.error("No action available for this status");
+        return;
       }
 
-      const result = await api.bookings.updateStatus(selectedBooking.id, {
-        status: newStatus,
+      const paymentAmountNumber = paymentAmount.trim()
+        ? Number(paymentAmount)
+        : undefined;
+
+      if (
+        (action === "confirm_payment" || action === "record_payment") &&
+        paymentAmountNumber !== undefined &&
+        (Number.isNaN(paymentAmountNumber) || paymentAmountNumber < 0)
+      ) {
+        toast.error("Payment amount must be a valid number (0 or higher)");
+        return;
+      }
+
+      const result = await api.bookings.action(selectedBooking.id, {
+        action,
         rejection_reason: rejectionReason || undefined,
         admin_notes: adminNotes || undefined,
+        ...(action === "confirm_payment" || action === "record_payment"
+          ? {
+              payment_amount: paymentAmountNumber,
+              payment_method: paymentMethod.trim() || undefined,
+              receipt_number: receiptNumber.trim() || undefined,
+            }
+          : {}),
       });
 
       if (result.error) {
@@ -244,8 +307,8 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
     try {
       setIsProcessing(selectedBooking.id);
 
-      const result = await api.bookings.updateStatus(selectedBooking.id, {
-        status: "rejected",
+      const result = await api.bookings.action(selectedBooking.id, {
+        action: "reject",
         rejection_reason: rejectionReason || "No reason provided",
         admin_notes: adminNotes || undefined,
       });
@@ -369,21 +432,9 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="inquiry_submitted">
-                    Inquiry Submitted
-                  </SelectItem>
-                  <SelectItem value="pending_approval">
-                    Pending Approval
-                  </SelectItem>
-                  <SelectItem value="pending_payment">
-                    Pending Payment
-                  </SelectItem>
-                  <SelectItem value="pending_verification">
-                    Pending Verification
-                  </SelectItem>
-                  <SelectItem value="pending_resident">
-                    Pending (Resident)
-                  </SelectItem>
+                  <SelectItem value="submitted">Submitted</SelectItem>
+                  <SelectItem value="payment_due">Payment Due</SelectItem>
+                  <SelectItem value="payment_review">Payment Review</SelectItem>
                   <SelectItem value="confirmed">Confirmed</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
@@ -509,6 +560,12 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
               <p className="text-2xl font-bold">
                 ₱
                 {bookings
+                  .filter(
+                    (b) =>
+                      b.booking_status !== "rejected" &&
+                      b.booking_status !== "cancelled" &&
+                      b.booking_status !== "no_show",
+                  )
                   .reduce(
                     (sum, b) => sum + ((b.amount || 0) - (b.amount_paid || 0)),
                     0,
@@ -705,23 +762,21 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
                               onClick={() => openStatusDialog(booking)}
                               title="Update status"
                             >
-                              {booking.booking_status === "pending_resident" ||
-                              booking.booking_status === "pending_approval" ? (
+                              {booking.booking_status === "submitted" ||
+                              booking.booking_status === "payment_review" ? (
                                 <Check className="w-4 h-4 text-green-500" />
                               ) : (
                                 <Loader2 className="w-4 h-4 text-muted-foreground" />
                               )}
                             </Button>
-                            {booking.booking_status === "cancelled" && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => openDeleteDialog(booking)}
-                                title="Delete booking"
-                              >
-                                <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
-                              </Button>
-                            )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => openDeleteDialog(booking)}
+                              title="Delete booking"
+                            >
+                              <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -736,7 +791,7 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
 
       {/* Status Update Dialog */}
       <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Update Booking Status</DialogTitle>
             <DialogDescription>
@@ -753,14 +808,65 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
 
           {selectedBooking && (
             <div className="py-4 space-y-4">
+              <div className="space-y-2">
+                <div className="text-sm text-muted-foreground">
+                  Next: {getPrimaryAction(selectedBooking).label}
+                </div>
+                <StatusPhaseIndicator
+                  status={selectedBooking.booking_status as any}
+                />
+              </div>
+
               {/* Current Status */}
               <div className="p-3 space-y-1 rounded-lg bg-muted/50">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Booking ID:</span>
+                  <span className="font-medium">{selectedBooking.id}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    Reference Number:
+                  </span>
+                  <span className="font-medium">
+                    {selectedBooking.reference_number || "—"}
+                  </span>
+                </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Current Status:</span>
                   <span className="font-medium">
                     {getStatusConfig(selectedBooking.booking_status).label}
                   </span>
                 </div>
+                {selectedBooking.email && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Email:</span>
+                    <span className="font-medium">{selectedBooking.email}</span>
+                  </div>
+                )}
+                {selectedBooking.phone && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Phone:</span>
+                    <span className="font-medium">{selectedBooking.phone}</span>
+                  </div>
+                )}
+                {selectedBooking.proof_of_payment_url && (
+                  <div className="flex items-center justify-between gap-3 text-sm pt-2 border-t">
+                    <span className="text-muted-foreground">
+                      Payment Proof:
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        window.open(`/api/bookings/${selectedBooking.id}/proof`, "_blank")
+                      }
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      View
+                    </Button>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Amenity:</span>
                   <span className="font-medium">
@@ -788,9 +894,94 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
                         ₱{(selectedBooking.amount_paid || 0).toFixed(2)}
                       </span>
                     </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Remaining:</span>
+                      <span className="font-medium">
+                        ₱
+                        {Math.max(
+                          0,
+                          (selectedBooking.amount || 0) -
+                            (selectedBooking.amount_paid || 0),
+                        ).toFixed(2)}
+                      </span>
+                    </div>
                   </>
                 )}
               </div>
+
+              {(selectedBooking.booking_status === "payment_review" ||
+                selectedBooking.booking_status === "confirmed") &&
+                (selectedBooking.amount || 0) > 0 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="payment_amount">
+                      Payment Received Now (₱)
+                    </Label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Input
+                        id="payment_amount"
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        step="0.01"
+                        value={paymentAmount}
+                        onChange={(e) => setPaymentAmount(e.target.value)}
+                        placeholder="e.g., 2500"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          const total = selectedBooking.amount || 0;
+                          const paid = selectedBooking.amount_paid || 0;
+                          const remaining = Math.max(0, total - paid);
+                          const deposit = Math.min(
+                            remaining,
+                            Math.round(total * 0.5 * 100) / 100,
+                          );
+                          setPaymentAmount(String(deposit));
+                        }}
+                      >
+                        50% Deposit
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          const total = selectedBooking.amount || 0;
+                          const paid = selectedBooking.amount_paid || 0;
+                          const remaining = Math.max(0, total - paid);
+                          setPaymentAmount(String(remaining));
+                        }}
+                      >
+                        Remaining
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="payment_method">Payment Method</Label>
+                        <Input
+                          id="payment_method"
+                          value={paymentMethod}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                          placeholder="e.g., GCash"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="receipt_number">Receipt #</Label>
+                        <Input
+                          id="receipt_number"
+                          value={receiptNumber}
+                          onChange={(e) => setReceiptNumber(e.target.value)}
+                          placeholder="optional"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Tip: Confirming payment can be a deposit. You can record
+                      the remaining balance later from the Confirmed status.
+                    </p>
+                  </div>
+                )}
 
               {/* Admin Notes */}
               <div className="space-y-2">
@@ -805,10 +996,9 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
               </div>
 
               {/* Rejection Reason (only show if rejecting) */}
-              {(selectedBooking.booking_status === "inquiry_submitted" ||
-                selectedBooking.booking_status === "pending_approval" ||
-                selectedBooking.booking_status === "pending_payment" ||
-                selectedBooking.booking_status === "pending_verification") && (
+              {(selectedBooking.booking_status === "submitted" ||
+                selectedBooking.booking_status === "payment_due" ||
+                selectedBooking.booking_status === "payment_review") && (
                 <div className="space-y-2">
                   <Label htmlFor="rejection_reason">
                     Rejection Reason (if rejecting)
@@ -834,11 +1024,9 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
             >
               Cancel
             </Button>
-            {(selectedBooking?.booking_status === "inquiry_submitted" ||
-              selectedBooking?.booking_status === "pending_approval" ||
-              selectedBooking?.booking_status === "pending_payment" ||
-              selectedBooking?.booking_status === "pending_verification" ||
-              selectedBooking?.booking_status === "pending_resident") && (
+            {(selectedBooking?.booking_status === "submitted" ||
+              selectedBooking?.booking_status === "payment_due" ||
+              selectedBooking?.booking_status === "payment_review") && (
               <Button
                 type="button"
                 variant="destructive"
@@ -853,11 +1041,14 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
             <Button
               type="button"
               onClick={handleStatusUpdate}
-              disabled={isProcessing === selectedBooking?.id}
+              disabled={
+                isProcessing === selectedBooking?.id ||
+                getPrimaryAction(selectedBooking).disabled
+              }
             >
               {isProcessing === selectedBooking?.id
                 ? "Updating..."
-                : "Approve / Update"}
+                : getPrimaryAction(selectedBooking).label}
             </Button>
           </DialogFooter>
         </DialogContent>

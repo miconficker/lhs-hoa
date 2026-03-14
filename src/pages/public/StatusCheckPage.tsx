@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Search, AlertCircle, Calendar, Clock, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,11 +46,14 @@ interface BookingStatusData {
 
 export function StatusCheckPage() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [identifier, setIdentifier] = useState(searchParams.get("ref") || "");
   const [loading, setLoading] = useState(false);
+  const [qrLoading, setQrLoading] = useState(false);
   const [booking, setBooking] = useState<BookingStatusData | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const qrInputRef = useRef<HTMLInputElement | null>(null);
 
   // Auto-load if reference number is in URL
   useEffect(() => {
@@ -98,6 +101,85 @@ export function StatusCheckPage() {
     handleCheckStatus();
   }
 
+  function extractIdentifierFromQrValue(rawValue: string): string | null {
+    const trimmed = rawValue.trim();
+    if (!trimmed) return null;
+
+    // Full URL: https://.../status/<ref> or https://.../status?ref=<ref>
+    if (/^https?:\/\//i.test(trimmed)) {
+      try {
+        const url = new URL(trimmed);
+        const byQuery = url.searchParams.get("ref");
+        if (byQuery) return byQuery.trim();
+
+        const match = url.pathname.match(/\/status\/([^/]+)$/);
+        if (match?.[1]) return decodeURIComponent(match[1]).trim();
+      } catch {
+        // ignore parse failure and fall through
+      }
+    }
+
+    // Raw identifier (reference number or booking UUID)
+    if (/^EXT-\d{8}-[a-z0-9]{3}$/i.test(trimmed)) return trimmed.toUpperCase();
+    if (
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        trimmed,
+      )
+    )
+      return trimmed;
+
+    // Sometimes scanners return something like "status/EXT-..." or "/status/EXT-..."
+    const pathMatch = trimmed.match(/\/status\/([^/]+)$/i);
+    if (pathMatch?.[1]) return decodeURIComponent(pathMatch[1]).trim();
+
+    return null;
+  }
+
+  async function handleQrFileSelected(file: File) {
+    const BarcodeDetectorCtor = (window as any).BarcodeDetector as
+      | (new (options?: any) => { detect: (image: any) => Promise<any[]> })
+      | undefined;
+
+    if (!BarcodeDetectorCtor) {
+      toast.error(
+        "QR scanning isn't supported in this browser. Please type your reference number instead.",
+      );
+      return;
+    }
+
+    setQrLoading(true);
+    try {
+      const imageBitmap = await createImageBitmap(file);
+      try {
+        const detector = new BarcodeDetectorCtor({ formats: ["qr_code"] });
+        const barcodes = await detector.detect(imageBitmap);
+        const rawValue = barcodes?.[0]?.rawValue as string | undefined;
+
+        if (!rawValue) {
+          toast.error("Couldn't read a QR code from that image.");
+          return;
+        }
+
+        const extracted = extractIdentifierFromQrValue(rawValue);
+        if (!extracted) {
+          toast.error(
+            "QR code read, but it doesn't look like a booking status link.",
+          );
+          return;
+        }
+
+        navigate(`/status/${encodeURIComponent(extracted)}`);
+      } finally {
+        imageBitmap.close?.();
+      }
+    } catch (err) {
+      console.error("QR decode failed:", err);
+      toast.error("Failed to scan QR code. Try a clearer image.");
+    } finally {
+      setQrLoading(false);
+    }
+  }
+
   return (
     <PublicLayout title="Check Booking Status" showBackButton backTo="/">
       <div className="max-w-3xl mx-auto py-8">
@@ -138,6 +220,43 @@ export function StatusCheckPage() {
               Tip: You can find your reference number in your booking
               confirmation email or on your payment receipt.
             </p>
+
+            <div className="flex items-center gap-3 mt-4">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">or</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            <div className="mt-4">
+              <input
+                ref={qrInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  void handleQrFileSelected(file);
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={qrLoading}
+                onClick={() => qrInputRef.current?.click()}
+              >
+                {qrLoading ? (
+                  <LoadingSpinner size="sm" className="mr-2" />
+                ) : null}
+                Upload QR Code Image
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2">
+                This scans the image locally in your browser. Nothing is
+                uploaded.
+              </p>
+            </div>
           </CardContent>
         </Card>
 
@@ -296,7 +415,7 @@ function StatusDetailsCard({ booking }: { booking: BookingStatusData }) {
               Browse Amenities
             </Button>
           </Link>
-          {booking.booking_status === "pending_payment" && (
+          {booking.booking_status === "payment_due" && (
             <Link
               to={`/external-rentals/inquiry/${booking.id}/payment`}
               className="flex-1"

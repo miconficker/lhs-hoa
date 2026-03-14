@@ -9,16 +9,23 @@ interface AuthState {
   guest: GuestSession | null;
   // Initialization state
   initialized: boolean;
+  // Derived state (stored as fields; do not use getters with Zustand)
+  isAuthenticated: boolean;
+  isResident: boolean;
+  isGuest: boolean;
   // Actions
   setAuth: (auth: AuthResponse) => void;
   clearAuth: () => void;
   init: () => Promise<void>;
   loginWithGoogle: () => void;
   logoutGuest: () => Promise<void>;
-  // Computed properties
-  isAuthenticated: boolean;
-  isResident: boolean;
-  isGuest: boolean;
+}
+
+function deriveFlags(user: User | null, guest: GuestSession | null) {
+  const isResident = !!user;
+  const isGuest = !!guest && !user;
+  const isAuthenticated = !!(user || guest);
+  return { isAuthenticated, isResident, isGuest };
 }
 
 export const useAuth = create<AuthState>((set, get) => ({
@@ -28,30 +35,18 @@ export const useAuth = create<AuthState>((set, get) => ({
   // Guest session
   guest: null,
   initialized: false,
-
-  // Computed properties
-  get isAuthenticated() {
-    const { user, guest } = get();
-    return !!(user || guest);
-  },
-  get isResident() {
-    return !!get().user;
-  },
-  get isGuest() {
-    const { guest, user } = get();
-    return !!guest && !user;
-  },
+  ...deriveFlags(null, null),
 
   setAuth: (auth) => {
     localStorage.setItem("hoa_token", auth.token);
     localStorage.setItem("hoa_user", JSON.stringify(auth.user));
-    set({ user: auth.user, token: auth.token });
+    set({ user: auth.user, token: auth.token, ...deriveFlags(auth.user, get().guest) });
   },
 
   clearAuth: () => {
     localStorage.removeItem("hoa_token");
     localStorage.removeItem("hoa_user");
-    set({ user: null, token: null });
+    set({ user: null, token: null, ...deriveFlags(null, get().guest) });
   },
 
   init: async () => {
@@ -60,11 +55,35 @@ export const useAuth = create<AuthState>((set, get) => ({
     const userStr = localStorage.getItem("hoa_user");
     if (token && userStr) {
       try {
-        set({ user: JSON.parse(userStr), token });
+        const parsedUser = JSON.parse(userStr) as User;
+        set({ user: parsedUser, token, ...deriveFlags(parsedUser, get().guest) });
       } catch {
-        // Invalid user data, clear it
+        // If `hoa_user` is corrupted, try to recover from the token instead of
+        // immediately logging the user out.
         localStorage.removeItem("hoa_user");
-        localStorage.removeItem("hoa_token");
+      }
+    }
+
+    // If we have a token but no user (or invalid stored user), refresh from API.
+    if (token && !get().user) {
+      try {
+        const response = await fetch("/api/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data?.user) {
+            localStorage.setItem("hoa_user", JSON.stringify(data.user));
+            set({ user: data.user, token, ...deriveFlags(data.user, get().guest) });
+          }
+        } else {
+          // Token is invalid/expired.
+          localStorage.removeItem("hoa_user");
+          localStorage.removeItem("hoa_token");
+          set({ user: null, token: null, ...deriveFlags(null, get().guest) });
+        }
+      } catch (error) {
+        console.error("Failed to refresh resident session:", error);
       }
     }
 
@@ -74,14 +93,17 @@ export const useAuth = create<AuthState>((set, get) => ({
       if (response.ok) {
         const data = await response.json();
         if (data.guest) {
-          set({ guest: data.guest });
+          set({ guest: data.guest, ...deriveFlags(get().user, data.guest) });
         }
       }
     } catch (error) {
       console.error("Failed to fetch guest session:", error);
     }
 
-    set({ initialized: true });
+    {
+      const { user, guest } = get();
+      set({ initialized: true, ...deriveFlags(user, guest) });
+    }
   },
 
   loginWithGoogle: () => {
@@ -95,6 +117,6 @@ export const useAuth = create<AuthState>((set, get) => ({
     } catch (error) {
       console.error("Failed to logout guest:", error);
     }
-    set({ guest: null });
+    set({ guest: null, ...deriveFlags(get().user, null) });
   },
 }));

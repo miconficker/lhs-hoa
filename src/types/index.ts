@@ -257,7 +257,7 @@ export interface AvailabilitySlot {
   available_slots: TimeBlockSlot[];
 }
 
-export interface PricingCalculation {
+export interface PublicPricingCalculation {
   base_rate: number;
   duration: number;
   day_type: "weekday" | "weekend" | "holiday";
@@ -285,7 +285,8 @@ export interface PublicBookingRequest {
   amenity_type: AmenityType;
   date: string;
   slot: TimeBlockSlot;
-  guest_name: string;
+  guest_first_name: string;
+  guest_last_name: string;
   guest_email: string;
   guest_phone: string;
   event_type: "wedding" | "birthday" | "meeting" | "sports" | "other";
@@ -311,11 +312,13 @@ export interface PublicBookingResponse {
   id: string;
   reference_number: string;
   status:
-    | "pending_payment"
-    | "pending_verification"
+    | "submitted"
+    | "payment_due"
+    | "payment_review"
     | "confirmed"
     | "rejected"
-    | "cancelled";
+    | "cancelled"
+    | "no_show";
   amenity_type: AmenityType;
   date: string;
   slot: TimeBlockSlot;
@@ -1300,12 +1303,9 @@ export interface WaiveDelinquencyRequest {
 
 // Unified booking status types (matches booking-status.ts)
 export type UnifiedBookingStatus =
-  | "inquiry_submitted" // guest submitted form
-  | "pending_approval" // admin approved, awaiting payment
-  | "pending_payment" // guest shown payment instructions
-  | "pending_verification" // proof uploaded, admin reviewing
-  | "pending_resident" // resident submitted, pre-approved pending slot check
-  | "awaiting_resident_payment" // resident awaiting payment
+  | "submitted" // awaiting admin approval
+  | "payment_due" // approved; awaiting payment/proof
+  | "payment_review" // proof uploaded; admin verifying
   | "confirmed" // booking confirmed
   | "rejected" // booking rejected
   | "cancelled" // booking cancelled
@@ -1410,6 +1410,7 @@ export interface BookingWithCustomer extends Booking {
   household_address?: string; // for residents
   picture?: string; // google_picture_url or user avatar
   display_customer_type?: "resident" | "external" | "board_member"; // derived at query time
+  reference_number?: string; // optional in list responses
 }
 
 // Booking with reference number (for display)
@@ -1475,6 +1476,21 @@ export interface CreateGuestBookingRequest extends CreateBookingRequest {
 // Update booking status request
 export interface UpdateBookingStatusRequest {
   status: UnifiedBookingStatus;
+  rejection_reason?: string;
+  admin_notes?: string;
+}
+
+export interface AdminBookingActionRequest {
+  action:
+    | "approve"
+    | "confirm_payment"
+    | "record_payment"
+    | "request_new_proof"
+    | "reject"
+    | "mark_no_show";
+  payment_amount?: number;
+  payment_method?: string;
+  receipt_number?: string;
   rejection_reason?: string;
   admin_notes?: string;
 }

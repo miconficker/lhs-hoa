@@ -60,8 +60,8 @@ export function InquiryPaymentPage() {
 
       // Only show payment details if approved
       if (
-        inquiryData.booking_status === "pending_approval" ||
-        inquiryData.booking_status === "pending_payment"
+        inquiryData.booking_status === "payment_due" ||
+        inquiryData.booking_status === "payment_review"
       ) {
         if (paymentResult.data) {
           setPaymentDetails(paymentResult.data);
@@ -80,12 +80,6 @@ export function InquiryPaymentPage() {
     }
   }
 
-  async function handleProofUpload(file: File): Promise<string> {
-    // TODO: Implement R2 upload
-    // For now, return a mock URL
-    return `https://r2-storage.example.com/proofs/${Date.now()}-${file.name}`;
-  }
-
   async function handleUploadProof() {
     if (!proofFile) {
       toast.error("Please select a file to upload");
@@ -99,10 +93,8 @@ export function InquiryPaymentPage() {
 
     try {
       setUploadingProof(true);
-      const url = await handleProofUpload(proofFile);
-
-      // Upload proof via API
-      const result = await api.public.uploadProof(id!, { proof_url: url });
+      // Upload proof file via API
+      const result = await api.public.uploadProofFile(id!, proofFile);
 
       if (result.error) {
         toast.error(result.error);
@@ -145,8 +137,8 @@ export function InquiryPaymentPage() {
     );
   }
 
-  const isApproved = inquiry.booking_status === "pending_payment";
-  const hasProof = inquiry.booking_status === "pending_verification";
+  const isPaymentDue = inquiry.booking_status === "payment_due";
+  const isPaymentReview = inquiry.booking_status === "payment_review";
 
   return (
     <PublicLayout title="Complete Payment" showBackButton>
@@ -154,11 +146,11 @@ export function InquiryPaymentPage() {
         <h1 className="text-3xl font-bold mb-2">Complete Your Payment</h1>
         <p className="text-muted-foreground mb-8">
           Your inquiry for{" "}
-          <strong>{amenityLabels[inquiry.amenity_type]}</strong> has been
-          approved!
+          <strong>{amenityLabels[inquiry.amenity_type]}</strong>{" "}
+          {isPaymentDue || isPaymentReview ? "has been approved!" : "is being reviewed."}
         </p>
 
-        {!isApproved && !hasProof && (
+        {!isPaymentDue && !isPaymentReview && (
           <Card className="border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950/20 mb-6">
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
@@ -175,7 +167,23 @@ export function InquiryPaymentPage() {
           </Card>
         )}
 
-        {isApproved && (
+        {isPaymentReview && (
+          <Card className="border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/20 mb-6">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-purple-600 dark:text-purple-400 mt-0.5" />
+                <div>
+                  <p className="font-medium">Proof Uploaded</p>
+                  <p className="text-sm text-muted-foreground">
+                    Thank you. Your payment proof is under review.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {isPaymentDue && (
           <>
             {/* Booking Summary */}
             <Card className="mb-6">
@@ -268,7 +276,7 @@ export function InquiryPaymentPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {hasProof ? (
+                {Boolean(inquiry.proof_of_payment_url) ? (
                   <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                     <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
                     <div className="flex-1">
@@ -334,7 +342,7 @@ export function InquiryPaymentPage() {
             </Card>
 
             {/* QR Code for Status Check */}
-            {isApproved && (
+            {isPaymentDue && (
               <Card>
                 <CardContent className="pt-6">
                   <QRCodeDisplay

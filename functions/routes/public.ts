@@ -18,10 +18,11 @@ const bookingRequestSchema = z.object({
   guest_first_name: z.string().min(1),
   guest_last_name: z.string().min(1),
   guest_email: z.string().email(),
-  guest_phone: z.string().min(10),
+  guest_phone: z.string().min(10).optional(), // Phone can be optional
   event_type: z.enum(['wedding', 'birthday', 'meeting', 'sports', 'other']),
   attendees: z.number().int().positive().max(500),
-  purpose: z.string().min(1).optional(), // Purpose is optional, defaults to event_type if not provided
+  // Purpose is optional; allow null for older clients.
+  purpose: z.string().nullable().optional(),
   proof_of_payment_url: z.string().optional(),
 });
 
@@ -64,64 +65,34 @@ publicRouter.get('/availability/:amenityType', async (c) => {
 
   const blockedSet = new Set<string>();
 
-  // Get blocked dates (confirmed bookings only) - handle missing table gracefully
-  try {
-    const blockedDates = await c.env.DB.prepare(
-      `SELECT booking_date, slot FROM booking_blocked_dates
-       WHERE amenity_type = ? AND booking_date BETWEEN ? AND ?`
-    ).bind(amenityType, startDate, endDate).all();
-
-    for (const d of (blockedDates.results || [])) {
-      blockedSet.add(`${d.booking_date}-${d.slot}`);
-    }
-  } catch (e) {
-    // Table might not exist yet - continue with empty blocked set
-    console.warn('booking_blocked_dates table not available:', e);
-  }
-
-  // Also check external_rentals table for confirmed bookings directly
-  // This handles cases where booking_blocked_dates might be out of sync
+  // Get confirmed bookings from unified bookings table
   try {
     const confirmedBookings = await c.env.DB.prepare(
-      `SELECT date, slot FROM external_rentals
+      `SELECT date, slot FROM bookings
        WHERE amenity_type = ? AND date BETWEEN ? AND ?
-       AND booking_status = 'confirmed'`
+       AND booking_status = 'confirmed'
+       AND deleted_at IS NULL`
     ).bind(amenityType, startDate, endDate).all();
 
     for (const b of (confirmedBookings.results || [])) {
       blockedSet.add(`${b.date}-${b.slot}`);
     }
   } catch (e) {
-    console.warn('external_rentals table not available:', e);
+    console.warn('bookings table not available:', e);
   }
 
-  // Check resident reservations - handle missing table gracefully
+  // Get amenity closures
   try {
-    const residentBlocked = await c.env.DB.prepare(
-      `SELECT date, slot FROM reservations
-       WHERE amenity_type = ? AND date BETWEEN ? AND ?
-       AND status != 'cancelled'`
-    ).bind(amenityType, startDate, endDate).all();
-
-    for (const r of (residentBlocked.results || [])) {
-      blockedSet.add(`${r.date}-${r.slot}`);
-    }
-  } catch (e) {
-    console.warn('reservations table not available:', e);
-  }
-
-  // Check time blocks - handle missing table gracefully
-  try {
-    const timeBlocked = await c.env.DB.prepare(
-      `SELECT date, slot FROM time_blocks
+    const closures = await c.env.DB.prepare(
+      `SELECT date, slot FROM amenity_closures
        WHERE amenity_type = ? AND date BETWEEN ? AND ?`
     ).bind(amenityType, startDate, endDate).all();
 
-    for (const t of (timeBlocked.results || [])) {
-      blockedSet.add(`${t.date}-${t.slot}`);
+    for (const cl of (closures.results || [])) {
+      blockedSet.add(`${cl.date}-${cl.slot}`);
     }
   } catch (e) {
-    console.warn('time_blocks table not available:', e);
+    console.warn('amenity_closures table not available:', e);
   }
 
   // Apply cascading block logic for slot relationships
@@ -288,7 +259,7 @@ publicRouter.get('/payment-details', async (c) => {
   });
 });
 
-// POST /api/public/inquiries - Submit inquiry (creates booking with status: "inquiry_submitted")
+// POST /api/public/inquiries - Submit inquiry (creates customer + booking with status: "submitted")
 publicRouter.post('/inquiries', async (c) => {
   // Rate limit check (max 3 inquiries per hour per IP)
   const clientIp = getClientIp(c.req.raw);
@@ -355,39 +326,103 @@ publicRouter.post('/inquiries', async (c) => {
   const duration = durations[data.slot] || 9;
   const amount = Math.round(baseRate * duration * dayMultiplier * seasonMultiplier);
 
-  // Generate inquiry ID and reference number
-  const id = crypto.randomUUID();
+  // Generate IDs and reference number
+  const customerId = crypto.randomUUID();
+  const bookingId = crypto.randomUUID();
   const now = new Date();
+  const nowStr = now.toISOString();
   const refNum = `EXT-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
 
   // Get client IP
   const clientIP = getClientIp(c.req.raw);
 
-  // Insert inquiry with status "inquiry_submitted"
+  // First, create or find customer
+  // Check if customer exists by email
+  let existingCustomer = await c.env.DB.prepare(
+    'SELECT id FROM customers WHERE email = ?'
+  ).bind(data.guest_email).first();
+
+  let finalCustomerId = customerId;
+  if (existingCustomer) {
+    finalCustomerId = existingCustomer.id as string;
+    // Update existing customer's last_booking_at
+    await c.env.DB.prepare(
+      'UPDATE customers SET updated_at = ?, last_booking_at = ? WHERE id = ?'
+    ).bind(nowStr, nowStr, finalCustomerId).run();
+  } else {
+    // Create new customer
+    await c.env.DB.prepare(
+      `INSERT INTO customers (id, first_name, last_name, email, phone, guest_notes, created_at, updated_at, created_ip, ip_retained_until)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      finalCustomerId,
+      data.guest_first_name,
+      data.guest_last_name,
+      data.guest_email,
+      data.guest_phone,
+      data.purpose || null,
+      nowStr,
+      nowStr,
+      clientIP,
+      getIPRetentionDate()
+    ).run();
+  }
+
+  // Create booking
   await c.env.DB.prepare(
-    `INSERT INTO external_rentals (
-      id, amenity_type, date, slot, amount, payment_status,
-      guest_name, guest_email, guest_phone, guest_notes,
-      booking_status, created_ip, ip_retained_until
-    ) VALUES (?, ?, ?, ?, ?, 'unpaid', ?, ?, ?, ?, 'inquiry_submitted', ?, ?)`
+    `INSERT INTO bookings (
+      id, customer_id, workflow, amenity_type, date, slot,
+      base_rate, duration_hours, day_multiplier, season_multiplier, amount, pricing_calculated_at,
+      booking_status, event_type, purpose, attendee_count,
+      created_at, created_by_customer_id, created_ip
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
-    id, data.amenity_type, data.date, data.slot, amount,
-    data.guest_name, data.guest_email, data.guest_phone, data.purpose,
-    clientIP,
-    getIPRetentionDate()
+    bookingId,
+    finalCustomerId,
+    'external',
+    data.amenity_type,
+    data.date,
+    data.slot,
+    baseRate,
+    duration,
+    dayMultiplier,
+    seasonMultiplier,
+    amount,
+    nowStr,
+    'submitted',
+    data.event_type,
+    data.purpose || null,
+    data.attendees,
+    nowStr,
+    finalCustomerId,
+    clientIP
   ).run();
 
-  // Fetch created inquiry
-  const inquiry = await c.env.DB.prepare(
-    'SELECT * FROM external_rentals WHERE id = ?'
-  ).bind(id).first();
+  // Fetch created booking with customer info
+  const booking = await c.env.DB.prepare(
+    `SELECT b.*, c.first_name, c.last_name, c.email, c.phone
+     FROM bookings b
+     JOIN customers c ON b.customer_id = c.id
+     WHERE b.id = ?`
+  ).bind(bookingId).first();
 
   return c.json({
     data: {
       inquiry: {
-        ...inquiry,
+        id: booking?.id,
         reference_number: refNum,
-        time_of_day: formatTimeOfDay(inquiry.created_at as string),
+        amenity_type: booking?.amenity_type,
+        date: booking?.date,
+        slot: booking?.slot,
+        amount: booking?.amount,
+        booking_status: booking?.booking_status,
+        guest_first_name: booking?.first_name,
+        guest_last_name: booking?.last_name,
+        guest_email: booking?.email,
+        guest_phone: booking?.phone,
+        guest_notes: booking?.purpose,
+        created_at: booking?.created_at,
+        time_of_day: formatTimeOfDay(booking?.created_at as string),
       }
     }
   }, 201);
@@ -397,24 +432,26 @@ publicRouter.post('/inquiries', async (c) => {
 publicRouter.get('/inquiries/:id/status', async (c) => {
   const id = c.req.param('id');
 
-  const inquiry = await c.env.DB.prepare(
-    'SELECT * FROM external_rentals WHERE id = ?'
+  const booking = await c.env.DB.prepare(
+    `SELECT b.*, c.first_name, c.last_name, c.email, c.phone
+     FROM bookings b
+     JOIN customers c ON b.customer_id = c.id
+     WHERE b.id = ? AND b.deleted_at IS NULL`
   ).bind(id).first();
 
-  if (!inquiry) {
+  if (!booking) {
     return c.json({ error: 'Inquiry not found' }, 404);
   }
 
   // Generate reference number
-  const createdDate = new Date(inquiry.created_at as string);
-  const refNum = `EXT-${createdDate.getFullYear()}${String(createdDate.getMonth() + 1).padStart(2, '0')}${String(createdDate.getDate()).padStart(2, '0')}-${inquiry.id.slice(-3)}`;
+  const createdDate = new Date(booking.created_at as string);
+  const refNum = `EXT-${createdDate.getFullYear()}${String(createdDate.getMonth() + 1).padStart(2, '0')}${String(createdDate.getDate()).padStart(2, '0')}-${booking.id.slice(-3)}`;
 
   // Map status to user-friendly message
   const statusMessages: Record<string, string> = {
-    inquiry_submitted: 'Your inquiry is being reviewed.',
-    pending_approval: 'Your inquiry has been approved! Please proceed with payment.',
-    pending_payment: 'Please complete your payment to confirm your booking.',
-    pending_verification: 'Payment received. Your booking is being verified.',
+    submitted: 'Your request is being reviewed.',
+    payment_due: 'Approved! Please complete your payment to confirm your booking.',
+    payment_review: 'Payment received. Your booking is being verified.',
     confirmed: 'Your booking is confirmed!',
     rejected: 'Your inquiry has been rejected.',
     cancelled: 'Your booking has been cancelled.',
@@ -422,10 +459,9 @@ publicRouter.get('/inquiries/:id/status', async (c) => {
 
   // Determine next action based on status
   const nextActions: Record<string, { action: string; link?: string }> = {
-    inquiry_submitted: { action: 'Wait for approval' },
-    pending_approval: { action: 'Proceed to payment', link: `/external-rentals/inquiry/${id}/payment` },
-    pending_payment: { action: 'Complete payment', link: `/external-rentals/inquiry/${id}/payment` },
-    pending_verification: { action: 'Wait for verification' },
+    submitted: { action: 'Wait for approval' },
+    payment_due: { action: 'Complete payment', link: `/external-rentals/inquiry/${id}/payment` },
+    payment_review: { action: 'Wait for verification' },
     confirmed: { action: 'View booking details', link: `/external-rentals/confirmation/${id}` },
     rejected: { action: 'Submit new inquiry', link: '/external-rentals' },
     cancelled: { action: 'Submit new inquiry', link: '/external-rentals' },
@@ -434,16 +470,29 @@ publicRouter.get('/inquiries/:id/status', async (c) => {
   return c.json({
     data: {
       inquiry: {
-        ...inquiry,
+        id: booking.id,
         reference_number: refNum,
+        amenity_type: booking.amenity_type,
+        date: booking.date,
+        slot: booking.slot,
+        amount: booking.amount,
+        booking_status: booking.booking_status,
+        guest_first_name: booking.first_name,
+        guest_last_name: booking.last_name,
+        guest_email: booking.email,
+        guest_phone: booking.phone,
+        guest_notes: booking.purpose,
+        rejection_reason: booking.rejection_reason,
+        admin_notes: booking.admin_notes,
+        created_at: booking.created_at,
       },
-      status_message: statusMessages[inquiry.booking_status as string] || 'Unknown status',
-      next_action: nextActions[inquiry.booking_status as string] || { action: 'Contact support' },
+      status_message: statusMessages[booking.booking_status as string] || 'Unknown status',
+      next_action: nextActions[booking.booking_status as string] || { action: 'Contact support' },
     }
   });
 });
 
-// POST /api/public/bookings - Create booking request
+// POST /api/public/bookings - Create booking request (direct booking, not inquiry)
 publicRouter.post('/bookings', async (c) => {
   // Rate limit check (max 3 bookings per hour per IP)
   const clientIp = getClientIp(c.req.raw);
@@ -464,31 +513,23 @@ publicRouter.post('/bookings', async (c) => {
 
   // Check if slot is actually available (confirmed bookings only)
   const blocked = await c.env.DB.prepare(
-    `SELECT id FROM booking_blocked_dates
-     WHERE amenity_type = ? AND booking_date = ? AND slot = ?`
+    `SELECT id FROM bookings
+     WHERE amenity_type = ? AND date = ? AND slot = ?
+     AND booking_status = 'confirmed'
+     AND deleted_at IS NULL`
   ).bind(data.amenity_type, data.date, data.slot).first();
 
   if (blocked) {
     return c.json({ error: 'This time slot is already booked.' }, 409);
   }
 
-  // Check resident reservations
-  const reserved = await c.env.DB.prepare(
-    `SELECT id FROM reservations
-     WHERE amenity_type = ? AND date = ? AND slot = ? AND status != 'cancelled'`
-  ).bind(data.amenity_type, data.date, data.slot).first();
-
-  if (reserved) {
-    return c.json({ error: 'This time slot is already reserved.' }, 409);
-  }
-
-  // Check time blocks
-  const timeBlocked = await c.env.DB.prepare(
-    `SELECT id FROM time_blocks
+  // Check amenity closures
+  const closure = await c.env.DB.prepare(
+    `SELECT id FROM amenity_closures
      WHERE amenity_type = ? AND date = ? AND slot = ?`
   ).bind(data.amenity_type, data.date, data.slot).first();
 
-  if (timeBlocked) {
+  if (closure) {
     return c.json({ error: 'This time slot is blocked.' }, 409);
   }
 
@@ -499,42 +540,146 @@ publicRouter.post('/bookings', async (c) => {
 
   const baseRate = parseFloat(pricingResponse?.setting_value as string) || 500;
   const durations: Record<string, number> = { AM: 4, PM: 4, FULL_DAY: 9 };
-  const amount = baseRate * durations[data.slot]; // Simplified (no multipliers for now)
 
-  // Generate booking ID and reference number
-  const id = crypto.randomUUID();
+  // Get day multipliers for accurate pricing
+  const dayMultipliersResult = await c.env.DB.prepare(
+    `SELECT setting_value FROM system_settings WHERE setting_key = 'external_pricing_day_multipliers'`
+  ).first();
+  const dayMultipliers = JSON.parse(dayMultipliersResult?.setting_value as string || '{"weekday": 1.0, "weekend": 1.2, "holiday": 1.5}');
+
+  // Get season multipliers
+  const seasonMultipliersResult = await c.env.DB.prepare(
+    `SELECT setting_value FROM system_settings WHERE setting_key = 'external_pricing_season_multipliers'`
+  ).first();
+  const seasonMultipliers = JSON.parse(seasonMultipliersResult?.setting_value as string || '{"peak": 1.3, "off_peak": 1.0}');
+
+  // Get peak months
+  const peakMonthsResult = await c.env.DB.prepare(
+    `SELECT setting_value FROM system_settings WHERE setting_key = 'external_pricing_peak_months'`
+  ).first();
+  const peakMonths = (peakMonthsResult?.setting_value as string || '12,1,2,3,4,5').split(',').map(Number);
+
+  // Get holidays
+  const holidaysResult = await c.env.DB.prepare(
+    `SELECT setting_value FROM system_settings WHERE setting_key = 'external_pricing_holidays_2026'`
+  ).first();
+  const holidays = (holidaysResult?.setting_value as string || '').split(',').map(s => s.trim());
+
+  // Calculate multipliers
+  const bookingDate = new Date(data.date);
+  const dayOfWeek = bookingDate.getDay();
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  const isHoliday = holidays.includes(data.date);
+  const month = bookingDate.getMonth() + 1;
+  const isPeak = peakMonths.includes(month);
+
+  let dayMultiplier = dayMultipliers.weekday;
+  if (isHoliday) dayMultiplier = dayMultipliers.holiday;
+  else if (isWeekend) dayMultiplier = dayMultipliers.weekend;
+
+  const seasonMultiplier = isPeak ? seasonMultipliers.peak : seasonMultipliers.off_peak;
+  const duration = durations[data.slot] || 9;
+  const amount = Math.round(baseRate * duration * dayMultiplier * seasonMultiplier);
+
+  // Generate IDs and reference number
+  const customerId = crypto.randomUUID();
+  const bookingId = crypto.randomUUID();
   const now = new Date();
+  const nowStr = now.toISOString();
   const refNum = `EXT-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
 
   // Get client IP
   const clientIP = getClientIp(c.req.raw);
 
-  // Insert booking
+  // First, create or find customer
+  // Check if customer exists by email
+  let existingCustomer = await c.env.DB.prepare(
+    'SELECT id FROM customers WHERE email = ?'
+  ).bind(data.guest_email).first();
+
+  let finalCustomerId = customerId;
+  if (existingCustomer) {
+    finalCustomerId = existingCustomer.id as string;
+    // Update existing customer's last_booking_at
+    await c.env.DB.prepare(
+      'UPDATE customers SET updated_at = ?, last_booking_at = ? WHERE id = ?'
+    ).bind(nowStr, nowStr, finalCustomerId).run();
+  } else {
+    // Create new customer
+    await c.env.DB.prepare(
+      `INSERT INTO customers (id, first_name, last_name, email, phone, guest_notes, created_at, updated_at, created_ip, ip_retained_until)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      finalCustomerId,
+      data.guest_first_name,
+      data.guest_last_name,
+      data.guest_email,
+      data.guest_phone,
+      data.purpose || null,
+      nowStr,
+      nowStr,
+      clientIP,
+      getIPRetentionDate()
+    ).run();
+  }
+
+  // Create booking with status payment_due (direct booking flow)
   await c.env.DB.prepare(
-    `INSERT INTO external_rentals (
-      id, amenity_type, date, slot, amount, payment_status,
-      guest_name, guest_email, guest_phone, guest_notes,
-      proof_of_payment_url, booking_status, created_ip, ip_retained_until
-    ) VALUES (?, ?, ?, ?, ?, 'unpaid', ?, ?, ?, ?, ?, 'pending_payment', ?, ?)`
+    `INSERT INTO bookings (
+      id, customer_id, workflow, amenity_type, date, slot,
+      base_rate, duration_hours, day_multiplier, season_multiplier, amount, pricing_calculated_at,
+      payment_status, proof_of_payment_url,
+      booking_status, event_type, purpose, attendee_count,
+      created_at, created_by_customer_id, created_ip
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unpaid', ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
-    id, data.amenity_type, data.date, data.slot, amount,
-    data.guest_name, data.guest_email, data.guest_phone, data.purpose,
+    bookingId,
+    finalCustomerId,
+    'external',
+    data.amenity_type,
+    data.date,
+    data.slot,
+    baseRate,
+    duration,
+    dayMultiplier,
+    seasonMultiplier,
+    amount,
+    nowStr,
     data.proof_of_payment_url || null,
-    clientIP,
-    getIPRetentionDate()
+    'payment_due',
+    data.event_type,
+    data.purpose || null,
+    data.attendees,
+    nowStr,
+    finalCustomerId,
+    clientIP
   ).run();
 
-  // Fetch created booking
+  // Fetch created booking with customer info
   const booking = await c.env.DB.prepare(
-    'SELECT * FROM external_rentals WHERE id = ?'
-  ).bind(id).first();
+    `SELECT b.*, c.first_name, c.last_name, c.email, c.phone
+     FROM bookings b
+     JOIN customers c ON b.customer_id = c.id
+     WHERE b.id = ?`
+  ).bind(bookingId).first();
 
   return c.json({
     data: {
       booking: {
-        ...booking,
+        id: booking?.id,
         reference_number: refNum,
-        time_of_day: formatTimeOfDay(booking.created_at as string),
+        amenity_type: booking?.amenity_type,
+        date: booking?.date,
+        slot: booking?.slot,
+        amount: booking?.amount,
+        booking_status: booking?.booking_status,
+        guest_first_name: booking?.first_name,
+        guest_last_name: booking?.last_name,
+        guest_email: booking?.email,
+        guest_phone: booking?.phone,
+        guest_notes: booking?.purpose,
+        created_at: booking?.created_at,
+        time_of_day: formatTimeOfDay(booking?.created_at as string),
       }
     }
   }, 201);
@@ -565,7 +710,7 @@ publicRouter.post('/bookings/:id/proof', async (c) => {
 
   // Check if booking exists
   const booking = await c.env.DB.prepare(
-    'SELECT * FROM external_rentals WHERE id = ?'
+    'SELECT * FROM bookings WHERE id = ? AND deleted_at IS NULL'
   ).bind(id).first();
 
   if (!booking) {
@@ -580,8 +725,8 @@ publicRouter.post('/bookings/:id/proof', async (c) => {
     return c.json({ error: 'Booking has been rejected' }, 400);
   }
 
-  // Only allow proof upload for pending_payment status
-  if (booking.booking_status !== 'pending_payment') {
+  // Only allow proof upload for payment_due status
+  if (booking.booking_status !== 'payment_due') {
     return c.json({
       error: 'Payment proof can only be uploaded after approval',
       current_status: booking.booking_status
@@ -590,13 +735,85 @@ publicRouter.post('/bookings/:id/proof', async (c) => {
 
   // Update booking
   await c.env.DB.prepare(
-    `UPDATE external_rentals
-     SET proof_of_payment_url = ?, booking_status = 'pending_verification'
+    `UPDATE bookings
+     SET proof_of_payment_url = ?, booking_status = 'payment_review', updated_at = datetime('now')
      WHERE id = ?`
   ).bind(proofUrl, id).run();
 
   const updated = await c.env.DB.prepare(
-    'SELECT * FROM external_rentals WHERE id = ?'
+    'SELECT * FROM bookings WHERE id = ?'
+  ).bind(id).first();
+
+  return c.json({ data: { booking: updated } });
+});
+
+// POST /api/public/bookings/:id/proof-file - Upload payment proof file
+publicRouter.post('/bookings/:id/proof-file', async (c) => {
+  const id = c.req.param('id');
+
+  const form = await c.req.formData();
+  const file = form.get('file');
+
+  if (!(file instanceof File)) {
+    return c.json({ error: 'file is required' }, 400);
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    return c.json({ error: 'File size must be less than 5MB' }, 400);
+  }
+
+  // Check if booking exists
+  const booking = await c.env.DB.prepare(
+    'SELECT * FROM bookings WHERE id = ? AND deleted_at IS NULL'
+  ).bind(id).first() as any;
+
+  if (!booking) {
+    return c.json({ error: 'Booking not found' }, 404);
+  }
+
+  if (booking.booking_status === 'confirmed') {
+    return c.json({ error: 'Booking is already confirmed' }, 400);
+  }
+
+  if (booking.booking_status === 'rejected') {
+    return c.json({ error: 'Booking has been rejected' }, 400);
+  }
+
+  // Only allow proof upload for payment_due status
+  if (booking.booking_status !== 'payment_due') {
+    return c.json({
+      error: 'Payment proof can only be uploaded after approval',
+      current_status: booking.booking_status
+    }, 400);
+  }
+
+  const ext = (() => {
+    const name = file.name || '';
+    const dot = name.lastIndexOf('.');
+    if (dot === -1) return '';
+    return name.slice(dot).toLowerCase().replace(/[^a-z0-9.]/g, '');
+  })();
+
+  const objectKey = `booking-proofs/${id}/${crypto.randomUUID()}${ext}`;
+  const contentType = file.type || 'application/octet-stream';
+
+  await c.env.R2.put(objectKey, file.stream(), {
+    httpMetadata: { contentType },
+    customMetadata: {
+      filename: file.name || 'payment-proof',
+      uploaded_via: 'public',
+    },
+  });
+
+  // Update booking
+  await c.env.DB.prepare(
+    `UPDATE bookings
+     SET proof_of_payment_url = ?, booking_status = 'payment_review', updated_at = datetime('now')
+     WHERE id = ?`
+  ).bind(objectKey, id).run();
+
+  const updated = await c.env.DB.prepare(
+    'SELECT * FROM bookings WHERE id = ?'
   ).bind(id).first();
 
   return c.json({ data: { booking: updated } });
@@ -607,18 +824,24 @@ publicRouter.get('/bookings/:id/status', async (c) => {
   const id = c.req.param('id');
 
   const booking = await c.env.DB.prepare(
-    'SELECT * FROM external_rentals WHERE id = ?'
+    `SELECT b.*, c.first_name, c.last_name, c.email, c.phone
+     FROM bookings b
+     JOIN customers c ON b.customer_id = c.id
+     WHERE b.id = ? AND b.deleted_at IS NULL`
   ).bind(id).first();
 
   if (!booking) {
     return c.json({ error: 'Booking not found' }, 404);
   }
 
+  const createdDate = new Date(booking.created_at as string);
+  const refNum = `EXT-${createdDate.getFullYear()}${String(createdDate.getMonth() + 1).padStart(2, '0')}${String(createdDate.getDate()).padStart(2, '0')}-${id.slice(-3)}`;
+
   return c.json({
     data: {
       booking: {
         id: booking.id,
-        reference_number: `EXT-${new Date(booking.created_at as string).getFullYear()}${String(new Date(booking.created_at as string).getMonth() + 1).padStart(2, '0')}${String(new Date(booking.created_at as string).getDate()).padStart(2, '0')}-${id.slice(-3)}`,
+        reference_number: refNum,
         status: booking.booking_status,
         amenity_type: booking.amenity_type,
         date: booking.date,
@@ -627,6 +850,10 @@ publicRouter.get('/bookings/:id/status', async (c) => {
         rejection_reason: booking.rejection_reason,
         admin_notes: booking.admin_notes,
         time_of_day: formatTimeOfDay(booking.created_at as string),
+        guest_first_name: booking.first_name,
+        guest_last_name: booking.last_name,
+        guest_email: booking.email,
+        guest_phone: booking.phone,
       }
     }
   });
@@ -638,21 +865,23 @@ publicRouter.get('/status/:identifier', async (c) => {
   const identifier = c.req.param('identifier');
 
   // Try to find by ID first (UUID), then by reference number
-  // For reference number, we need to generate it from the created_at date
   let booking = await c.env.DB.prepare(
-    'SELECT * FROM external_rentals WHERE id = ?'
+    `SELECT b.*, c.first_name, c.last_name, c.email, c.phone
+     FROM bookings b
+     JOIN customers c ON b.customer_id = c.id
+     WHERE b.id = ? AND b.deleted_at IS NULL`
   ).bind(identifier).first();
 
   // If not found by ID, try to find by reference number pattern
   if (!booking && identifier.startsWith('EXT-')) {
     // Reference number format: EXT-YYYYMMDD-XXX
     // Extract date part and search
-    const match = identifier.match(/^EXT-(\d{4})(\d{2})(\d{2})-(\d+)$/);
+    const match = identifier.match(/^EXT-(\d{4})(\d{2})(\d{2})-([a-zA-Z0-9]{3})$/);
     if (match) {
       const year = parseInt(match[1]);
       const month = parseInt(match[2]) - 1; // 0-indexed
       const day = parseInt(match[3]);
-      const suffix = match[4];
+      const suffix = match[4].toLowerCase();
 
       // Create date range for the query
       const startDate = new Date(year, month, day);
@@ -660,16 +889,18 @@ publicRouter.get('/status/:identifier', async (c) => {
 
       // Query for bookings created on that date
       const bookings = await c.env.DB.prepare(
-        `SELECT * FROM external_rentals
-         WHERE created_at >= ? AND created_at < ?
-         ORDER BY created_at ASC`
+        `SELECT b.*, c.first_name, c.last_name, c.email, c.phone
+         FROM bookings b
+         JOIN customers c ON b.customer_id = c.id
+         WHERE b.created_at >= ? AND b.created_at < ? AND b.deleted_at IS NULL
+         ORDER BY b.created_at ASC`
       ).bind(startDate.toISOString(), endDate.toISOString()).all();
 
       // Find the booking that matches the reference number suffix
       // The suffix is the last 3 characters of the booking ID
       for (const b of (bookings.results || [])) {
         const bookingId = b.id as string;
-        if (bookingId.slice(-3) === suffix) {
+        if (bookingId.slice(-3).toLowerCase() === suffix) {
           booking = b;
           break;
         }
@@ -687,32 +918,26 @@ publicRouter.get('/status/:identifier', async (c) => {
 
   // Map status to phase information
   const phaseMap: Record<string, { phase: number; phase_name: string; description: string; next_step: string }> = {
-    inquiry_submitted: {
+    submitted: {
       phase: 1,
       phase_name: 'Submitted',
-      description: 'Your inquiry has been submitted successfully. Our team will review your request.',
-      next_step: 'Wait for our team to review your inquiry. You\'ll receive an update within 24-48 hours.'
+      description: 'Your request has been submitted successfully. Our team will review it shortly.',
+      next_step: 'Wait for approval. You\'ll receive an update within 24-48 hours.'
     },
-    pending_approval: {
+    payment_due: {
       phase: 2,
-      phase_name: 'Under Review',
-      description: 'Your inquiry is being reviewed by our admin team. We\'ll check availability and approve shortly.',
-      next_step: 'Once approved, you\'ll receive payment instructions to complete your booking.'
-    },
-    pending_payment: {
-      phase: 3,
       phase_name: 'Payment Required',
-      description: 'Your inquiry has been approved! Please complete your payment to confirm your booking.',
+      description: 'Your request has been approved! Please complete your payment to confirm your booking.',
       next_step: 'Upload proof of payment via the link provided, or contact admin for assistance.'
     },
-    pending_verification: {
-      phase: 4,
+    payment_review: {
+      phase: 3,
       phase_name: 'Verifying Payment',
       description: 'Payment received! Our team is verifying your payment proof.',
       next_step: 'We\'ll confirm your booking within 24-48 hours after verification.'
     },
     confirmed: {
-      phase: 5,
+      phase: 4,
       phase_name: 'Confirmed',
       description: 'Your booking has been confirmed! We look forward to hosting you.',
       next_step: 'Arrive 15 minutes before your scheduled time. Present your booking confirmation upon arrival.'
@@ -720,19 +945,19 @@ publicRouter.get('/status/:identifier', async (c) => {
     rejected: {
       phase: 0,
       phase_name: 'Rejected',
-      description: 'Your inquiry has been declined. This may be due to availability or other reasons.',
-      next_step: 'You can submit a new inquiry with different dates or contact us for more information.'
+      description: 'Your request has been declined. This may be due to availability or other reasons.',
+      next_step: 'You can submit a new request with different dates or contact us for more information.'
     },
     cancelled: {
       phase: 0,
       phase_name: 'Cancelled',
       description: 'This booking has been cancelled.',
-      next_step: 'You can submit a new inquiry if you\'d like to book again.'
+      next_step: 'You can submit a new request if you\'d like to book again.'
     }
   };
 
   const status = booking.booking_status as string;
-  const phaseInfo = phaseMap[status] || phaseMap.inquiry_submitted;
+  const phaseInfo = phaseMap[status] || phaseMap.submitted;
 
   return c.json({
     data: {
@@ -745,6 +970,10 @@ publicRouter.get('/status/:identifier', async (c) => {
         amount: booking.amount,
         booking_status: booking.booking_status,
         created_at: booking.created_at,
+        guest_first_name: booking.first_name,
+        guest_last_name: booking.last_name,
+        guest_email: booking.email,
+        guest_phone: booking.phone,
       },
       phase: phaseInfo.phase,
       phase_name: phaseInfo.phase_name,
@@ -831,7 +1060,10 @@ publicRouter.post('/bookings/:id/verify', async (c) => {
 
   // Check if booking exists
   const booking = await c.env.DB.prepare(
-    'SELECT * FROM external_rentals WHERE id = ?'
+    `SELECT b.*, c.email, c.phone
+     FROM bookings b
+     JOIN customers c ON b.customer_id = c.id
+     WHERE b.id = ? AND b.deleted_at IS NULL`
   ).bind(id).first();
 
   if (!booking) {
@@ -839,8 +1071,8 @@ publicRouter.post('/bookings/:id/verify', async (c) => {
   }
 
   // Verify ownership by matching email or phone
-  const guestEmail = booking.guest_email as string;
-  const guestPhone = booking.guest_phone as string;
+  const guestEmail = booking.email as string;
+  const guestPhone = booking.phone as string;
 
   const isEmailMatch = emailOrPhone.toLowerCase() === guestEmail.toLowerCase();
   const isPhoneMatch = emailOrPhone.replace(/\D/g, '') === guestPhone.replace(/\D/g, '');

@@ -81,6 +81,17 @@ const HelpPage = lazy(() =>
   import("./pages/HelpPage").then((m) => ({ default: m.HelpPage })),
 );
 
+const BookingPaymentPage = lazy(() =>
+  import("./pages/bookings/BookingPaymentPage").then((m) => ({
+    default: m.BookingPaymentPage,
+  })),
+);
+const BookingDetailsPage = lazy(() =>
+  import("./pages/bookings/BookingDetailsPage").then((m) => ({
+    default: m.BookingDetailsPage,
+  })),
+);
+
 // Public pages (no authentication required)
 const LandingPage = lazy(() =>
   import("./pages/public/LandingPage").then((m) => ({
@@ -182,6 +193,8 @@ function App() {
             <Route path="announcements" element={<AnnouncementsPage />} />
             <Route path="events" element={<EventsPage />} />
             <Route path="polls" element={<PollsPage />} />
+            <Route path="bookings/:id/payment" element={<BookingPaymentPage />} />
+            <Route path="bookings/:id/details" element={<BookingDetailsPage />} />
             <Route
               path="messages"
               element={

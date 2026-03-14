@@ -145,9 +145,7 @@ export function BookingStatusPage() {
   }
 
   const allowsPayment = [
-    "pending_payment",
-    "awaiting_resident_payment",
-    "pending_verification",
+    "payment_due",
   ].includes(booking.booking_status);
   const canViewDetails = booking.booking_status === "confirmed";
 

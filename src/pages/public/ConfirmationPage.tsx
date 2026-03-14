@@ -25,16 +25,23 @@ import { toast } from "sonner";
 import { PublicLayout } from "@/components/public/PublicLayout";
 
 const statusConfig = {
-  pending_payment: {
+  submitted: {
     icon: Clock,
-    label: "Pending Payment",
+    label: "Submitted",
+    color:
+      "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-800",
+    description: "Your request is being reviewed. Please wait for approval.",
+  },
+  payment_due: {
+    icon: Clock,
+    label: "Payment Due",
     color:
       "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-800",
     description: "Please upload your proof of payment to proceed",
   },
-  pending_verification: {
+  payment_review: {
     icon: Clock,
-    label: "Under Review",
+    label: "Payment Review",
     color:
       "bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-800",
     description:
@@ -60,6 +67,13 @@ const statusConfig = {
     color:
       "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700",
     description: "This booking has been cancelled.",
+  },
+  no_show: {
+    icon: AlertCircle,
+    label: "No Show",
+    color:
+      "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700",
+    description: "This booking was marked as a no-show.",
   },
 };
 
@@ -111,10 +125,7 @@ export function ConfirmationPage() {
 
     try {
       setUploading(true);
-      // TODO: Implement R2 upload
-      const url = `https://r2-storage.example.com/proofs/${Date.now()}-${proofFile.name}`;
-
-      await api.public.uploadPaymentProof(id, url);
+      await api.public.uploadPaymentProofFile(id, proofFile);
       toast.success("Proof of payment uploaded");
       await loadBooking();
       setProofFile(null);
@@ -157,7 +168,7 @@ export function ConfirmationPage() {
 
   const status =
     statusConfig[booking.status as keyof typeof statusConfig] ||
-    statusConfig.pending_payment;
+    statusConfig.submitted;
   const StatusIcon = status.icon;
 
   return (
@@ -276,8 +287,8 @@ export function ConfirmationPage() {
           </CardContent>
         </Card>
 
-        {/* Proof of Payment Upload (for pending_payment) */}
-        {booking.status === "pending_payment" && (
+        {/* Proof of Payment Upload (for payment_due) */}
+        {booking.status === "payment_due" && (
           <Card>
             <CardHeader>
               <CardTitle>Upload Proof of Payment</CardTitle>
@@ -349,7 +360,7 @@ export function ConfirmationPage() {
               Make Another Booking
             </Button>
           </Link>
-          {booking.status === "pending_payment" && (
+          {booking.status === "payment_due" && (
             <Link
               to={`/external-rentals/book?amenity=${booking.amenity_type}&date=${booking.date}&slot=${booking.slot}`}
               className="flex-1"

@@ -234,7 +234,7 @@ function StatusDetailsCard({ booking }: { booking: BookingStatusData }) {
               Check Another Status
             </Button>
           </Link>
-          {booking.booking_status === "pending_payment" && (
+          {booking.booking_status === "payment_due" && (
             <Link
               to={`/external-rentals/inquiry/${booking.id}/payment`}
               className="flex-1"

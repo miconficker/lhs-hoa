@@ -5,15 +5,13 @@
  * All components should import from this file to ensure consistency.
  *
  * Status workflow:
- * - External guests: inquiry_submitted → pending_approval → pending_payment → pending_verification → confirmed
- * - Residents: pending_resident → confirmed (or directly to confirmed)
+ * - All bookings: submitted → payment_due → payment_review → confirmed
  * - Shared terminal states: confirmed, rejected, cancelled, no_show
  */
 
 import {
   MessageSquare,
   Clock,
-  CreditCard,
   Search,
   CheckCircle,
   XCircle,
@@ -22,49 +20,25 @@ import {
 } from "lucide-react";
 
 export const BOOKING_STATUS_CONFIG = {
-  // External guest path (existing, unchanged)
-  inquiry_submitted: {
-    label: "Inquiry Submitted",
-    description: "Your inquiry has been received and is being reviewed.",
+  submitted: {
+    label: "Submitted",
+    description: "Your request has been received and is being reviewed.",
     color: "blue",
     icon: MessageSquare,
     variant: "default" as const,
   },
-  pending_approval: {
-    label: "Pending Approval",
-    description: "Your booking is being reviewed by admin.",
+  payment_due: {
+    label: "Payment Due",
+    description: "Approved—please complete payment to confirm your booking.",
     color: "yellow",
     icon: Clock,
     variant: "secondary" as const,
   },
-  pending_payment: {
-    label: "Awaiting Payment",
-    description: "Your booking has been approved! Please complete payment.",
+  payment_review: {
+    label: "Payment Review",
+    description: "Payment proof received—verifying.",
     color: "orange",
-    icon: CreditCard,
-    variant: "outline" as const,
-  },
-  pending_verification: {
-    label: "Verifying Payment",
-    description: "Thank you! We are verifying your payment.",
-    color: "purple",
     icon: Search,
-    variant: "default" as const,
-  },
-
-  // Resident-only path (new, simpler)
-  pending_resident: {
-    label: "Pending",
-    description: "Your booking is being processed.",
-    color: "yellow",
-    icon: Clock,
-    variant: "secondary" as const,
-  },
-  awaiting_resident_payment: {
-    label: "Awaiting Payment",
-    description: "Please complete payment to confirm your booking.",
-    color: "orange",
-    icon: CreditCard,
     variant: "outline" as const,
   },
 
@@ -110,17 +84,18 @@ export const VALID_TRANSITIONS: Record<
   Record<string, BookingStatus[]>
 > = {
   resident: {
-    pending_resident: ["confirmed", "cancelled"],
-    pending_payment: ["confirmed", "cancelled"],
+    submitted: ["payment_due", "confirmed", "rejected", "cancelled"],
+    payment_due: ["payment_review", "cancelled"],
+    payment_review: ["confirmed", "payment_due", "cancelled"],
     confirmed: ["cancelled", "no_show"],
     cancelled: [],
+    rejected: [],
     no_show: ["cancelled"],
   },
   external: {
-    inquiry_submitted: ["pending_approval", "rejected", "cancelled"],
-    pending_approval: ["pending_payment", "rejected", "cancelled"],
-    pending_payment: ["pending_verification", "cancelled"],
-    pending_verification: ["confirmed", "pending_payment", "cancelled"],
+    submitted: ["payment_due", "confirmed", "rejected", "cancelled"],
+    payment_due: ["payment_review", "cancelled"],
+    payment_review: ["confirmed", "payment_due", "cancelled"],
     confirmed: ["cancelled", "no_show"],
     rejected: [],
     cancelled: [],
@@ -133,7 +108,7 @@ export const VALID_TRANSITIONS: Record<
  */
 export function getStatusConfig(status: BookingStatus) {
   return (
-    BOOKING_STATUS_CONFIG[status] || BOOKING_STATUS_CONFIG.inquiry_submitted
+    BOOKING_STATUS_CONFIG[status] || BOOKING_STATUS_CONFIG.submitted
   );
 }
 
@@ -172,11 +147,7 @@ export function isTerminalStatus(status: BookingStatus): boolean {
  * Check if a status allows payment
  */
 export function allowsPayment(status: BookingStatus): boolean {
-  return [
-    "pending_payment",
-    "awaiting_resident_payment",
-    "pending_verification",
-  ].includes(status);
+  return ["payment_due", "payment_review"].includes(status);
 }
 
 /**

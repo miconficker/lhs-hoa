@@ -74,7 +74,9 @@ export function UnifiedBookingForm({
       return;
     }
 
-    if (!formData.terms_agreed) {
+    // Residents should be able to book with minimal friction; guests must
+    // explicitly agree to terms.
+    if (!isResident && !formData.terms_agreed) {
       toast.error("Please agree to the terms and conditions");
       return;
     }
@@ -94,11 +96,11 @@ export function UnifiedBookingForm({
         amenity_type: amenityType,
         date,
         slot,
-        event_type: formData.event_type,
+        event_type: formData.event_type || undefined,
         attendee_count: formData.attendee_count
           ? Number(formData.attendee_count)
           : undefined,
-        purpose: formData.purpose,
+        purpose: formData.purpose.trim() ? formData.purpose.trim() : undefined,
       };
 
       let result;
@@ -151,7 +153,7 @@ export function UnifiedBookingForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Your Information</CardTitle>
+        <CardTitle>{isResident ? "Confirm Reservation" : "Your Information"}</CardTitle>
       </CardHeader>
       <CardContent>
         {!isAuthenticated ? (
@@ -350,7 +352,7 @@ export function UnifiedBookingForm({
               </div>
             </div>
 
-            {/* Event details */}
+            {/* Event details (resident-friendly) */}
             <div className="space-y-2">
               <Label htmlFor="event_type">Event Type</Label>
               <Select
@@ -387,52 +389,47 @@ export function UnifiedBookingForm({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="purpose">Additional Notes</Label>
-              <Textarea
-                id="purpose"
-                value={formData.purpose}
-                onChange={(e) =>
-                  setFormData({ ...formData, purpose: e.target.value })
-                }
-                placeholder="Any special requirements or notes..."
-                rows={3}
-              />
-            </div>
+            {!isResident && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="purpose">Additional Notes</Label>
+                  <Textarea
+                    id="purpose"
+                    value={formData.purpose}
+                    onChange={(e) =>
+                      setFormData({ ...formData, purpose: e.target.value })
+                    }
+                    placeholder="Any special requirements or notes..."
+                    rows={3}
+                  />
+                </div>
 
-            <div className="flex items-start space-x-2 pt-2">
-              <Checkbox
-                id="terms"
-                checked={formData.terms_agreed}
-                onCheckedChange={(v) =>
-                  setFormData({ ...formData, terms_agreed: !!v })
-                }
-              />
-              <label
-                htmlFor="terms"
-                className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                I agree to the terms and conditions and cancellation policy. I
-                understand that:
-                <ul className="list-disc list-inside mt-1 text-muted-foreground">
-                  <li>Bookings are subject to availability</li>
-                  <li>Payment must be completed within 48 hours of approval</li>
-                  <li>
-                    Cancellations must be made at least 24 hours before the
-                    event
-                  </li>
-                </ul>
-              </label>
-            </div>
+                <div className="flex items-start space-x-2 pt-2">
+                  <Checkbox
+                    id="terms"
+                    checked={formData.terms_agreed}
+                    onCheckedChange={(v) =>
+                      setFormData({ ...formData, terms_agreed: !!v })
+                    }
+                  />
+                  <label
+                    htmlFor="terms"
+                    className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    I agree to the terms and conditions and cancellation policy.
+                  </label>
+                </div>
+              </>
+            )}
 
             <Button
               type="submit"
-              disabled={submitting || !formData.terms_agreed}
+              disabled={submitting || (!isResident && !formData.terms_agreed)}
               className="w-full"
               size="lg"
             >
               {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {submitting ? "Submitting..." : "Submit Booking Request"}
+              {submitting ? "Submitting..." : isResident ? "Confirm Reservation" : "Submit Booking Request"}
             </Button>
 
             {isResident && (

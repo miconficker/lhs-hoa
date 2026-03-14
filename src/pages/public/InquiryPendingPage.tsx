@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { PublicLayout } from "@/components/public/PublicLayout";
+import { QRCodeDisplay } from "@/components/public/QRCodeDisplay";
 
 const amenityLabels: Record<string, string> = {
   clubhouse: "Clubhouse",
@@ -54,9 +55,12 @@ export function InquiryPendingPage() {
 
         setInquiry(inquiryData);
 
-        if (inquiryData.booking_status === "pending_approval") {
+        if (inquiryData.booking_status === "payment_due") {
           window.location.href = `/external-rentals/inquiry/${id}/payment`;
-        } else if (inquiryData.booking_status === "confirmed") {
+        } else if (
+          inquiryData.booking_status === "payment_review" ||
+          inquiryData.booking_status === "confirmed"
+        ) {
           window.location.href = `/external-rentals/confirmation/${id}`;
         }
       } catch (err) {
@@ -98,6 +102,9 @@ export function InquiryPendingPage() {
   }
 
   const isRejected = inquiry.booking_status === "rejected";
+  const statusUrl = inquiry.reference_number
+    ? `${window.location.origin}/status/${inquiry.reference_number}`
+    : `${window.location.origin}/status/${inquiry.id}`;
 
   return (
     <PublicLayout
@@ -106,6 +113,14 @@ export function InquiryPendingPage() {
       backTo="/external-rentals"
     >
       <div className="max-w-3xl mx-auto py-8">
+        <div className="mb-6">
+          <QRCodeDisplay
+            value={statusUrl}
+            title="Status QR Code"
+            description="Download or scan this QR code to check your booking status anytime."
+          />
+        </div>
+
         {isRejected ? (
           // Rejected state
           <Card className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20">

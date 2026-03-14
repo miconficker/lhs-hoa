@@ -116,9 +116,7 @@ export function BookingHistory({ userId, customerId }: BookingHistoryProps) {
 
   const renderBookingCard = (booking: BookingWithReference) => {
     const allowsPayment = [
-      "pending_payment",
-      "awaiting_resident_payment",
-      "pending_verification",
+      "payment_due",
     ].includes(booking.booking_status);
     const allowsCancellation = !["rejected", "cancelled", "no_show"].includes(
       booking.booking_status,

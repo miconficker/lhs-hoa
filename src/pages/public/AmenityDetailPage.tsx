@@ -5,21 +5,14 @@ import { useAuth } from "@/hooks/useAuth";
 import type {
   AmenityType,
   TimeBlockSlot,
-  AvailabilitySlot,
-  PricingCalculation,
+  PublicPricingCalculation,
 } from "@/types";
-import { Calendar as CalendarIcon, Clock, DollarSign } from "lucide-react";
+import { DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PublicLayout } from "@/components/public/PublicLayout";
+import { UnifiedBookingCalendar } from "@/components/booking/UnifiedBookingCalendar";
 import { cn } from "@/lib/utils";
 
 const amenityInfo: Record<
@@ -42,30 +35,16 @@ const amenityInfo: Record<
   },
 };
 
-const slotLabels: Record<TimeBlockSlot, string> = {
-  AM: "Morning (8AM - 12PM)",
-  PM: "Afternoon (1PM - 5PM)",
-  FULL_DAY: "Full Day (8AM - 5PM)",
-};
-
 export function AmenityDetailPage() {
   const { amenityType } = useParams<{ amenityType: AmenityType }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
-  const [pricing, setPricing] = useState<PricingCalculation | null>(null);
+  const [pricing, setPricing] = useState<PublicPricingCalculation | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>("");
-  const [selectedSlot, setSelectedSlot] = useState<TimeBlockSlot | "">("");
-  const [loading, setLoading] = useState(true);
+  const [selectedSlot, setSelectedSlot] = useState<TimeBlockSlot | null>(null);
   const [loadingPricing, setLoadingPricing] = useState(false);
 
   const info = amenityType ? amenityInfo[amenityType] : null;
-
-  useEffect(() => {
-    if (amenityType) {
-      loadAvailability();
-    }
-  }, [amenityType]);
 
   useEffect(() => {
     if (selectedDate && selectedSlot && amenityType) {
@@ -74,32 +53,6 @@ export function AmenityDetailPage() {
       setPricing(null);
     }
   }, [selectedDate, selectedSlot, amenityType]);
-
-  async function loadAvailability() {
-    if (!amenityType) return;
-
-    try {
-      setLoading(true);
-      const today = new Date().toISOString().split("T")[0];
-      const threeMonthsLater = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0];
-
-      const result = await api.public.getAvailability(
-        amenityType,
-        today,
-        threeMonthsLater,
-      );
-      if (result.data) {
-        const response = result.data as { available: AvailabilitySlot[] };
-        setAvailability(response.available);
-      }
-    } catch (error) {
-      console.error("Error loading availability:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function loadPricing() {
     if (!amenityType || !selectedDate || !selectedSlot) return;
@@ -113,7 +66,7 @@ export function AmenityDetailPage() {
         !!user,
       );
       if (result.data) {
-        setPricing(result.data as PricingCalculation);
+        setPricing(result.data as PublicPricingCalculation);
       }
     } catch (error) {
       console.error("Error loading pricing:", error);
@@ -124,10 +77,10 @@ export function AmenityDetailPage() {
 
   function handleDateSelect(date: string) {
     setSelectedDate(date);
-    setSelectedSlot("");
+    setSelectedSlot(null);
   }
 
-  function handleSlotSelect(slot: TimeBlockSlot) {
+  function handleSlotSelect(slot: TimeBlockSlot | null) {
     setSelectedSlot(slot);
   }
 
@@ -152,30 +105,6 @@ export function AmenityDetailPage() {
     );
   }
 
-  const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
-
-  const byMonth: Record<string, AvailabilitySlot[]> = {};
-  availability.forEach((slot) => {
-    const month = new Date(slot.date).getMonth();
-    const year = new Date(slot.date).getFullYear();
-    const key = `${year}-${month}`;
-    if (!byMonth[key]) byMonth[key] = [];
-    byMonth[key].push(slot);
-  });
-
   return (
     <PublicLayout title={info.name} showBackButton backTo="/external-rentals">
       {/* Hero Image */}
@@ -198,124 +127,18 @@ export function AmenityDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Calendar Section */}
           <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CalendarIcon className="w-5 h-5" />
-                  Select a Date
-                </CardTitle>
-                <CardDescription>
-                  Click on an available date to see time slots
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <LoadingSpinner size="md" />
-                  </div>
-                ) : availability.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-12">
-                    No available dates in the next 3 months
-                  </p>
-                ) : (
-                  <div className="space-y-6">
-                    {Object.entries(byMonth).map(([key, slots]) => {
-                      const [year, month] = key.split("-").map(Number);
-                      return (
-                        <div key={key}>
-                          <h3 className="font-semibold text-lg mb-3">
-                            {monthNames[month]} {year}
-                          </h3>
-                          <div className="grid grid-cols-7 gap-2">
-                            {slots.map((slot) => {
-                              const date = new Date(slot.date);
-                              const day = date.getDate();
-                              const isSelected = selectedDate === slot.date;
-                              const isToday =
-                                slot.date ===
-                                new Date().toISOString().split("T")[0];
-
-                              return (
-                                <button
-                                  key={slot.date}
-                                  onClick={() => handleDateSelect(slot.date)}
-                                  className={cn(
-                                    "p-3 text-sm rounded-lg border transition-colors",
-                                    isSelected
-                                      ? "bg-primary text-primary-foreground border-primary"
-                                      : isToday
-                                        ? "bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-900/50"
-                                        : "bg-card border-border hover:bg-accent hover:text-accent-foreground",
-                                  )}
-                                >
-                                  <div className="font-medium">{day}</div>
-                                  <div className="text-xs opacity-70">
-                                    {date.toLocaleDateString("en-US", {
-                                      weekday: "short",
-                                    })}
-                                  </div>
-                                  {isSelected && (
-                                    <div className="mt-1 text-xs">
-                                      {slot.available_slots.length} slot
-                                      {slot.available_slots.length !== 1
-                                        ? "s"
-                                        : ""}
-                                    </div>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <UnifiedBookingCalendar
+              mode="external"
+              initialAmenityType={amenityType}
+              selectedDate={selectedDate}
+              selectedSlot={selectedSlot}
+              onDateSelect={handleDateSelect}
+              onSlotSelect={handleSlotSelect}
+            />
           </div>
 
-          {/* Slot Selection & Pricing */}
+          {/* Pricing Section */}
           <div className="space-y-6">
-            {selectedDate && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Clock className="w-5 h-5" />
-                    Available Slots
-                  </CardTitle>
-                  <CardDescription>
-                    {new Date(selectedDate).toLocaleDateString("en-US", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {availability
-                    .find((a) => a.date === selectedDate)
-                    ?.available_slots.map((slot) => (
-                      <button
-                        key={slot}
-                        onClick={() => handleSlotSelect(slot as TimeBlockSlot)}
-                        className={cn(
-                          "w-full p-4 text-left rounded-lg border transition-colors",
-                          selectedSlot === slot
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-card border-border hover:bg-accent hover:text-accent-foreground",
-                        )}
-                      >
-                        <div className="font-medium">
-                          {slotLabels[slot as TimeBlockSlot]}
-                        </div>
-                      </button>
-                    ))}
-                </CardContent>
-              </Card>
-            )}
-
             {pricing && (
               <Card
                 className={cn(
@@ -325,7 +148,7 @@ export function AmenityDetailPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <DollarSign className="w-5 h-5" />
-                    Pricing Breakdown
+                    Price
                   </CardTitle>
                   {user && (
                     <Badge variant="default">Resident Discount Applied</Badge>
@@ -333,33 +156,13 @@ export function AmenityDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Base Rate</span>
-                    <span>₱{pricing.base_rate}/hour</span>
+                    <span className="text-muted-foreground">Rate</span>
+                    <span>₱{pricing.base_rate.toLocaleString()}/hour</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Duration</span>
                     <span>{pricing.duration} hours</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Day Type</span>
-                    <span className="capitalize">{pricing.day_type}</span>
-                  </div>
-                  {pricing.day_multiplier !== 1 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Day Multiplier
-                      </span>
-                      <span>x{pricing.day_multiplier}</span>
-                    </div>
-                  )}
-                  {pricing.season_multiplier !== 1 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Season</span>
-                      <span className="capitalize">
-                        {pricing.season_type} (x{pricing.season_multiplier})
-                      </span>
-                    </div>
-                  )}
                   {pricing.resident_discount > 0 && (
                     <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
                       <span>Resident Discount</span>

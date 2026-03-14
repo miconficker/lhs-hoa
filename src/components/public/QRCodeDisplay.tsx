@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react";
 import { Download, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -87,7 +87,7 @@ export function QRCodeDisplay({
             className="bg-white p-4 rounded-lg shadow-inner border"
             style={{ width: size + 32, height: size + 32 }}
           >
-            <QRCodeSVG
+            <QRCodeCanvas
               value={value}
               size={size}
               level="M"
@@ -150,7 +150,7 @@ export function CompactQRCode({
         className="bg-white p-2 rounded shadow-sm border"
         style={{ width: size + 16, height: size + 16 }}
       >
-        <QRCodeSVG
+        <QRCodeCanvas
           value={value}
           size={size}
           level="M"

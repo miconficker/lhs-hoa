@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import type {
   AmenityType,
   TimeBlockSlot,
-  PricingCalculation,
+  PublicPricingCalculation,
   PaymentDetails,
   PublicBookingRequest,
 } from "@/types";
@@ -61,7 +61,7 @@ export function BookingPage() {
   const date = searchParams.get("date") || "";
   const slot = searchParams.get("slot") as TimeBlockSlot;
 
-  const [pricing, setPricing] = useState<PricingCalculation | null>(null);
+  const [pricing, setPricing] = useState<PublicPricingCalculation | null>(null);
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(
     null,
   );
@@ -69,10 +69,8 @@ export function BookingPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
-    guest_name:
-      user?.first_name && user?.last_name
-        ? `${user.first_name} ${user.last_name}`
-        : "",
+    guest_first_name: user?.first_name || "",
+    guest_last_name: user?.last_name || "",
     guest_email: user?.email || "",
     guest_phone: "",
     event_type: "" as any,
@@ -102,9 +100,9 @@ export function BookingPage() {
         api.public.getPaymentDetails(),
       ]);
 
-      if (pricingResult.data) {
-        setPricing(pricingResult.data as PricingCalculation);
-      }
+	      if (pricingResult.data) {
+	        setPricing(pricingResult.data as PublicPricingCalculation);
+	      }
       if (paymentResult.data) {
         setPaymentDetails(paymentResult.data as PaymentDetails);
       }
@@ -169,7 +167,8 @@ export function BookingPage() {
         amenity_type: amenityType,
         date,
         slot,
-        guest_name: formData.guest_name,
+        guest_first_name: formData.guest_first_name,
+        guest_last_name: formData.guest_last_name,
         guest_email: formData.guest_email,
         guest_phone: formData.guest_phone,
         event_type: formData.event_type,
@@ -283,17 +282,37 @@ export function BookingPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="guest_name">Full Name *</Label>
-                <Input
-                  id="guest_name"
-                  value={formData.guest_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, guest_name: e.target.value })
-                  }
-                  placeholder="Juan Dela Cruz"
-                  required
-                />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="guest_first_name">First Name *</Label>
+                  <Input
+                    id="guest_first_name"
+                    value={formData.guest_first_name}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        guest_first_name: e.target.value,
+                      })
+                    }
+                    placeholder="Juan"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="guest_last_name">Last Name *</Label>
+                  <Input
+                    id="guest_last_name"
+                    value={formData.guest_last_name}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        guest_last_name: e.target.value,
+                      })
+                    }
+                    placeholder="Dela Cruz"
+                    required
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="guest_email">Email Address *</Label>
