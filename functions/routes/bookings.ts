@@ -1162,7 +1162,9 @@ bookingsRouter.post('/:id/action', async (c) => {
       proof_of_payment_url,
       amenity_type,
       date,
-      slot
+      slot,
+      user_id,
+      customer_id
      FROM bookings
      WHERE id = ? AND deleted_at IS NULL`
   ).bind(id).first() as any;
@@ -1273,16 +1275,22 @@ bookingsRouter.post('/:id/action', async (c) => {
   ).run();
 
   // Send notification based on action
-  if (action === 'approve') {
-    await createBookingNotification(c.env.DB, { ...currentBooking, id, booking_status: nextStatus }, 'approved_to_payment_due');
-  } else if (action === 'confirm_payment') {
-    await createBookingNotification(c.env.DB, { ...currentBooking, id, booking_status: nextStatus }, 'payment_verified_confirmed');
-  } else if (action === 'reject') {
-    await createBookingNotification(c.env.DB, { ...currentBooking, id, booking_status: nextStatus }, 'rejected', rejection_reason);
-  } else if (action === 'request_new_proof') {
-    await createBookingNotification(c.env.DB, { ...currentBooking, id, booking_status: nextStatus }, 'payment_review_failed');
-  } else if (action === 'mark_no_show') {
-    await createBookingNotification(c.env.DB, { ...currentBooking, id, booking_status: nextStatus }, 'cancelled');
+  try {
+    if (action === 'approve') {
+      await createBookingNotification(c.env.DB, { ...currentBooking, id, booking_status: nextStatus }, 'approved_to_payment_due');
+    } else if (action === 'confirm_payment') {
+      await createBookingNotification(c.env.DB, { ...currentBooking, id, booking_status: nextStatus }, 'payment_verified_confirmed');
+    } else if (action === 'record_payment') {
+      await createBookingNotification(c.env.DB, { ...currentBooking, id, booking_status: nextStatus }, 'payment_verified_confirmed');
+    } else if (action === 'reject') {
+      await createBookingNotification(c.env.DB, { ...currentBooking, id, booking_status: nextStatus }, 'rejected', rejection_reason);
+    } else if (action === 'request_new_proof') {
+      await createBookingNotification(c.env.DB, { ...currentBooking, id, booking_status: nextStatus }, 'payment_review_failed');
+    } else if (action === 'mark_no_show') {
+      await createBookingNotification(c.env.DB, { ...currentBooking, id, booking_status: nextStatus }, 'cancelled');
+    }
+  } catch (error) {
+    console.error('Failed to create booking notification:', error);
   }
 
   if (nextStatus === 'confirmed' && fromStatus !== 'confirmed') {
