@@ -23,6 +23,7 @@ import type {
   GuestSession,
 } from '../../types';
 import { getUserFromRequest } from '../lib/auth';
+import { applyCascadingBlockLogic } from '../lib/slot-availability';
 import {
   getGuestSessionFromRequest,
   getClientIp,
@@ -330,11 +331,13 @@ bookingsRouter.get('/availability/:amenityType', async (c) => {
 
   const bookedSlots = new Set((confirmedBookings.results || []).map((b: any) => b.slot));
 
+  // Combine closures and bookings, then apply cascading block logic
+  const allBlockedSlots = new Set([...closedSlots, ...bookedSlots]);
+  const blockedSlots = applyCascadingBlockLogic(allBlockedSlots);
+
   // Available slots
   const allSlots = ['AM', 'PM', 'FULL_DAY'] as const;
-  const availableSlots = allSlots.filter(
-    slot => !closedSlots.has(slot) && !bookedSlots.has(slot)
-  );
+  const availableSlots = allSlots.filter(slot => !blockedSlots.has(slot));
 
   return c.json({
     data: {
@@ -425,9 +428,11 @@ bookingsRouter.get('/availability/:amenityType/range', async (c) => {
     const closedSlots = closuresMap.get(dateStr) || new Set();
     const bookedSlots = bookingsMap.get(dateStr) || new Set();
 
-    const availableSlots = allSlots.filter(
-      slot => !closedSlots.has(slot) && !bookedSlots.has(slot)
-    );
+    // Combine closures and bookings, then apply cascading block logic
+    const allBlockedSlots = new Set([...closedSlots, ...bookedSlots]);
+    const blockedSlots = applyCascadingBlockLogic(allBlockedSlots);
+
+    const availableSlots = allSlots.filter(slot => !blockedSlots.has(slot));
 
     available.push({
       date: dateStr,

@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { applyCascadingBlockLogic } from '../lib/slot-availability';
 import { checkRateLimit, getClientIp, RATE_LIMITS } from '../lib/rate-limit';
 
 type Env = {
@@ -95,27 +96,15 @@ publicRouter.get('/availability/:amenityType', async (c) => {
     console.warn('amenity_closures table not available:', e);
   }
 
-  // Apply cascading block logic for slot relationships
-  // - If AM is blocked → FULL_DAY should also be blocked
-  // - If PM is blocked → FULL_DAY should also be blocked
-  // - If FULL_DAY is blocked → both AM and PM should be blocked
-  const cascadedBlockedSet = new Set<string>();
+  // Organize blocked slots by date
+  const blockedByDate = new Map<string, Set<string>>();
   for (const blocked of blockedSet) {
-    cascadedBlockedSet.add(blocked);
     const [date, slot] = blocked.split('-');
-
-    if (slot === 'AM') {
-      cascadedBlockedSet.add(`${date}-FULL_DAY`);
-    } else if (slot === 'PM') {
-      cascadedBlockedSet.add(`${date}-FULL_DAY`);
-    } else if (slot === 'FULL_DAY') {
-      cascadedBlockedSet.add(`${date}-AM`);
-      cascadedBlockedSet.add(`${date}-PM`);
+    if (!blockedByDate.has(date)) {
+      blockedByDate.set(date, new Set());
     }
+    blockedByDate.get(date)!.add(slot);
   }
-
-  // Debug logging for blocked slots
-  console.log(`[Availability] Amenity: ${amenityType}, Blocked slots:`, Array.from(cascadedBlockedSet));
 
   // Generate available dates
   const available: any[] = [];
@@ -124,7 +113,10 @@ publicRouter.get('/availability/:amenityType', async (c) => {
 
   while (current <= end) {
     const dateStr = current.toISOString().split('T')[0];
-    const slots = ['AM', 'PM', 'FULL_DAY'].filter(slot => !cascadedBlockedSet.has(`${dateStr}-${slot}`));
+    const blockedSlots = blockedByDate.get(dateStr) || new Set();
+    const cascadedBlocked = applyCascadingBlockLogic(blockedSlots);
+
+    const slots = ['AM', 'PM', 'FULL_DAY'].filter(slot => !cascadedBlocked.has(slot));
 
     if (slots.length > 0) {
       available.push({ date: dateStr, available_slots: slots });
