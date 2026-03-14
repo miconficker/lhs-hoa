@@ -75,8 +75,15 @@ export function InquiryPage() {
     terms_agreed: false,
   });
 
+  const EXTERNAL_AMENITIES = ["clubhouse", "pool"];
+
   useEffect(() => {
     if (!amenityType || !date || !slot) {
+      navigate("/external-rentals");
+      return;
+    }
+
+    if (!EXTERNAL_AMENITIES.includes(amenityType)) {
       navigate("/external-rentals");
       return;
     }
@@ -167,7 +174,7 @@ export function InquiryPage() {
         purpose:
           formData.event_type === "other"
             ? formData.other_event_type.trim()
-            : formData.event_type,
+            : null,
       };
 
       const result = await api.public.createInquiry(inquiryData);

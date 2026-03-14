@@ -145,9 +145,7 @@ export function InquiryPaymentPage() {
     );
   }
 
-  const isApproved =
-    inquiry.booking_status === "pending_approval" ||
-    inquiry.booking_status === "pending_payment";
+  const isApproved = inquiry.booking_status === "pending_payment";
   const hasProof = inquiry.booking_status === "pending_verification";
 
   return (

@@ -179,11 +179,7 @@ export function ReservationsPage() {
 
       {/* Show booking history */}
       {!showBookingForm && (
-        <BookingHistory
-          key={refreshKey}
-          userId={undefined}
-          customerId={undefined}
-        />
+        <BookingHistory key={refreshKey} />
       )}
     </div>
   );

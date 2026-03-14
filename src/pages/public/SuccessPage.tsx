@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,11 +7,12 @@ import { PublicLayout } from "@/components/public/PublicLayout";
 
 export function SuccessPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Auto-redirect to confirmation page after 3 seconds
     const timer = setTimeout(() => {
-      window.location.href = `/external-rentals/confirmation/${id}`;
+      navigate(`/external-rentals/confirmation/${id}`);
     }, 3000);
 
     return () => clearTimeout(timer);

@@ -41,15 +41,10 @@ export function InquiryPendingPage() {
           return;
         }
 
-        // Handle both response structures: { data: { inquiry: {...} } } or { data: { data: { inquiry: {...} } } }
         let inquiryData = result.data?.inquiry;
         if (!inquiryData && (result.data as any)?.data?.inquiry) {
           inquiryData = (result.data as any).data.inquiry;
         }
-
-        // Debug logging
-        console.log("[InquiryPendingPage] API result:", result);
-        console.log("[InquiryPendingPage] inquiryData:", inquiryData);
 
         if (!inquiryData) {
           setError("Inquiry data not found in response");
@@ -59,28 +54,22 @@ export function InquiryPendingPage() {
 
         setInquiry(inquiryData);
 
-        // If status changed, redirect appropriately
         if (inquiryData.booking_status === "pending_approval") {
           window.location.href = `/external-rentals/inquiry/${id}/payment`;
         } else if (inquiryData.booking_status === "confirmed") {
           window.location.href = `/external-rentals/confirmation/${id}`;
-        } else if (inquiryData.booking_status === "rejected") {
-          // Stay on page but show rejection
         }
       } catch (err) {
-        console.error("Error checking inquiry status:", err);
+        console.error("Error checking inquiry status", err);
         setError("Failed to check inquiry status");
       } finally {
         setLoading(false);
       }
     };
 
-    checkStatus();
-
-    // Poll for status updates every 30 seconds
-    const interval = setInterval(checkStatus, 30000);
-
-    return () => clearInterval(interval);
+    checkStatus(); // run immediately on mount
+    const interval = setInterval(checkStatus, 15000); // then every 15s
+    return () => clearInterval(interval); // cleanup on unmount
   }, [id]);
 
   if (loading) {

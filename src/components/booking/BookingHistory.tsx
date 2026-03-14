@@ -54,6 +54,8 @@ export function BookingHistory({ userId, customerId }: BookingHistoryProps) {
       setLoading(true);
       const result = await api.bookings.getMyBookings({
         filter: filter === "all" ? undefined : filter,
+        ...(userId && { user_id: userId }),
+        ...(customerId && { customer_id: customerId }),
       });
 
       if (result.error) {
