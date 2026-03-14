@@ -1421,6 +1421,57 @@ export interface BookingWithReference extends BookingWithCustomer {
   reference_number: string; // human-readable booking ID
 }
 
+// =============================================================================
+// Admin Booking Creation
+// =============================================================================
+
+export interface AdminBookingRequest {
+  user_type: "resident" | "guest" | "new_resident" | "new_guest";
+  user_id?: string; // for existing residents
+  customer_id?: string; // for existing guests
+  new_customer?: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone?: string;
+    household_address?: string;
+    resident_notes?: string;
+  };
+  amenity_type: AmenityType;
+  date: string; // YYYY-MM-DD format
+  slot: TimeBlockSlot;
+  event_type?: "wedding" | "birthday" | "meeting" | "sports" | "other";
+  purpose?: string;
+  attendee_count?: number;
+  override_price?: number;
+  skip_approval?: boolean;
+  record_payment?: boolean;
+  payment_amount?: number;
+  payment_method?: string;
+  receipt_number?: string;
+  admin_notes_internal?: string;
+  customer_notes?: string;
+}
+
+export interface AdminBookingResponse {
+  booking: BookingWithCustomer;
+  warning?: string;
+}
+
+export interface UserSearchResult {
+  id: string;
+  type: "resident" | "guest";
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  household_address?: string;
+}
+
+export interface UserSearchResponse {
+  results: UserSearchResult[];
+}
+
 // Pricing calculation result (matches functions/lib/pricing.ts)
 export interface PricingCalculation {
   baseRate: number;
