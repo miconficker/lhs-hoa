@@ -100,10 +100,21 @@ export function BookingDetailsPage() {
           <CardTitle>Summary</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
-          <Row label="Amount" value={`₱${(booking.amount || 0).toLocaleString()}`} />
-          <Row label="Payment Status" value={booking.payment_status || "unpaid"} />
-          <Row label="Amount Paid" value={`₱${(booking.amount_paid || 0).toLocaleString()}`} />
-          {booking.admin_notes && <Row label="Admin Notes" value={booking.admin_notes} />}
+          <Row
+            label="Amount"
+            value={`₱${(booking.amount || 0).toLocaleString()}`}
+          />
+          <Row
+            label="Payment Status"
+            value={booking.payment_status || "unpaid"}
+          />
+          <Row
+            label="Amount Paid"
+            value={`₱${(booking.amount_paid || 0).toLocaleString()}`}
+          />
+          {booking.admin_notes && (
+            <Row label="Admin Notes" value={booking.admin_notes} />
+          )}
           {booking.rejection_reason && (
             <Row label="Rejection Reason" value={booking.rejection_reason} />
           )}
@@ -138,7 +149,11 @@ export function BookingDetailsPage() {
             Upload Payment
           </Button>
         )}
-        <Button type="button" variant="ghost" onClick={() => navigate("/reservations")}>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => navigate("/reservations")}
+        >
           My Reservations
         </Button>
       </div>

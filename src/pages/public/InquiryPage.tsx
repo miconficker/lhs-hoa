@@ -101,9 +101,9 @@ export function InquiryPage() {
         !!user,
       );
 
-	      if (pricingResult.data) {
-	        setPricing(pricingResult.data as PublicPricingCalculation);
-	      }
+      if (pricingResult.data) {
+        setPricing(pricingResult.data as PublicPricingCalculation);
+      }
     } catch (error) {
       console.error("Error loading data:", error);
       toast.error("Failed to load booking information");

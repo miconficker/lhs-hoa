@@ -107,9 +107,7 @@ export const VALID_TRANSITIONS: Record<
  * Get status configuration for a booking status
  */
 export function getStatusConfig(status: BookingStatus) {
-  return (
-    BOOKING_STATUS_CONFIG[status] || BOOKING_STATUS_CONFIG.submitted
-  );
+  return BOOKING_STATUS_CONFIG[status] || BOOKING_STATUS_CONFIG.submitted;
 }
 
 /**

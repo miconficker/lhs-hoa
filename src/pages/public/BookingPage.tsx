@@ -100,9 +100,9 @@ export function BookingPage() {
         api.public.getPaymentDetails(),
       ]);
 
-	      if (pricingResult.data) {
-	        setPricing(pricingResult.data as PublicPricingCalculation);
-	      }
+      if (pricingResult.data) {
+        setPricing(pricingResult.data as PublicPricingCalculation);
+      }
       if (paymentResult.data) {
         setPaymentDetails(paymentResult.data as PaymentDetails);
       }

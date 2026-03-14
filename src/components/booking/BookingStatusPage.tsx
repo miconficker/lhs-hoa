@@ -144,9 +144,7 @@ export function BookingStatusPage() {
     );
   }
 
-  const allowsPayment = [
-    "payment_due",
-  ].includes(booking.booking_status);
+  const allowsPayment = ["payment_due"].includes(booking.booking_status);
   const canViewDetails = booking.booking_status === "confirmed";
 
   return (

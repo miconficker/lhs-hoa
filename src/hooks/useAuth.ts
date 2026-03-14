@@ -40,7 +40,11 @@ export const useAuth = create<AuthState>((set, get) => ({
   setAuth: (auth) => {
     localStorage.setItem("hoa_token", auth.token);
     localStorage.setItem("hoa_user", JSON.stringify(auth.user));
-    set({ user: auth.user, token: auth.token, ...deriveFlags(auth.user, get().guest) });
+    set({
+      user: auth.user,
+      token: auth.token,
+      ...deriveFlags(auth.user, get().guest),
+    });
   },
 
   clearAuth: () => {
@@ -56,7 +60,11 @@ export const useAuth = create<AuthState>((set, get) => ({
     if (token && userStr) {
       try {
         const parsedUser = JSON.parse(userStr) as User;
-        set({ user: parsedUser, token, ...deriveFlags(parsedUser, get().guest) });
+        set({
+          user: parsedUser,
+          token,
+          ...deriveFlags(parsedUser, get().guest),
+        });
       } catch {
         // If `hoa_user` is corrupted, try to recover from the token instead of
         // immediately logging the user out.
@@ -74,7 +82,11 @@ export const useAuth = create<AuthState>((set, get) => ({
           const data = await response.json();
           if (data?.user) {
             localStorage.setItem("hoa_user", JSON.stringify(data.user));
-            set({ user: data.user, token, ...deriveFlags(data.user, get().guest) });
+            set({
+              user: data.user,
+              token,
+              ...deriveFlags(data.user, get().guest),
+            });
           }
         } else {
           // Token is invalid/expired.

@@ -153,7 +153,9 @@ export function UnifiedBookingForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{isResident ? "Confirm Reservation" : "Your Information"}</CardTitle>
+        <CardTitle>
+          {isResident ? "Confirm Reservation" : "Your Information"}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         {!isAuthenticated ? (
@@ -429,7 +431,11 @@ export function UnifiedBookingForm({
               size="lg"
             >
               {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {submitting ? "Submitting..." : isResident ? "Confirm Reservation" : "Submit Booking Request"}
+              {submitting
+                ? "Submitting..."
+                : isResident
+                  ? "Confirm Reservation"
+                  : "Submit Booking Request"}
             </Button>
 
             {isResident && (

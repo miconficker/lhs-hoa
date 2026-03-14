@@ -147,7 +147,9 @@ export function InquiryPaymentPage() {
         <p className="text-muted-foreground mb-8">
           Your inquiry for{" "}
           <strong>{amenityLabels[inquiry.amenity_type]}</strong>{" "}
-          {isPaymentDue || isPaymentReview ? "has been approved!" : "is being reviewed."}
+          {isPaymentDue || isPaymentReview
+            ? "has been approved!"
+            : "is being reviewed."}
         </p>
 
         {!isPaymentDue && !isPaymentReview && (

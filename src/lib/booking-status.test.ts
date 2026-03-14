@@ -5,9 +5,9 @@ import { getNextStatuses, isValidTransition } from "./booking-status";
 describe("booking-status transitions", () => {
   it("allows submitted -> payment_due", () => {
     expect(getNextStatuses("submitted", "resident")).toContain("payment_due");
-    expect(
-      isValidTransition("submitted", "payment_due", "resident"),
-    ).toBe(true);
+    expect(isValidTransition("submitted", "payment_due", "resident")).toBe(
+      true,
+    );
   });
 
   it("allows payment_review -> confirmed", () => {
@@ -17,6 +17,8 @@ describe("booking-status transitions", () => {
   });
 
   it("disallows payment_due -> rejected", () => {
-    expect(isValidTransition("payment_due", "rejected", "resident")).toBe(false);
+    expect(isValidTransition("payment_due", "rejected", "resident")).toBe(
+      false,
+    );
   });
 });

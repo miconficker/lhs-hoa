@@ -207,7 +207,9 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
     setReceiptNumber("");
   };
 
-  const getPrimaryAction = (booking: BookingWithCustomer | null): {
+  const getPrimaryAction = (
+    booking: BookingWithCustomer | null,
+  ): {
     disabled: boolean;
     label: string;
   } => {
@@ -252,7 +254,7 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
             ? "confirm_payment"
             : selectedBooking.booking_status === "confirmed"
               ? "record_payment"
-            : null;
+              : null;
 
       if (!action) {
         toast.error("No action available for this status");
@@ -859,7 +861,10 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
                       size="sm"
                       variant="outline"
                       onClick={() =>
-                        window.open(`/api/bookings/${selectedBooking.id}/proof`, "_blank")
+                        window.open(
+                          `/api/bookings/${selectedBooking.id}/proof`,
+                          "_blank",
+                        )
                       }
                     >
                       <ExternalLink className="w-4 h-4 mr-2" />

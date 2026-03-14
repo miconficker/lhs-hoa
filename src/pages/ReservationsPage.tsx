@@ -18,7 +18,8 @@ const RESIDENT_AMENITIES: AmenityType[] = [
 
 export function ReservationsPage() {
   const { user, isAuthenticated, initialized } = useAuth();
-  const [selectedAmenity, setSelectedAmenity] = useState<AmenityType>("clubhouse");
+  const [selectedAmenity, setSelectedAmenity] =
+    useState<AmenityType>("clubhouse");
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedSlot, setSelectedSlot] = useState<TimeBlockSlot | null>(null);
   const [pricing, setPricing] = useState<PricingCalculation | null>(null);
@@ -85,7 +86,10 @@ export function ReservationsPage() {
   // loads), scroll the panel into view.
   useEffect(() => {
     if (showBookingForm && selectedDate && selectedSlot) {
-      bookingFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      bookingFormRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
     }
   }, [showBookingForm, selectedDate, selectedSlot]);
 
@@ -160,7 +164,10 @@ export function ReservationsPage() {
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg flex justify-between items-center">
           <span>{error}</span>
-          <button onClick={() => setError("")} className="ml-2 hover:text-red-900">
+          <button
+            onClick={() => setError("")}
+            className="ml-2 hover:text-red-900"
+          >
             ×
           </button>
         </div>
@@ -233,10 +240,7 @@ export function ReservationsPage() {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <p className="text-sm text-muted-foreground">{error}</p>
-                    <Button
-                      variant="outline"
-                      onClick={loadPricing}
-                    >
+                    <Button variant="outline" onClick={loadPricing}>
                       Retry
                     </Button>
                   </CardContent>

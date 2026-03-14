@@ -122,14 +122,14 @@ export function useCalendarAvailability({
               },
             },
           );
-          
+
           if (!response.ok) throw new Error("Failed to fetch availability");
-          
+
           const data = await response.json();
-          
+
           // NEW FIX: Handle the array whether it's wrapped in 'data.available' or just 'available'
           const availableArray = data.available || data.data?.available;
-          
+
           if (Array.isArray(availableArray)) {
             for (const item of availableArray) {
               result.set(item.date, item.available_slots);
@@ -140,7 +140,6 @@ export function useCalendarAvailability({
           // NEW FIX: Use functional state update to prevent stale data
           setAvailability((prev) => new Map([...prev, ...result]));
           return result;
-
         } else {
           // External mode
           const promises = datesToFetch.map((date) =>
@@ -159,7 +158,7 @@ export function useCalendarAvailability({
           // Process all responses
           for (const response of responses) {
             const data = await response.json();
-            
+
             // NEW FIX: Correctly extract the array from your specific API format
             const availableArray = data.available || data.data?.available;
 
@@ -179,7 +178,6 @@ export function useCalendarAvailability({
           setAvailability((prev) => new Map([...prev, ...result]));
           return result;
         }
-
       } catch (err) {
         const errorMsg =
           err instanceof Error ? err.message : "Failed to load availability";

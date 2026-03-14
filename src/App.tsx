@@ -193,8 +193,14 @@ function App() {
             <Route path="announcements" element={<AnnouncementsPage />} />
             <Route path="events" element={<EventsPage />} />
             <Route path="polls" element={<PollsPage />} />
-            <Route path="bookings/:id/payment" element={<BookingPaymentPage />} />
-            <Route path="bookings/:id/details" element={<BookingDetailsPage />} />
+            <Route
+              path="bookings/:id/payment"
+              element={<BookingPaymentPage />}
+            />
+            <Route
+              path="bookings/:id/details"
+              element={<BookingDetailsPage />}
+            />
             <Route
               path="messages"
               element={

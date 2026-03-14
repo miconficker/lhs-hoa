@@ -79,15 +79,15 @@ import type {
   MarkDelinquentRequest,
   MemberSearchResult,
   WaiveDelinquencyRequest,
-	  // Public booking types
-	  PublicAmenity,
-	  AvailabilitySlot,
-	  PublicPricingCalculation,
-	  PaymentDetails,
-	  PublicBookingRequest,
-	  PublicBookingResponse,
-	  PublicInquiryRequest,
-	  // Unified bookings system types
+  // Public booking types
+  PublicAmenity,
+  AvailabilitySlot,
+  PublicPricingCalculation,
+  PaymentDetails,
+  PublicBookingRequest,
+  PublicBookingResponse,
+  PublicInquiryRequest,
+  // Unified bookings system types
   BookingWithCustomer,
   BookingWithReference,
   UnifiedBookingStatus,
@@ -99,10 +99,10 @@ import type {
   BookingListFilters,
   BookingListResponse,
   MyBookingsResponse,
-	  BookingStatusResponse,
-	  BookingAvailabilityResponse,
-	  PricingCalculation,
-	} from "@/types";
+  BookingStatusResponse,
+  BookingAvailabilityResponse,
+  PricingCalculation,
+} from "@/types";
 
 import { logger } from "@/lib/logger";
 
@@ -1966,18 +1966,18 @@ export const api = {
         `/public/availability/${amenityType}${query ? "?" + query : ""}`,
       );
     },
-	    getPricing: (
-	      amenityType: string,
-	      date: string,
-	      slot: string,
-	      isResident?: boolean,
-	    ) => {
-	      const params = new URLSearchParams({ date, slot });
-	      if (isResident) params.append("resident", "true");
-	      return apiRequest<PublicPricingCalculation>(
-	        `/public/pricing/${amenityType}?${params.toString()}`,
-	      );
-	    },
+    getPricing: (
+      amenityType: string,
+      date: string,
+      slot: string,
+      isResident?: boolean,
+    ) => {
+      const params = new URLSearchParams({ date, slot });
+      if (isResident) params.append("resident", "true");
+      return apiRequest<PublicPricingCalculation>(
+        `/public/pricing/${amenityType}?${params.toString()}`,
+      );
+    },
     getPaymentDetails: () =>
       apiRequest<PaymentDetails>("/public/payment-details"),
     createBooking: (bookingData: PublicBookingRequest) =>
@@ -2199,7 +2199,10 @@ export const api = {
     uploadProofFile: (id: string, file: File) => {
       const form = new FormData();
       form.append("file", file);
-      return apiUpload<{ success: boolean }>(`/bookings/${id}/proof-file`, form);
+      return apiUpload<{ success: boolean }>(
+        `/bookings/${id}/proof-file`,
+        form,
+      );
     },
     // Cancel booking
     cancel: (id: string) =>
