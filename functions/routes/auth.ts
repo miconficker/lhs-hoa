@@ -1,6 +1,13 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { hashPassword, verifyPassword, generateToken, getUserFromRequest, getGoogleAccessToken, getGoogleUserInfo, getGoogleAuthUrl } from '../lib/auth';
+import {
+  generateOAuthState,
+  verifyOAuthState,
+  createGuestSession,
+  getClientIp,
+  type GuestSession
+} from '../middleware/auth';
 import type { User, UserRole } from '../types';
 
 type Env = {
@@ -9,6 +16,7 @@ type Env = {
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
   GOOGLE_REDIRECT_URI: string;
+  APP_URL: string;
 };
 
 const loginSchema = z.object({
@@ -355,6 +363,139 @@ authRouter.delete('/whitelist/:id', async (c) => {
   await c.env.DB.prepare(
     'DELETE FROM pre_approved_emails WHERE id = ?'
   ).bind(id).run();
+
+  return c.json({ success: true });
+});
+
+// =============================================================================
+// Guest Authentication for External Bookings (Google SSO)
+// =============================================================================
+
+// GET /guest/auth/google - Get Google OAuth URL for guests
+authRouter.get('/guest/auth/google', async (c) => {
+  // Generate signed state token for CSRF protection
+  const state = await generateOAuthState(c.env.JWT_SECRET);
+
+  // Construct Google OAuth URL with state
+  const baseUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
+  const params = new URLSearchParams({
+    client_id: c.env.GOOGLE_CLIENT_ID,
+    redirect_uri: `${c.env.APP_URL}/guest/auth/google/callback`,
+    response_type: 'code',
+    scope: 'email profile',
+    state: state,
+  });
+
+  const url = `${baseUrl}?${params.toString()}`;
+  return c.json({ url });
+});
+
+// GET /guest/auth/google/callback - Handle Google OAuth callback for guests
+authRouter.get('/guest/auth/google/callback', async (c) => {
+  const code = c.req.query('code');
+  const state = c.req.query('state');
+  const error = c.req.query('error');
+
+  if (error) {
+    return c.redirect(`${c.env.APP_URL}/external-rentals?error=oauth_failed&message=${encodeURIComponent(error)}`);
+  }
+
+  if (!code || !state) {
+    return c.redirect(`${c.env.APP_URL}/external-rentals?error=invalid_request`);
+  }
+
+  // Verify the signed state token (CSRF protection)
+  const stateValid = await verifyOAuthState(state, c.env.JWT_SECRET);
+  if (!stateValid) {
+    return c.redirect(`${c.env.APP_URL}/external-rentals?error=invalid_state`);
+  }
+
+  try {
+    // Exchange code for access token
+    const tokenResponse = await getGoogleAccessToken(
+      code,
+      c.env.GOOGLE_CLIENT_ID,
+      c.env.GOOGLE_CLIENT_SECRET,
+      `${c.env.APP_URL}/guest/auth/google/callback`
+    );
+
+    // Fetch user info from Google
+    const googleUser = await getGoogleUserInfo(tokenResponse.access_token);
+
+    // Find or create customer using INSERT OR IGNORE pattern
+    const { sub, email, given_name, family_name, picture } = googleUser;
+
+    // Step 1: Try to insert new customer, silently ignore if google_sub already exists
+    const customerId = crypto.randomUUID();
+    await c.env.DB.prepare(`
+      INSERT OR IGNORE INTO customers
+        (id, first_name, last_name, email, google_sub, google_picture_url, created_at, updated_at)
+      VALUES
+        (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `).bind(
+      customerId,
+      given_name ?? '',
+      family_name ?? '',
+      email,
+      sub,
+      picture ?? null
+    ).run();
+
+    // Step 2: If email exists without google_sub, link the account
+    await c.env.DB.prepare(`
+      UPDATE customers
+      SET google_sub = ?, google_picture_url = ?, updated_at = datetime('now')
+      WHERE email = ? AND google_sub IS NULL
+    `).bind(sub, picture ?? null, email).run();
+
+    // Step 3: Definitive SELECT - no race possible at this point
+    const customer = await c.env.DB.prepare(
+      'SELECT * FROM customers WHERE google_sub = ?'
+    ).bind(sub).first() as any;
+
+    if (!customer) {
+      throw new Error('Failed to find or create customer');
+    }
+
+    // Create guest session token
+    const guestToken = await createGuestSession({
+      id: customer.id,
+      email: customer.email,
+      first_name: customer.first_name,
+      last_name: customer.last_name,
+      google_picture_url: customer.google_picture_url,
+    }, c.env.JWT_SECRET);
+
+    // Set cookie
+    c.header('Set-Cookie', `guest_token=${guestToken}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=604800`); // 7 days
+
+    // Redirect to booking page with guest session
+    return c.redirect(`${c.env.APP_URL}/external-rentals?auth=success`);
+
+  } catch (err: any) {
+    console.error('Guest Google OAuth error:', err);
+    const errorMessage = err?.message || String(err);
+    return c.redirect(
+      `${c.env.APP_URL}/external-rentals?error=oauth_error&message=${encodeURIComponent(errorMessage)}`
+    );
+  }
+});
+
+// GET /guest/auth/session - Get current guest session
+authRouter.get('/guest/auth/session', async (c) => {
+  const guest = await getGuestSessionFromRequest(c.req.raw, c.env.JWT_SECRET);
+
+  if (!guest) {
+    return c.json({ guest: null });
+  }
+
+  return c.json({ guest });
+});
+
+// POST /guest/auth/logout - Logout guest
+authRouter.post('/guest/auth/logout', async (c) => {
+  // Clear the guest token cookie
+  c.header('Set-Cookie', 'guest_token=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0');
 
   return c.json({ success: true });
 });

@@ -2,21 +2,18 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import {
   Calendar,
-  Home,
   Check,
-  X,
   Filter,
-  Receipt,
   DollarSign,
   Trash2,
   Users,
-  Award,
-  Plus,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -32,13 +29,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { api } from "@/lib/api";
+import { getStatusConfig, getStatusColorClasses } from "@/lib/booking-status";
+import { cn } from "@/lib/utils";
 import type {
-  UnifiedReservation,
-  ReservationStatus,
+  BookingWithCustomer,
+  UnifiedBookingStatus,
   AmenityType,
-  ReservationSlot,
-  ReservationPaymentStatus,
-  CustomerType,
+  TimeBlockSlot,
 } from "@/types";
 
 interface UnifiedBookingsTabProps {
@@ -46,10 +44,10 @@ interface UnifiedBookingsTabProps {
 }
 
 interface FilterState {
-  status: ReservationStatus | "all";
+  status: UnifiedBookingStatus | "all";
   amenity: AmenityType | "all";
-  slot: ReservationSlot | "all";
-  customerType: CustomerType | "all";
+  slot: TimeBlockSlot | "all";
+  customerType: "resident" | "external" | "all";
   search: string;
 }
 
@@ -60,111 +58,28 @@ const amenityLabels: Record<AmenityType, string> = {
   "tennis-court": "Tennis Court",
 };
 
-const statusLabels: Record<ReservationStatus, string> = {
-  pending: "Pending",
-  confirmed: "Confirmed",
-  cancelled: "Cancelled",
-};
-
-const statusBadgeVariant: Record<
-  ReservationStatus,
-  "default" | "secondary" | "destructive" | "outline"
-> = {
-  pending: "secondary",
-  confirmed: "default",
-  cancelled: "outline",
-};
-
-const slotLabels: Record<ReservationSlot, string> = {
+const slotLabels: Record<TimeBlockSlot, string> = {
   AM: "Morning (8AM - 12PM)",
   PM: "Afternoon (1PM - 5PM)",
   FULL_DAY: "Full Day (8AM - 5PM)",
 };
 
-const paymentStatusLabels: Record<ReservationPaymentStatus, string> = {
-  unpaid: "Unpaid",
-  partial: "Partial",
-  paid: "Paid",
-  overdue: "Overdue",
-};
-
-const paymentStatusBadgeVariant: Record<
-  ReservationPaymentStatus,
-  "default" | "secondary" | "destructive" | "outline"
-> = {
-  unpaid: "secondary",
-  partial: "outline",
-  paid: "default",
-  overdue: "destructive",
-};
-
-const customerTypeLabels: Record<CustomerType, string> = {
-  resident: "Resident",
-  external: "External",
-  board_free: "Board (Free)",
-  board_paid: "Board (Paid)",
-};
-
-const customerTypeBadgeVariant: Record<
-  CustomerType,
-  "default" | "secondary" | "destructive" | "outline"
-> = {
-  resident: "secondary",
-  external: "outline",
-  board_free: "default",
-  board_paid: "destructive",
-};
-
-interface PaymentFormData {
-  amount: string;
-  payment_method: string;
-  receipt_number: string;
-}
-
-const emptyPaymentForm: PaymentFormData = {
-  amount: "",
-  payment_method: "",
-  receipt_number: "",
-};
-
-interface BookingFormData {
-  booking_type: "resident" | "board_member" | "external";
-  household_id?: string;
-  user_id?: string;
-  renter_name?: string;
-  renter_contact?: string;
-  amenity_type: AmenityType | "";
-  date: string;
-  slot: ReservationSlot | "";
-  amount?: string;
-  purpose?: string;
-  notes?: string;
-}
-
-const emptyBookingForm: BookingFormData = {
-  booking_type: "resident",
-  amenity_type: "",
-  date: "",
-  slot: "",
-  amount: "",
-};
-
 export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
-  const [reservations, setReservations] = useState<UnifiedReservation[]>([]);
-  const [filteredReservations, setFilteredReservations] = useState<
-    UnifiedReservation[]
+  const [bookings, setBookings] = useState<BookingWithCustomer[]>([]);
+  const [filteredBookings, setFilteredBookings] = useState<
+    BookingWithCustomer[]
   >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [paymentReservation, setPaymentReservation] =
-    useState<UnifiedReservation | null>(null);
-  const [paymentForm, setPaymentForm] =
-    useState<PaymentFormData>(emptyPaymentForm);
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] =
+    useState<BookingWithCustomer | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [adminNotes, setAdminNotes] = useState("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [reservationToDelete, setReservationToDelete] =
-    useState<UnifiedReservation | null>(null);
+  const [bookingToDelete, setBookingToDelete] =
+    useState<BookingWithCustomer | null>(null);
   const [filters, setFilters] = useState<FilterState>({
     status: "all",
     amenity: "all",
@@ -172,241 +87,180 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
     customerType: "all",
     search: "",
   });
-  const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
-  const [bookingForm, setBookingForm] =
-    useState<BookingFormData>(emptyBookingForm);
-  const [households, setHouseholds] = useState<any[]>([]);
-  const [boardMembers, setBoardMembers] = useState<any[]>([]);
-  // Fuzzy search states
-  const [householdSearch, setHouseholdSearch] = useState("");
-  const [householdSuggestions, setHouseholdSuggestions] = useState<any[]>([]);
-  const [boardMemberSearch, setBoardMemberSearch] = useState("");
-  const [boardMemberSuggestions, setBoardMemberSuggestions] = useState<any[]>(
-    [],
-  );
   useEffect(() => {
-    loadReservations();
+    loadBookings();
   }, []);
 
   useEffect(() => {
     applyFilters();
-  }, [reservations, filters]);
+  }, [bookings, filters]);
 
-  // Fuzzy search for households
-  useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-      if (householdSearch.length >= 1) {
-        const filtered = households.filter(
-          (h) =>
-            h.address?.toLowerCase().includes(householdSearch.toLowerCase()) ||
-            h.lot_label?.toLowerCase().includes(householdSearch.toLowerCase()),
-        );
-        setHouseholdSuggestions(filtered.slice(0, 50));
-      } else {
-        setHouseholdSuggestions([]);
-      }
-    }, 200);
-
-    return () => clearTimeout(debounceTimer);
-  }, [householdSearch, households]);
-
-  // Fuzzy search for board members
-  useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-      if (boardMemberSearch.length >= 1) {
-        const filtered = boardMembers.filter(
-          (bm) =>
-            bm.user_email
-              ?.toLowerCase()
-              .includes(boardMemberSearch.toLowerCase()) ||
-            bm.user_name
-              ?.toLowerCase()
-              .includes(boardMemberSearch.toLowerCase()),
-        );
-        setBoardMemberSuggestions(filtered.slice(0, 50));
-      } else {
-        setBoardMemberSuggestions([]);
-      }
-    }, 200);
-
-    return () => clearTimeout(debounceTimer);
-  }, [boardMemberSearch, boardMembers]);
-
-  const loadReservations = async () => {
+  const loadBookings = async () => {
     try {
       setIsLoading(true);
-      const hoa_token = localStorage.getItem("hoa_token");
 
-      const response = await fetch("/api/admin/reservations/unified", {
-        headers: {
-          Authorization: `Bearer ${hoa_token}`,
-        },
-      });
+      // Build filter params
+      const params: Record<string, string> = {};
+      if (filters.status !== "all") params.status = filters.status;
+      if (filters.amenity !== "all") params.amenity_type = filters.amenity;
+      if (filters.customerType !== "all")
+        params.customer_type = filters.customerType;
 
-      if (!response.ok) {
-        throw new Error("Failed to load reservations");
+      const result = await api.bookings.list(params);
+
+      if (result.error) {
+        toast.error(result.error);
+        return;
       }
 
-      const data = await response.json();
-      setReservations(data.reservations || []);
+      setBookings(result.data?.bookings || []);
     } catch (error) {
-      console.error("Error loading reservations:", error);
-      toast.error("Failed to load reservations");
+      console.error("Error loading bookings:", error);
+      toast.error("Failed to load bookings");
     } finally {
       setIsLoading(false);
     }
   };
 
   const applyFilters = () => {
-    let filtered = [...reservations];
+    let filtered = [...bookings];
 
     if (filters.status !== "all") {
-      filtered = filtered.filter((r) => r.status === filters.status);
+      filtered = filtered.filter((b) => b.booking_status === filters.status);
     }
 
     if (filters.amenity !== "all") {
-      filtered = filtered.filter((r) => r.amenity_type === filters.amenity);
+      filtered = filtered.filter((b) => b.amenity_type === filters.amenity);
     }
 
     if (filters.slot !== "all") {
-      filtered = filtered.filter((r) => r.slot === filters.slot);
+      filtered = filtered.filter((b) => b.slot === filters.slot);
     }
 
     if (filters.customerType !== "all") {
-      filtered = filtered.filter(
-        (r) => r.customer_type === filters.customerType,
-      );
+      filtered = filtered.filter((b) => {
+        if (filters.customerType === "resident") return b.user_id !== null;
+        if (filters.customerType === "external") return b.customer_id !== null;
+        return true;
+      });
     }
 
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
-      filtered = filtered.filter(
-        (r) =>
-          r.household_address?.toLowerCase().includes(searchLower) ||
-          r.renter_name?.toLowerCase().includes(searchLower) ||
-          r.user_email?.toLowerCase().includes(searchLower) ||
-          r.user_name?.toLowerCase().includes(searchLower),
-      );
+      filtered = filtered.filter((b) => {
+        const customerName = `${b.first_name} ${b.last_name}`.toLowerCase();
+        const customerEmail = b.email?.toLowerCase() || "";
+        const householdAddress = b.household_address?.toLowerCase() || "";
+        return (
+          customerName.includes(searchLower) ||
+          customerEmail.includes(searchLower) ||
+          householdAddress.includes(searchLower)
+        );
+      });
     }
 
     filtered.sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
     );
 
-    setFilteredReservations(filtered);
-  };
-
-  const updateReservationStatus = async (
-    reservationId: string,
-    newStatus: ReservationStatus,
-  ) => {
-    // Only resident bookings can have status changed
-    const reservation = reservations.find((r) => r.id === reservationId);
-    if (!reservation || reservation.customer_type === "external") {
-      return;
-    }
-
-    try {
-      setIsProcessing(reservationId);
-      const hoa_token = localStorage.getItem("hoa_token");
-
-      const response = await fetch(
-        `/api/admin/reservations/${reservationId}/status`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${hoa_token}`,
-          },
-          body: JSON.stringify({ status: newStatus }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to update reservation");
-      }
-
-      setReservations((prev) =>
-        prev.map((r) =>
-          r.id === reservationId ? { ...r, status: newStatus } : r,
-        ),
-      );
-
-      toast.success(
-        `Reservation ${newStatus === "confirmed" ? "approved" : "declined"} successfully`,
-      );
-    } catch (error) {
-      console.error("Error updating reservation:", error);
-      toast.error("Failed to update reservation");
-    } finally {
-      setIsProcessing(null);
-    }
+    setFilteredBookings(filtered);
   };
 
   const updateFilter = (key: keyof FilterState, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  const openPaymentDialog = (reservation: UnifiedReservation) => {
-    setPaymentReservation(reservation);
-    const remainingBalance =
-      (reservation.amount || 0) - (reservation.amount_paid || 0);
-    setPaymentForm({
-      amount: remainingBalance > 0 ? remainingBalance.toString() : "",
-      payment_method: "",
-      receipt_number: "",
-    });
-    setIsPaymentDialogOpen(true);
+  const openStatusDialog = (booking: BookingWithCustomer) => {
+    setSelectedBooking(booking);
+    setRejectionReason(booking.rejection_reason || "");
+    setAdminNotes(booking.admin_notes || "");
+    setIsStatusDialogOpen(true);
   };
 
-  const closePaymentDialog = () => {
-    setIsPaymentDialogOpen(false);
-    setPaymentReservation(null);
-    setPaymentForm(emptyPaymentForm);
+  const closeStatusDialog = () => {
+    setIsStatusDialogOpen(false);
+    setSelectedBooking(null);
+    setRejectionReason("");
+    setAdminNotes("");
   };
 
-  const handlePaymentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!paymentReservation) return;
-
-    if (!paymentForm.amount || isNaN(parseFloat(paymentForm.amount))) {
-      toast.error("Please enter a valid payment amount");
-      return;
-    }
+  const handleStatusUpdate = async () => {
+    if (!selectedBooking) return;
 
     try {
-      setIsProcessing(paymentReservation.id);
-      const hoa_token = localStorage.getItem("hoa_token");
+      setIsProcessing(selectedBooking.id);
 
-      const isExternal = paymentReservation.customer_type === "external";
-      const url = isExternal
-        ? `/api/admin/external-rentals/${paymentReservation.id}/payment`
-        : `/api/admin/reservations/${paymentReservation.id}/payment`;
+      // Determine new status based on current status and customer type
+      const isExternal = selectedBooking.customer_id !== null;
+      let newStatus: UnifiedBookingStatus;
 
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${hoa_token}`,
-        },
-        body: JSON.stringify({
-          amount: parseFloat(paymentForm.amount),
-          payment_method: paymentForm.payment_method || undefined,
-          receipt_number: paymentForm.receipt_number || undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to record payment");
+      if (isExternal) {
+        // External workflow
+        if (selectedBooking.booking_status === "inquiry_submitted") {
+          newStatus = "pending_approval";
+        } else if (selectedBooking.booking_status === "pending_approval") {
+          newStatus = "pending_payment";
+        } else if (selectedBooking.booking_status === "pending_payment") {
+          newStatus = "pending_verification";
+        } else if (selectedBooking.booking_status === "pending_verification") {
+          newStatus = "confirmed";
+        } else {
+          newStatus = selectedBooking.booking_status;
+        }
+      } else {
+        // Resident workflow
+        if (selectedBooking.booking_status === "pending_resident") {
+          newStatus = "confirmed";
+        } else {
+          newStatus = selectedBooking.booking_status;
+        }
       }
 
-      await loadReservations();
-      closePaymentDialog();
-      toast.success("Payment recorded successfully");
+      const result = await api.bookings.updateStatus(selectedBooking.id, {
+        status: newStatus,
+        rejection_reason: rejectionReason || undefined,
+        admin_notes: adminNotes || undefined,
+      });
+
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("Booking status updated successfully");
+      await loadBookings();
+      closeStatusDialog();
     } catch (error) {
-      console.error("Error recording payment:", error);
-      toast.error("Failed to record payment");
+      console.error("Error updating booking status:", error);
+      toast.error("Failed to update booking status");
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+  const handleRejectBooking = async () => {
+    if (!selectedBooking) return;
+
+    try {
+      setIsProcessing(selectedBooking.id);
+
+      const result = await api.bookings.updateStatus(selectedBooking.id, {
+        status: "rejected",
+        rejection_reason: rejectionReason || "No reason provided",
+        admin_notes: adminNotes || undefined,
+      });
+
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("Booking rejected successfully");
+      await loadBookings();
+      closeStatusDialog();
+    } catch (error) {
+      console.error("Error rejecting booking:", error);
+      toast.error("Failed to reject booking");
     } finally {
       setIsProcessing(null);
     }
@@ -422,216 +276,36 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
     });
   };
 
-  const openDeleteDialog = (reservation: UnifiedReservation) => {
-    setReservationToDelete(reservation);
+  const openDeleteDialog = (booking: BookingWithCustomer) => {
+    setBookingToDelete(booking);
     setIsDeleteDialogOpen(true);
   };
 
   const closeDeleteDialog = () => {
     setIsDeleteDialogOpen(false);
-    setReservationToDelete(null);
+    setBookingToDelete(null);
   };
 
-  const handleDeleteReservation = async () => {
-    if (!reservationToDelete) return;
+  const handleDeleteBooking = async () => {
+    if (!bookingToDelete) return;
 
     try {
-      setIsProcessing(reservationToDelete.id);
-      const hoa_token = localStorage.getItem("hoa_token");
+      setIsProcessing(bookingToDelete.id);
+      const result = await api.bookings.delete(bookingToDelete.id);
 
-      const isExternal = reservationToDelete.customer_type === "external";
-      const url = isExternal
-        ? `/api/admin/external-rentals/${reservationToDelete.id}`
-        : `/api/admin/reservations/${reservationToDelete.id}`;
-
-      const response = await fetch(url, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${hoa_token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete reservation");
+      if (result.error) {
+        toast.error(result.error);
+        return;
       }
 
-      await loadReservations();
+      toast.success("Booking deleted successfully");
+      await loadBookings();
       closeDeleteDialog();
-      toast.success("Reservation deleted successfully");
     } catch (error) {
-      console.error("Error deleting reservation:", error);
-      toast.error("Failed to delete reservation");
+      console.error("Error deleting booking:", error);
+      toast.error("Failed to delete booking");
     } finally {
       setIsProcessing(null);
-    }
-  };
-
-  const openBookingDialog = async () => {
-    // Load households and board members for the dropdowns
-    try {
-      const hoa_token = localStorage.getItem("hoa_token");
-
-      const [householdsRes, boardMembersRes] = await Promise.all([
-        fetch("/api/admin/households", {
-          headers: { Authorization: `Bearer ${hoa_token}` },
-        }),
-        fetch("/api/admin/board-members", {
-          headers: { Authorization: `Bearer ${hoa_token}` },
-        }),
-      ]);
-
-      if (householdsRes.ok) {
-        const householdsData = await householdsRes.json();
-        setHouseholds(householdsData.households || []);
-      }
-      if (boardMembersRes.ok) {
-        const boardMembersData = await boardMembersRes.json();
-        // Filter to only active board members (not resigned, term not expired)
-        const activeBoardMembers = (
-          boardMembersData.board_members || []
-        ).filter(
-          (bm: any) => !bm.resigned_at && new Date(bm.term_end) >= new Date(),
-        );
-        setBoardMembers(activeBoardMembers);
-      }
-    } catch (error) {
-      console.error("Error loading booking data:", error);
-    }
-
-    setBookingForm(emptyBookingForm);
-    setHouseholdSearch("");
-    setHouseholdSuggestions([]);
-    setBoardMemberSearch("");
-    setBoardMemberSuggestions([]);
-    setIsBookingDialogOpen(true);
-  };
-
-  const closeBookingDialog = () => {
-    setIsBookingDialogOpen(false);
-    setBookingForm(emptyBookingForm);
-    setHouseholdSearch("");
-    setHouseholdSuggestions([]);
-    setBoardMemberSearch("");
-    setBoardMemberSuggestions([]);
-  };
-
-  const handleBookingSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const { booking_type, amenity_type, date, slot } = bookingForm;
-
-    // Validation
-    if (!amenity_type || !date || !slot) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    if (booking_type === "resident" && !bookingForm.household_id) {
-      toast.error("Please select a household");
-      return;
-    }
-
-    if (booking_type === "board_member" && !bookingForm.user_id) {
-      toast.error("Please select a board member");
-      return;
-    }
-
-    if (booking_type === "external" && !bookingForm.renter_name?.trim()) {
-      toast.error("Please enter renter name");
-      return;
-    }
-
-    try {
-      setIsProcessing("booking");
-      const hoa_token = localStorage.getItem("hoa_token");
-
-      if (booking_type === "external") {
-        // Create external rental
-        const response = await fetch("/api/admin/external-rentals", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${hoa_token}`,
-          },
-          body: JSON.stringify({
-            amenity_type,
-            date,
-            slot,
-            renter_name: bookingForm.renter_name?.trim(),
-            renter_contact: bookingForm.renter_contact?.trim() || undefined,
-            amount: bookingForm.amount ? parseFloat(bookingForm.amount) : 0,
-            notes: bookingForm.notes?.trim() || undefined,
-          }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Failed to create external rental");
-        }
-      } else {
-        // Create reservation (resident or board member)
-        const household_id =
-          booking_type === "resident"
-            ? bookingForm.household_id
-            : await getHouseholdForUser(bookingForm.user_id!);
-
-        if (!household_id) {
-          toast.error("Could not find household for this booking");
-          return;
-        }
-
-        const response = await fetch("/api/reservations", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${hoa_token}`,
-          },
-          body: JSON.stringify({
-            household_id,
-            amenity_type,
-            date,
-            slot,
-            purpose: bookingForm.purpose?.trim() || undefined,
-          }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Failed to create reservation");
-        }
-      }
-
-      await loadReservations();
-      closeBookingDialog();
-      toast.success("Booking created successfully");
-    } catch (error: any) {
-      console.error("Error creating booking:", error);
-      toast.error(error.message || "Failed to create booking");
-    } finally {
-      setIsProcessing(null);
-    }
-  };
-
-  const getHouseholdForUser = async (
-    userId: string,
-  ): Promise<string | null> => {
-    try {
-      const hoa_token = localStorage.getItem("hoa_token");
-      // Use lot_members API to find household for user
-      const response = await fetch(
-        `/api/admin/lot-members/user/${userId}/household`,
-        {
-          headers: { Authorization: `Bearer ${hoa_token}` },
-        },
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        return data.household_id || null;
-      }
-      return null;
-    } catch {
-      return null;
     }
   };
 
@@ -659,14 +333,10 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">All Bookings</h2>
           <p className="text-muted-foreground">
-            Unified view of resident, external, and board member bookings
+            Unified view of resident and external bookings
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => openBookingDialog()}>
-            <Plus className="mr-2 w-4 h-4" />
-            Add Booking
-          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -699,9 +369,25 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="inquiry_submitted">
+                    Inquiry Submitted
+                  </SelectItem>
+                  <SelectItem value="pending_approval">
+                    Pending Approval
+                  </SelectItem>
+                  <SelectItem value="pending_payment">
+                    Pending Payment
+                  </SelectItem>
+                  <SelectItem value="pending_verification">
+                    Pending Verification
+                  </SelectItem>
+                  <SelectItem value="pending_resident">
+                    Pending (Resident)
+                  </SelectItem>
                   <SelectItem value="confirmed">Confirmed</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="no_show">No Show</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -756,8 +442,6 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="resident">Resident</SelectItem>
-                  <SelectItem value="board_free">Board (Free)</SelectItem>
-                  <SelectItem value="board_paid">Board (Paid)</SelectItem>
                   <SelectItem value="external">External</SelectItem>
                 </SelectContent>
               </Select>
@@ -788,7 +472,7 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
           <div className="flex justify-between items-center">
             <div>
               <p className="text-sm text-muted-foreground">Total Bookings</p>
-              <p className="text-2xl font-bold">{reservations.length}</p>
+              <p className="text-2xl font-bold">{bookings.length}</p>
             </div>
             <Calendar className="w-8 h-8 opacity-50 text-primary" />
           </div>
@@ -796,15 +480,12 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
         <div className="p-4 rounded-lg border bg-card">
           <div className="flex justify-between items-center">
             <div>
-              <p className="text-sm text-muted-foreground">Board Free</p>
+              <p className="text-sm text-muted-foreground">External</p>
               <p className="text-2xl font-bold">
-                {
-                  reservations.filter((r) => r.customer_type === "board_free")
-                    .length
-                }
+                {bookings.filter((b) => b.customer_id !== null).length}
               </p>
             </div>
-            <Award className="w-8 h-8 text-green-500 opacity-50" />
+            <Users className="w-8 h-8 text-blue-500 opacity-50" />
           </div>
         </div>
         <div className="p-4 rounded-lg border bg-card">
@@ -813,8 +494,8 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
               <p className="text-sm text-muted-foreground">Revenue</p>
               <p className="text-2xl font-bold">
                 ₱
-                {reservations
-                  .reduce((sum, r) => sum + (r.amount_paid || 0), 0)
+                {bookings
+                  .reduce((sum, b) => sum + (b.amount_paid || 0), 0)
                   .toFixed(0)}
               </p>
             </div>
@@ -827,9 +508,9 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
               <p className="text-sm text-muted-foreground">Outstanding</p>
               <p className="text-2xl font-bold">
                 ₱
-                {reservations
+                {bookings
                   .reduce(
-                    (sum, r) => sum + ((r.amount || 0) - (r.amount_paid || 0)),
+                    (sum, b) => sum + ((b.amount || 0) - (b.amount_paid || 0)),
                     0,
                   )
                   .toFixed(0)}
@@ -840,15 +521,15 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
         </div>
       </div>
 
-      {/* Reservations List */}
-      {filteredReservations.length === 0 ? (
+      {/* Bookings List */}
+      {filteredBookings.length === 0 ? (
         <div className="flex flex-col justify-center items-center py-12 text-center">
           <Calendar className="mb-4 w-12 h-12 text-muted-foreground" />
-          <h3 className="mb-2 text-lg font-semibold">No reservations found</h3>
+          <h3 className="mb-2 text-lg font-semibold">No bookings found</h3>
           <p className="max-w-sm text-sm text-muted-foreground">
             {activeFilterCount > 0
               ? "Try adjusting your filters to see more results."
-              : "When reservations are made, they will appear here."}
+              : "When bookings are made, they will appear here."}
           </p>
           {activeFilterCount > 0 && (
             <Button
@@ -892,198 +573,160 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredReservations.map((reservation) => (
-                    <tr
-                      key={reservation.id}
-                      className="border-b hover:bg-muted/30"
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex gap-2 items-center">
-                          <Calendar className="w-4 h-4 text-muted-foreground" />
-                          <div>
-                            <p className="text-sm font-medium">
-                              {new Date(reservation.date).toLocaleDateString(
-                                "en-US",
-                                {
-                                  weekday: "short",
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                },
-                              )}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {slotLabels[reservation.slot]}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm">
-                          {amenityLabels[reservation.amenity_type]}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {reservation.customer_type === "external" ? (
-                          <div>
-                            <p className="text-sm font-medium">
-                              {reservation.renter_name}
-                            </p>
-                            {reservation.renter_contact && (
-                              <p className="text-xs text-muted-foreground">
-                                {reservation.renter_contact}
-                              </p>
-                            )}
-                          </div>
-                        ) : (
+                  {filteredBookings.map((booking) => {
+                    const statusConfig = getStatusConfig(
+                      booking.booking_status,
+                    );
+                    const statusColors = getStatusColorClasses(
+                      booking.booking_status,
+                    );
+                    const isExternal = booking.customer_id !== null;
+
+                    return (
+                      <tr
+                        key={booking.id}
+                        className="border-b hover:bg-muted/30"
+                      >
+                        <td className="px-4 py-3">
                           <div className="flex gap-2 items-center">
-                            {reservation.customer_type.includes("board") ? (
-                              <Users className="w-4 h-4 text-blue-500" />
-                            ) : (
-                              <Home className="w-4 h-4 text-muted-foreground" />
-                            )}
+                            <Calendar className="w-4 h-4 text-muted-foreground" />
                             <div>
                               <p className="text-sm font-medium">
-                                {reservation.user_name ||
-                                  reservation.household_address ||
-                                  "Unknown"}
+                                {new Date(booking.date).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    weekday: "short",
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  },
+                                )}
                               </p>
-                              {reservation.user_email && (
-                                <p className="text-xs text-muted-foreground">
-                                  {reservation.user_email}
-                                </p>
-                              )}
+                              <p className="text-xs text-muted-foreground">
+                                {slotLabels[booking.slot]}
+                              </p>
                             </div>
                           </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge
-                          variant={
-                            customerTypeBadgeVariant[reservation.customer_type]
-                          }
-                        >
-                          {customerTypeLabels[reservation.customer_type]}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div>
-                          {(reservation.amount || 0) > 0 ? (
-                            <>
-                              <p className="text-sm font-medium">
-                                ₱{(reservation.amount || 0).toFixed(0)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm">
+                            {amenityLabels[booking.amenity_type]}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div>
+                            <p className="text-sm font-medium">
+                              {booking.first_name} {booking.last_name}
+                            </p>
+                            {booking.email && (
+                              <p className="text-xs text-muted-foreground">
+                                {booking.email}
                               </p>
-                              {reservation.amount_paid &&
-                                reservation.amount_paid > 0 && (
-                                  <>
-                                    <p className="text-xs text-muted-foreground">
-                                      Paid: ₱
-                                      {reservation.amount_paid.toFixed(0)}
-                                    </p>
-                                    {(reservation.amount || 0) -
-                                      reservation.amount_paid >
-                                      0 && (
-                                      <p className="text-xs text-destructive">
-                                        Balance: ₱
-                                        {(
-                                          (reservation.amount || 0) -
-                                          reservation.amount_paid
-                                        ).toFixed(0)}
-                                      </p>
-                                    )}
-                                  </>
-                                )}
-                              {reservation.payment_status && (
-                                <Badge
-                                  variant={
-                                    paymentStatusBadgeVariant[
-                                      reservation.payment_status
-                                    ]
-                                  }
-                                  className="mt-1"
-                                >
-                                  {
-                                    paymentStatusLabels[
-                                      reservation.payment_status
-                                    ]
-                                  }
-                                </Badge>
-                              )}
-                            </>
-                          ) : (
-                            <span className="text-sm font-medium text-green-600">
-                              Free
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={statusBadgeVariant[reservation.status]}>
-                          {statusLabels[reservation.status]}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-2 justify-end items-center">
-                          {(reservation.amount || 0) > 0 &&
-                            (!reservation.payment_status ||
-                              reservation.payment_status === "unpaid" ||
-                              reservation.payment_status === "partial") && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => openPaymentDialog(reservation)}
-                                title="Record payment"
-                              >
-                                <Receipt className="w-4 h-4 text-green-500" />
-                              </Button>
                             )}
-                          {reservation.customer_type !== "external" &&
-                            reservation.status === "pending" && (
+                            {booking.household_address && (
+                              <p className="text-xs text-muted-foreground">
+                                {booking.household_address}
+                              </p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant={isExternal ? "outline" : "secondary"}>
+                            {isExternal ? "External" : "Resident"}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div>
+                            {(booking.amount || 0) > 0 ? (
                               <>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() =>
-                                    updateReservationStatus(
-                                      reservation.id,
-                                      "confirmed",
-                                    )
-                                  }
-                                  disabled={isProcessing === reservation.id}
-                                  aria-label="Approve reservation"
-                                >
-                                  <Check className="w-4 h-4 text-green-500" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() =>
-                                    updateReservationStatus(
-                                      reservation.id,
-                                      "cancelled",
-                                    )
-                                  }
-                                  disabled={isProcessing === reservation.id}
-                                  aria-label="Decline reservation"
-                                >
-                                  <X className="w-4 h-4 text-red-500" />
-                                </Button>
+                                <p className="text-sm font-medium">
+                                  ₱{(booking.amount || 0).toFixed(0)}
+                                </p>
+                                {booking.amount_paid &&
+                                  booking.amount_paid > 0 && (
+                                    <>
+                                      <p className="text-xs text-muted-foreground">
+                                        Paid: ₱{booking.amount_paid.toFixed(0)}
+                                      </p>
+                                      {(booking.amount || 0) -
+                                        booking.amount_paid >
+                                        0 && (
+                                        <p className="text-xs text-destructive">
+                                          Balance: ₱
+                                          {(
+                                            (booking.amount || 0) -
+                                            booking.amount_paid
+                                          ).toFixed(0)}
+                                        </p>
+                                      )}
+                                    </>
+                                  )}
+                                {booking.payment_status && (
+                                  <Badge
+                                    variant={
+                                      booking.payment_status === "paid"
+                                        ? "default"
+                                        : booking.payment_status === "partial"
+                                          ? "outline"
+                                          : "secondary"
+                                    }
+                                    className="mt-1"
+                                  >
+                                    {booking.payment_status.toUpperCase()}
+                                  </Badge>
+                                )}
                               </>
+                            ) : (
+                              <span className="text-sm font-medium text-green-600">
+                                Free
+                              </span>
                             )}
-                          {reservation.status === "cancelled" && (
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge
+                            variant={statusConfig.variant}
+                            className={cn(
+                              "gap-1",
+                              statusColors.border,
+                              statusColors.bg,
+                              statusColors.text,
+                            )}
+                          >
+                            <statusConfig.icon className="w-3 h-3" />
+                            {statusConfig.label}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-2 justify-end items-center">
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => openDeleteDialog(reservation)}
-                              title="Delete reservation"
+                              onClick={() => openStatusDialog(booking)}
+                              title="Update status"
                             >
-                              <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                              {booking.booking_status === "pending_resident" ||
+                              booking.booking_status === "pending_approval" ? (
+                                <Check className="w-4 h-4 text-green-500" />
+                              ) : (
+                                <Loader2 className="w-4 h-4 text-muted-foreground" />
+                              )}
                             </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            {booking.booking_status === "cancelled" && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => openDeleteDialog(booking)}
+                                title="Delete booking"
+                              >
+                                <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1091,435 +734,132 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
         </div>
       )}
 
-      {/* Payment Dialog */}
-      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+      {/* Status Update Dialog */}
+      <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Record Payment</DialogTitle>
+            <DialogTitle>Update Booking Status</DialogTitle>
             <DialogDescription>
-              {paymentReservation && (
+              {selectedBooking && (
                 <>
-                  Record payment for{" "}
-                  {paymentReservation.customer_type === "external"
-                    ? paymentReservation.renter_name
-                    : paymentReservation.user_name ||
-                      paymentReservation.household_address}{" "}
-                  - {amenityLabels[paymentReservation.amenity_type]} on{" "}
-                  {new Date(paymentReservation.date).toLocaleDateString()}
+                  Update status for {selectedBooking.first_name}{" "}
+                  {selectedBooking.last_name} -{" "}
+                  {amenityLabels[selectedBooking.amenity_type]} on{" "}
+                  {new Date(selectedBooking.date).toLocaleDateString()}
                 </>
               )}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handlePaymentSubmit}>
+
+          {selectedBooking && (
             <div className="py-4 space-y-4">
-              {paymentReservation && (
-                <div className="p-3 space-y-1 rounded-lg bg-muted/50">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Total Amount:</span>
-                    <span className="font-medium">
-                      ₱{(paymentReservation.amount || 0).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Previously Paid:
-                    </span>
-                    <span className="font-medium">
-                      ₱{(paymentReservation.amount_paid || 0).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm font-semibold">
-                    <span>Balance Due:</span>
-                    <span className="text-destructive">
-                      ₱
-                      {(
-                        (paymentReservation.amount || 0) -
-                        (paymentReservation.amount_paid || 0)
-                      ).toFixed(2)}
-                    </span>
-                  </div>
+              {/* Current Status */}
+              <div className="p-3 space-y-1 rounded-lg bg-muted/50">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Current Status:</span>
+                  <span className="font-medium">
+                    {getStatusConfig(selectedBooking.booking_status).label}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Amenity:</span>
+                  <span className="font-medium">
+                    {amenityLabels[selectedBooking.amenity_type]}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Date:</span>
+                  <span className="font-medium">
+                    {new Date(selectedBooking.date).toLocaleDateString()} -{" "}
+                    {slotLabels[selectedBooking.slot]}
+                  </span>
+                </div>
+                {(selectedBooking.amount || 0) > 0 && (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Amount:</span>
+                      <span className="font-medium">
+                        ₱{(selectedBooking.amount || 0).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Paid:</span>
+                      <span className="font-medium">
+                        ₱{(selectedBooking.amount_paid || 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Admin Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="admin_notes">Admin Notes</Label>
+                <Textarea
+                  id="admin_notes"
+                  placeholder="Add notes about this booking..."
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  rows={3}
+                />
+              </div>
+
+              {/* Rejection Reason (only show if rejecting) */}
+              {(selectedBooking.booking_status === "inquiry_submitted" ||
+                selectedBooking.booking_status === "pending_approval" ||
+                selectedBooking.booking_status === "pending_payment" ||
+                selectedBooking.booking_status === "pending_verification") && (
+                <div className="space-y-2">
+                  <Label htmlFor="rejection_reason">
+                    Rejection Reason (if rejecting)
+                  </Label>
+                  <Textarea
+                    id="rejection_reason"
+                    placeholder="Reason for rejection..."
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    rows={2}
+                  />
                 </div>
               )}
-
-              <div className="space-y-2">
-                <Label htmlFor="payment_amount">Payment Amount (₱) *</Label>
-                <Input
-                  id="payment_amount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  value={paymentForm.amount}
-                  onChange={(e) =>
-                    setPaymentForm((prev) => ({
-                      ...prev,
-                      amount: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="payment_method">Payment Method</Label>
-                <Input
-                  id="payment_method"
-                  placeholder="e.g., Cash, GCash, Bank Transfer"
-                  value={paymentForm.payment_method}
-                  onChange={(e) =>
-                    setPaymentForm((prev) => ({
-                      ...prev,
-                      payment_method: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="receipt_number">Receipt Number</Label>
-                <Input
-                  id="receipt_number"
-                  placeholder="Official receipt number..."
-                  value={paymentForm.receipt_number}
-                  onChange={(e) =>
-                    setPaymentForm((prev) => ({
-                      ...prev,
-                      receipt_number: e.target.value,
-                    }))
-                  }
-                />
-              </div>
             </div>
+          )}
 
-            <DialogFooter>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={closeStatusDialog}
+              disabled={isProcessing === selectedBooking?.id}
+            >
+              Cancel
+            </Button>
+            {(selectedBooking?.booking_status === "inquiry_submitted" ||
+              selectedBooking?.booking_status === "pending_approval" ||
+              selectedBooking?.booking_status === "pending_payment" ||
+              selectedBooking?.booking_status === "pending_verification" ||
+              selectedBooking?.booking_status === "pending_resident") && (
               <Button
                 type="button"
-                variant="outline"
-                onClick={closePaymentDialog}
-                disabled={isProcessing === paymentReservation?.id}
+                variant="destructive"
+                onClick={handleRejectBooking}
+                disabled={isProcessing === selectedBooking?.id}
               >
-                Cancel
+                {isProcessing === selectedBooking?.id
+                  ? "Rejecting..."
+                  : "Reject"}
               </Button>
-              <Button
-                type="submit"
-                disabled={isProcessing === paymentReservation?.id}
-              >
-                {isProcessing === paymentReservation?.id
-                  ? "Recording..."
-                  : "Record Payment"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Booking Dialog */}
-      <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add Manual Booking</DialogTitle>
-            <DialogDescription>
-              Create a booking for walk-ins or phone reservations
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleBookingSubmit}>
-            <div className="py-4 space-y-4">
-              {/* Booking Type */}
-              <div className="space-y-2">
-                <Label htmlFor="booking_type">Booking Type *</Label>
-                <Select
-                  value={bookingForm.booking_type}
-                  onValueChange={(
-                    v: "resident" | "board_member" | "external",
-                  ) => setBookingForm((prev) => ({ ...prev, booking_type: v }))}
-                >
-                  <SelectTrigger id="booking_type">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="resident">Resident</SelectItem>
-                    <SelectItem value="board_member">Board Member</SelectItem>
-                    <SelectItem value="external">External Rental</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Resident/Board Member Fields */}
-              {bookingForm.booking_type === "resident" && (
-                <div className="relative space-y-2">
-                  <Label htmlFor="household_search">Household *</Label>
-                  <Input
-                    id="household_search"
-                    placeholder="Search by address or lot..."
-                    value={householdSearch}
-                    onChange={(e) => {
-                      setHouseholdSearch(e.target.value);
-                      setBookingForm((prev) => ({
-                        ...prev,
-                        household_id: undefined,
-                      }));
-                    }}
-                    autoComplete="off"
-                  />
-                  {bookingForm.household_id && (
-                    <p className="text-xs text-green-600">
-                      ✓ Selected:{" "}
-                      {
-                        households.find(
-                          (h) => h.id === bookingForm.household_id,
-                        )?.address
-                      }
-                    </p>
-                  )}
-                  {householdSuggestions.length > 0 &&
-                    !bookingForm.household_id && (
-                      <div className="overflow-y-auto absolute z-50 mt-1 w-full max-h-48 rounded-md border shadow-md bg-popover">
-                        {householdSuggestions.map((h) => (
-                          <button
-                            key={h.id}
-                            type="button"
-                            className="px-3 py-2 w-full text-sm text-left cursor-pointer hover:bg-accent hover:text-accent-foreground"
-                            onClick={() => {
-                              setBookingForm((prev) => ({
-                                ...prev,
-                                household_id: h.id,
-                              }));
-                              setHouseholdSearch(h.address);
-                              setHouseholdSuggestions([]);
-                            }}
-                          >
-                            <span className="font-medium">{h.address}</span>
-                            {h.lot_label && (
-                              <span className="ml-2 text-xs text-muted-foreground">
-                                {h.lot_label}
-                              </span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                </div>
-              )}
-
-              {bookingForm.booking_type === "board_member" && (
-                <div className="relative space-y-2">
-                  <Label htmlFor="board_member_search">Board Member *</Label>
-                  <Input
-                    id="board_member_search"
-                    placeholder="Search by name or email..."
-                    value={boardMemberSearch}
-                    onChange={(e) => {
-                      setBoardMemberSearch(e.target.value);
-                      setBookingForm((prev) => ({
-                        ...prev,
-                        user_id: undefined,
-                      }));
-                    }}
-                    autoComplete="off"
-                  />
-                  {bookingForm.user_id && (
-                    <p className="text-xs text-green-600">
-                      ✓ Selected:{" "}
-                      {boardMembers.find(
-                        (bm) => bm.user_id === bookingForm.user_id,
-                      )?.user_name ||
-                        boardMembers.find(
-                          (bm) => bm.user_id === bookingForm.user_id,
-                        )?.user_email}
-                    </p>
-                  )}
-                  {boardMemberSuggestions.length > 0 &&
-                    !bookingForm.user_id && (
-                      <div className="overflow-y-auto absolute z-50 mt-1 w-full max-h-48 rounded-md border shadow-md bg-popover">
-                        {boardMemberSuggestions.map((bm) => (
-                          <button
-                            key={bm.user_id}
-                            type="button"
-                            className="px-3 py-2 w-full text-sm text-left cursor-pointer hover:bg-accent hover:text-accent-foreground"
-                            onClick={() => {
-                              setBookingForm((prev) => ({
-                                ...prev,
-                                user_id: bm.user_id,
-                              }));
-                              setBoardMemberSearch(
-                                bm.user_name || bm.user_email,
-                              );
-                              setBoardMemberSuggestions([]);
-                            }}
-                          >
-                            <span className="font-medium">
-                              {bm.user_name || "(no name)"}
-                            </span>
-                            <span className="ml-2 text-xs text-muted-foreground">
-                              {bm.user_email}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                </div>
-              )}
-
-              {/* External Rental Fields */}
-              {bookingForm.booking_type === "external" && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="renter_name">Renter Name *</Label>
-                    <Input
-                      id="renter_name"
-                      placeholder="Full name"
-                      value={bookingForm.renter_name || ""}
-                      onChange={(e) =>
-                        setBookingForm((prev) => ({
-                          ...prev,
-                          renter_name: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="renter_contact">Contact Number</Label>
-                    <Input
-                      id="renter_contact"
-                      placeholder="Phone or email"
-                      value={bookingForm.renter_contact || ""}
-                      onChange={(e) =>
-                        setBookingForm((prev) => ({
-                          ...prev,
-                          renter_contact: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="external_amount">Rental Fee (₱)</Label>
-                    <Input
-                      id="external_amount"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      value={bookingForm.amount || ""}
-                      onChange={(e) =>
-                        setBookingForm((prev) => ({
-                          ...prev,
-                          amount: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Amenity */}
-              <div className="space-y-2">
-                <Label htmlFor="amenity_type">Amenity *</Label>
-                <Select
-                  value={bookingForm.amenity_type}
-                  onValueChange={(v: AmenityType) =>
-                    setBookingForm((prev) => ({ ...prev, amenity_type: v }))
-                  }
-                >
-                  <SelectTrigger id="amenity_type">
-                    <SelectValue placeholder="Select amenity" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {amenityTypes.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {amenityLabels[type]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Date and Slot */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="date">Date *</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={bookingForm.date}
-                    onChange={(e) =>
-                      setBookingForm((prev) => ({
-                        ...prev,
-                        date: e.target.value,
-                      }))
-                    }
-                    min={new Date().toISOString().split("T")[0]}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="slot">Time Slot *</Label>
-                  <Select
-                    value={bookingForm.slot}
-                    onValueChange={(v: ReservationSlot) =>
-                      setBookingForm((prev) => ({ ...prev, slot: v }))
-                    }
-                  >
-                    <SelectTrigger id="slot">
-                      <SelectValue placeholder="Select slot" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="AM">Morning (8AM - 12PM)</SelectItem>
-                      <SelectItem value="PM">Afternoon (1PM - 5PM)</SelectItem>
-                      <SelectItem value="FULL_DAY">
-                        Full Day (8AM - 5PM)
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Purpose (for residents/board members) */}
-              {bookingForm.booking_type !== "external" && (
-                <div className="space-y-2">
-                  <Label htmlFor="purpose">Purpose</Label>
-                  <Input
-                    id="purpose"
-                    placeholder="Event or occasion..."
-                    value={bookingForm.purpose || ""}
-                    onChange={(e) =>
-                      setBookingForm((prev) => ({
-                        ...prev,
-                        purpose: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              )}
-
-              {/* Notes */}
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Input
-                  id="notes"
-                  placeholder="Additional notes..."
-                  value={bookingForm.notes || ""}
-                  onChange={(e) =>
-                    setBookingForm((prev) => ({
-                      ...prev,
-                      notes: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeBookingDialog}
-                disabled={isProcessing === "booking"}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isProcessing === "booking"}>
-                {isProcessing === "booking" ? "Creating..." : "Create Booking"}
-              </Button>
-            </DialogFooter>
-          </form>
+            )}
+            <Button
+              type="button"
+              onClick={handleStatusUpdate}
+              disabled={isProcessing === selectedBooking?.id}
+            >
+              {isProcessing === selectedBooking?.id
+                ? "Updating..."
+                : "Approve / Update"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1527,40 +867,39 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Reservation?</DialogTitle>
+            <DialogTitle>Delete Booking?</DialogTitle>
             <DialogDescription>
-              Are you sure you want to permanently delete this reservation? This
+              Are you sure you want to permanently delete this booking? This
               action cannot be undone.
             </DialogDescription>
           </DialogHeader>
 
-          {reservationToDelete && (
+          {bookingToDelete && (
             <div className="p-3 space-y-1 rounded-lg bg-muted/50">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Date:</span>
                 <span className="font-medium">
-                  {new Date(reservationToDelete.date).toLocaleDateString()}
+                  {new Date(bookingToDelete.date).toLocaleDateString()}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Amenity:</span>
                 <span className="font-medium">
-                  {amenityLabels[reservationToDelete.amenity_type]}
+                  {amenityLabels[bookingToDelete.amenity_type]}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Slot:</span>
                 <span className="font-medium">
-                  {slotLabels[reservationToDelete.slot]}
+                  {slotLabels[bookingToDelete.slot]}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Customer:</span>
                 <span className="font-medium">
-                  {reservationToDelete.customer_type === "external"
-                    ? reservationToDelete.renter_name
-                    : reservationToDelete.user_name ||
-                      reservationToDelete.household_address}
+                  {bookingToDelete.first_name} {bookingToDelete.last_name}
+                  {bookingToDelete.household_address &&
+                    ` (${bookingToDelete.household_address})`}
                 </span>
               </div>
             </div>
@@ -1571,19 +910,17 @@ export function UnifiedBookingsTab({ amenityTypes }: UnifiedBookingsTabProps) {
               type="button"
               variant="outline"
               onClick={closeDeleteDialog}
-              disabled={isProcessing === reservationToDelete?.id}
+              disabled={isProcessing === bookingToDelete?.id}
             >
               Cancel
             </Button>
             <Button
               type="button"
               variant="destructive"
-              onClick={handleDeleteReservation}
-              disabled={isProcessing === reservationToDelete?.id}
+              onClick={handleDeleteBooking}
+              disabled={isProcessing === bookingToDelete?.id}
             >
-              {isProcessing === reservationToDelete?.id
-                ? "Deleting..."
-                : "Delete"}
+              {isProcessing === bookingToDelete?.id ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

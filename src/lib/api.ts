@@ -87,6 +87,19 @@ import type {
   PublicBookingRequest,
   PublicBookingResponse,
   PublicInquiryRequest,
+  // Unified bookings system types
+  BookingWithCustomer,
+  BookingWithReference,
+  UnifiedBookingStatus,
+  GuestSession,
+  AmenityClosure,
+  CreateBookingRequest,
+  UpdateBookingStatusRequest,
+  BookingListFilters,
+  BookingListResponse,
+  MyBookingsResponse,
+  BookingStatusResponse,
+  BookingAvailabilityResponse,
 } from "@/types";
 
 import { logger } from "@/lib/logger";
@@ -2088,5 +2101,160 @@ export const api = {
       if (result.error) return { error: result.error };
       return { data: result.data };
     },
+  },
+  // =============================================================================
+  // Unified Bookings System
+  // =============================================================================
+  bookings: {
+    // Create a new booking (works for both residents and guests)
+    create: (bookingData: CreateBookingRequest) =>
+      apiRequest<{ booking: BookingWithReference }>("/bookings", {
+        method: "POST",
+        body: JSON.stringify(bookingData),
+      }),
+    // Create guest booking with customer info
+    createGuest: (
+      bookingData: CreateBookingRequest & {
+        guest_first_name: string;
+        guest_last_name: string;
+        guest_email: string;
+        guest_phone: string;
+      },
+    ) =>
+      apiRequest<{ booking: BookingWithReference }>("/bookings/guest", {
+        method: "POST",
+        body: JSON.stringify(bookingData),
+      }),
+    // List bookings (admin/staff)
+    list: (filters?: BookingListFilters) => {
+      const params = new URLSearchParams();
+      if (filters?.status) params.append("status", filters.status);
+      if (filters?.amenity_type)
+        params.append("amenity_type", filters.amenity_type);
+      if (filters?.date_from) params.append("date_from", filters.date_from);
+      if (filters?.date_to) params.append("date_to", filters.date_to);
+      if (filters?.customer_type)
+        params.append("customer_type", filters.customer_type);
+      if (filters?.household_id)
+        params.append("household_id", filters.household_id);
+      if (filters?.user_id) params.append("user_id", filters.user_id);
+      if (filters?.customer_id)
+        params.append("customer_id", filters.customer_id);
+      const query = params.toString();
+      return apiRequest<BookingListResponse>(
+        `/bookings${query ? `?${query}` : ""}`,
+      );
+    },
+    // Get single booking
+    get: (id: string) =>
+      apiRequest<{ booking: BookingWithCustomer }>(`/bookings/${id}`),
+    // Update booking status (admin/staff)
+    updateStatus: (id: string, data: UpdateBookingStatusRequest) =>
+      apiRequest<{ booking: BookingWithCustomer }>(`/bookings/${id}/status`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    // Upload payment proof
+    uploadProof: (id: string, proofUrl: string) =>
+      apiRequest<{ booking: BookingWithCustomer }>(`/bookings/${id}/proof`, {
+        method: "POST",
+        body: JSON.stringify({ proof_url: proofUrl }),
+      }),
+    // Cancel booking
+    cancel: (id: string) =>
+      apiRequest<{ booking: BookingWithCustomer }>(`/bookings/${id}/cancel`, {
+        method: "PUT",
+      }),
+    // Delete booking (admin only - soft delete)
+    delete: (id: string) =>
+      apiRequest<{ success: boolean }>(`/bookings/${id}`, {
+        method: "DELETE",
+      }),
+    // Get my bookings (for both residents and guests)
+    getMyBookings: (filters?: {
+      status?: UnifiedBookingStatus;
+      filter?: "upcoming" | "past" | "cancelled" | "all";
+    }) => {
+      const params = new URLSearchParams();
+      if (filters?.status) params.append("status", filters.status);
+      if (filters?.filter) params.append("filter", filters.filter);
+      const query = params.toString();
+      return apiRequest<MyBookingsResponse>(
+        `/bookings/my${query ? `?${query}` : ""}`,
+      );
+    },
+    // Check availability for a date
+    getAvailability: (amenityType: string, date: string) =>
+      apiRequest<BookingAvailabilityResponse>(
+        `/bookings/availability/${amenityType}?date=${date}`,
+      ),
+    // Calculate pricing
+    getPricing: (
+      amenityType: string,
+      date: string,
+      slot: string,
+      isResident?: boolean,
+    ) => {
+      const params = new URLSearchParams({ date, slot });
+      if (isResident) params.append("resident", "true");
+      return apiRequest<PricingCalculation>(
+        `/bookings/pricing/${amenityType}?${params.toString()}`,
+      );
+    },
+    // Get booking status (public endpoint)
+    getStatus: (id: string) =>
+      apiRequest<BookingStatusResponse>(`/bookings/${id}/status`),
+    // Generate reference number
+    generateReference: (id: string) =>
+      apiRequest<{ reference_number: string }>(`/bookings/${id}/reference`),
+  },
+  // Guest authentication (Google SSO for external guests)
+  guest: {
+    getGoogleUrl: () => apiRequest<{ url: string }>("/guest/auth/google"),
+    // Get current guest session
+    getSession: () =>
+      apiRequest<{ guest: GuestSession | null }>("/guest/auth/session"),
+    // Logout guest
+    logout: () =>
+      apiRequest<{ success: boolean }>("/guest/auth/logout", {
+        method: "POST",
+      }),
+  },
+  // =============================================================================
+  // Amenity Closures (admin-created blocks, separate from booking_blocked_dates)
+  // =============================================================================
+  amenityClosures: {
+    // List closures
+    list: (filters?: {
+      amenity_type?: AmenityType;
+      start_date?: string;
+      end_date?: string;
+    }) => {
+      const params = new URLSearchParams();
+      if (filters?.amenity_type)
+        params.append("amenity_type", filters.amenity_type);
+      if (filters?.start_date) params.append("start_date", filters.start_date);
+      if (filters?.end_date) params.append("end_date", filters.end_date);
+      const query = params.toString();
+      return apiRequest<{ closures: AmenityClosure[] }>(
+        `/admin/amenity-closures${query ? `?${query}` : ""}`,
+      );
+    },
+    // Create closure
+    create: (data: {
+      amenity_type: AmenityType;
+      date: string;
+      slot: "AM" | "PM" | "FULL_DAY";
+      reason: string;
+    }) =>
+      apiRequest<{ closure: AmenityClosure }>("/admin/amenity-closures", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    // Delete closure
+    delete: (id: string) =>
+      apiRequest<{ success: boolean }>(`/admin/amenity-closures/${id}`, {
+        method: "DELETE",
+      }),
   },
 };

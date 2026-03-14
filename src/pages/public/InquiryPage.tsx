@@ -65,10 +65,8 @@ export function InquiryPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
-    guest_name:
-      user?.first_name && user?.last_name
-        ? `${user.first_name} ${user.last_name}`
-        : "",
+    guest_first_name: user?.first_name || "",
+    guest_last_name: user?.last_name || "",
     guest_email: user?.email || "",
     guest_phone: "",
     event_type: "" as any,
@@ -159,7 +157,8 @@ export function InquiryPage() {
         amenity_type: amenityType,
         date,
         slot,
-        guest_name: formData.guest_name.trim(),
+        guest_first_name: formData.guest_first_name.trim(),
+        guest_last_name: formData.guest_last_name.trim(),
         guest_email: formData.guest_email.trim(),
         guest_phone: formData.guest_phone.trim(),
         event_type:
@@ -291,17 +290,37 @@ export function InquiryPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="guest_name">Full Name *</Label>
-                <Input
-                  id="guest_name"
-                  value={formData.guest_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, guest_name: e.target.value })
-                  }
-                  placeholder="Juan Dela Cruz"
-                  required
-                />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="guest_first_name">First Name *</Label>
+                  <Input
+                    id="guest_first_name"
+                    value={formData.guest_first_name}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        guest_first_name: e.target.value,
+                      })
+                    }
+                    placeholder="Juan"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="guest_last_name">Last Name *</Label>
+                  <Input
+                    id="guest_last_name"
+                    value={formData.guest_last_name}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        guest_last_name: e.target.value,
+                      })
+                    }
+                    placeholder="Dela Cruz"
+                    required
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="guest_email">Email Address *</Label>

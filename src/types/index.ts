@@ -298,7 +298,8 @@ export interface PublicInquiryRequest {
   amenity_type: AmenityType;
   date: string;
   slot: TimeBlockSlot;
-  guest_name: string;
+  guest_first_name: string;
+  guest_last_name: string;
   guest_email: string;
   guest_phone: string;
   event_type: "wedding" | "birthday" | "meeting" | "sports" | "other";
@@ -1291,4 +1292,232 @@ export interface MemberSearchResult {
 
 export interface WaiveDelinquencyRequest {
   waiver_reason: string;
+}
+
+// =============================================================================
+// Unified Bookings System
+// =============================================================================
+
+// Unified booking status types (matches booking-status.ts)
+export type UnifiedBookingStatus =
+  | "inquiry_submitted" // guest submitted form
+  | "pending_approval" // admin approved, awaiting payment
+  | "pending_payment" // guest shown payment instructions
+  | "pending_verification" // proof uploaded, admin reviewing
+  | "pending_resident" // resident submitted, pre-approved pending slot check
+  | "awaiting_resident_payment" // resident awaiting payment
+  | "confirmed" // booking confirmed
+  | "rejected" // booking rejected
+  | "cancelled" // booking cancelled
+  | "no_show"; // marked as no-show
+
+// Payment status for bookings
+export type BookingPaymentStatus =
+  | "unpaid"
+  | "partial"
+  | "paid"
+  | "overdue"
+  | "waived";
+
+// Customer (external guest only - residents use users table)
+export interface Customer {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email?: string;
+  phone?: string;
+  google_sub?: string;
+  google_picture_url?: string;
+  guest_notes?: string;
+  is_blacklisted: boolean;
+  blacklist_reason?: string;
+  blacklist_date?: string;
+  created_at: string;
+  updated_at: string;
+  last_booking_at?: string;
+  created_ip?: string;
+  ip_retained_until?: string;
+}
+
+// Unified booking (works for both residents and external guests)
+export interface Booking {
+  id: string;
+
+  // Exactly one of these is set
+  user_id?: string; // for residents
+  customer_id?: string; // for external guests
+
+  household_id?: string; // for resident bookings
+
+  // Booking details
+  amenity_type: AmenityType;
+  date: string; // ISO date string
+  slot: TimeBlockSlot;
+
+  // Pricing breakdown
+  base_rate: number;
+  duration_hours: number;
+  day_multiplier: number;
+  season_multiplier: number;
+  resident_discount: number; // 0 = no discount, 0.5 = 50% off
+  amount: number;
+  pricing_calculated_at: string;
+
+  // Payment tracking
+  payment_status: BookingPaymentStatus;
+  amount_paid: number;
+  payment_method?: string;
+  receipt_number?: string;
+  proof_of_payment_url?: string;
+
+  // Unified status workflow
+  booking_status: UnifiedBookingStatus;
+
+  // Event details
+  event_type?: "wedding" | "birthday" | "meeting" | "sports" | "other";
+  purpose?: string;
+  attendee_count?: number;
+
+  // Admin notes
+  admin_notes?: string;
+  rejection_reason?: string;
+
+  // For external guests workflow
+  approved_at?: string;
+  approved_by?: string;
+
+  // Audit
+  created_at: string;
+  created_by?: string; // for admin-created bookings
+  created_by_customer_id?: string; // for guest-created bookings
+  created_ip?: string;
+  updated_at: string;
+  updated_by?: string;
+
+  // Soft delete
+  deleted_at?: string;
+  deleted_by?: string;
+}
+
+// Booking with customer details populated (from JOIN)
+export interface BookingWithCustomer extends Booking {
+  // Customer info (populated from users or customers)
+  customer_type: "resident" | "external";
+  first_name: string;
+  last_name: string;
+  email?: string;
+  phone?: string;
+  household_address?: string; // for residents
+  picture?: string; // google_picture_url or user avatar
+  display_customer_type?: "resident" | "external" | "board_member"; // derived at query time
+}
+
+// Booking with reference number (for display)
+export interface BookingWithReference extends BookingWithCustomer {
+  reference_number: string; // human-readable booking ID
+}
+
+// Pricing calculation result (matches functions/lib/pricing.ts)
+export interface PricingCalculation {
+  baseRate: number;
+  durationHours: number;
+  dayType: "weekday" | "weekend" | "holiday";
+  dayMultiplier: number;
+  seasonType: "peak" | "off_peak";
+  seasonMultiplier: number;
+  residentDiscount: number; // 0 = no discount, 0.5 = 50% off
+  finalAmount: number;
+  isHoliday: boolean;
+  isWeekend: boolean;
+  isPeakSeason: boolean;
+}
+
+// Guest session (for Google SSO)
+export interface GuestSession {
+  customerId: string;
+  customerType: "external";
+  email: string;
+  firstName: string;
+  lastName: string;
+  picture?: string;
+  exp?: number; // JWT expiration
+}
+
+// Amenity closure (admin-created blocks, separate from booking_blocked_dates)
+export interface AmenityClosure {
+  id: string;
+  amenity_type: AmenityType;
+  date: string;
+  slot: TimeBlockSlot;
+  reason: string;
+  created_by?: string;
+  created_at: string;
+}
+
+// Create booking request (unified)
+export interface CreateBookingRequest {
+  amenity_type: AmenityType;
+  date: string; // YYYY-MM-DD format
+  slot: TimeBlockSlot;
+  event_type?: "wedding" | "birthday" | "meeting" | "sports" | "other";
+  purpose?: string;
+  attendee_count?: number;
+}
+
+// Create booking with guest info (for external guests without account)
+export interface CreateGuestBookingRequest extends CreateBookingRequest {
+  guest_first_name: string;
+  guest_last_name: string;
+  guest_email: string;
+  guest_phone: string;
+}
+
+// Update booking status request
+export interface UpdateBookingStatusRequest {
+  status: UnifiedBookingStatus;
+  rejection_reason?: string;
+  admin_notes?: string;
+}
+
+// Booking list filters
+export interface BookingListFilters {
+  status?: UnifiedBookingStatus;
+  amenity_type?: AmenityType;
+  date_from?: string;
+  date_to?: string;
+  customer_type?: "resident" | "external";
+  household_id?: string;
+  user_id?: string;
+  customer_id?: string;
+}
+
+// Booking list response
+export interface BookingListResponse {
+  bookings: BookingWithCustomer[];
+  total: number;
+}
+
+// My bookings response (for residents and guests)
+export interface MyBookingsResponse {
+  bookings: BookingWithReference[];
+  upcoming: number;
+  past: number;
+  cancelled: number;
+}
+
+// Booking status check response (public)
+export interface BookingStatusResponse {
+  booking: BookingWithReference;
+}
+
+// Availability check response
+export interface BookingAvailabilityResponse {
+  date: string;
+  amenity_type: AmenityType;
+  available_slots: TimeBlockSlot[];
+  existing_bookings: {
+    slot: TimeBlockSlot;
+    status: UnifiedBookingStatus;
+  }[];
+  closures: AmenityClosure[];
 }

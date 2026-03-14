@@ -22,6 +22,7 @@ import { notificationsRouter } from './routes/notifications';
 import { passManagementRouter } from './routes/pass-management';
 import { lotMembersRouter, adminLotMembersRouter } from './routes/lot-members';
 import { publicRouter } from './routes/public';
+import { bookingsRouter } from './routes/bookings';
 
 type Env = {
   DB: D1Database;
@@ -152,6 +153,42 @@ app.route('/api/public', publicRouter);
 app.route('/api/lot-members', lotMembersRouter);
 app.route('/api/admin/lot-members', adminLotMembersRouter);
 app.route('/api/pass-requests', passManagementRouter);
+app.route('/api/bookings', bookingsRouter);
+
+// =============================================================================
+// Scheduled Event: GDPR IP Cleanup (runs daily at 3 AM)
+// =============================================================================
+// Cloudflare Workers scheduled event handler
+export async function onScheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+  console.log('[GDPR IP Cleanup] Running scheduled task at:', new Date().toISOString());
+
+  try {
+    // Clean up expired IP addresses from customers table
+    const customerResult = await env.DB.prepare(`
+      UPDATE customers
+      SET created_ip = NULL
+      WHERE ip_retained_until IS NOT NULL
+        AND ip_retained_until < date('now')
+        AND created_ip IS NOT NULL
+    `).run();
+
+    console.log('[GDPR IP Cleanup] Customers IPs cleaned:', customerResult.meta?.changes || 0);
+
+    // Clean up expired IP addresses from bookings table (90-day retention)
+    const bookingResult = await env.DB.prepare(`
+      UPDATE bookings
+      SET created_ip = NULL
+      WHERE created_ip IS NOT NULL
+        AND date(created_at, '+90 days') < date('now')
+    `).run();
+
+    console.log('[GDPR IP Cleanup] Booking IPs cleaned:', bookingResult.meta?.changes || 0);
+
+    console.log('[GDPR IP Cleanup] Completed successfully');
+  } catch (error) {
+    console.error('[GDPR IP Cleanup] Error:', error);
+  }
+}
 
 // Export for Cloudflare Pages Functions
 export default app;

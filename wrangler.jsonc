@@ -21,6 +21,7 @@
   "vars": {
     "ENVIRONMENT": "production",
     "ALLOWED_ORIGINS": "https://lhs-hoa.pages.dev",
-    "GOOGLE_REDIRECT_URI": "https://lhs-hoa.pages.dev/api/auth/google/callback"
+    "GOOGLE_REDIRECT_URI": "https://lhs-hoa.pages.dev/api/auth/google/callback",
+    "APP_URL": "https://lhs-hoa.pages.dev"
   }
 }
