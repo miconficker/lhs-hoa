@@ -67,17 +67,11 @@ export function validateAdminBookingRequest(data: any): ValidationResult {
         error: 'new_customer object is required for new residents',
       };
     }
-    const { first_name, last_name, email, household_address } = data.new_customer;
+    const { first_name, last_name, email } = data.new_customer;
     if (!first_name || !last_name || !email) {
       return {
         valid: false,
         error: 'new_customer must include first_name, last_name, and email',
-      };
-    }
-    if (!household_address) {
-      return {
-        valid: false,
-        error: 'new_customer.household_address is required for new residents',
       };
     }
   }
@@ -114,28 +108,10 @@ export function validateAdminBookingRequest(data: any): ValidationResult {
     };
   }
 
-  // Validate date format (YYYY-MM-DD)
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (!dateRegex.test(data.date)) {
-    return {
-      valid: false,
-      error: 'date must be in YYYY-MM-DD format',
-    };
-  }
-
   if (!data.slot) {
     return {
       valid: false,
       error: 'slot is required',
-    };
-  }
-
-  // Validate slot value
-  const validSlots = ['AM', 'PM', 'FULL_DAY'];
-  if (!validSlots.includes(data.slot)) {
-    return {
-      valid: false,
-      error: `slot must be one of: ${validSlots.join(', ')}`,
     };
   }
 
@@ -145,16 +121,6 @@ export function validateAdminBookingRequest(data: any): ValidationResult {
       return {
         valid: false,
         error: 'override_price must be a non-negative number',
-      };
-    }
-  }
-
-  // Validate payment_amount if record_payment is true
-  if (data.record_payment && data.payment_amount !== undefined) {
-    if (typeof data.payment_amount !== 'number' || data.payment_amount < 0) {
-      return {
-        valid: false,
-        error: 'payment_amount must be a non-negative number',
       };
     }
   }
@@ -180,13 +146,9 @@ export function validateAdminBookingRequest(data: any): ValidationResult {
  */
 export function determineInitialStatus(request: AdminBookingRequest): UnifiedBookingStatus {
   if (request.skip_approval) {
-    if (request.record_payment && request.payment_amount !== undefined) {
-      // Will determine based on whether payment covers the full amount
-      // This is handled after pricing calculation, so default to payment_due
-      // The caller should check if payment_amount >= amount and set confirmed
-      return 'payment_due';
+    if (request.record_payment && request.payment_amount && request.override_price !== undefined) {
+      return request.payment_amount >= request.override_price ? 'confirmed' : 'payment_due';
     }
-    // No payment recorded, or skip_approval without payment requirement
     return 'confirmed';
   }
 
@@ -274,24 +236,24 @@ export function generateAdminNotes(
  * @param db - D1Database instance
  * @param request - The admin booking request
  * @param createdBy - The user ID of the admin creating the customer
- * @returns The created customer ID
- * @throws Error if customer creation fails or new_resident is requested
+ * @returns Object with customerId, userId?, householdId?, or error?
  */
 export async function createNewCustomer(
   db: D1Database,
   request: AdminBookingRequest,
   createdBy: string
-): Promise<string> {
-  if (request.user_type === 'new_guest') {
-    const { new_customer } = request;
-    if (!new_customer) {
-      throw new Error('new_customer data required for guest creation');
-    }
+): Promise<{ customerId?: string; userId?: string; householdId?: string; error?: string }> {
+  const { new_customer } = request;
+  if (!new_customer) {
+    return { error: 'No new customer data provided' };
+  }
 
-    const customerId = crypto.randomUUID();
-    const now = new Date().toISOString();
+  try {
+    if (request.user_type === 'new_guest') {
+      // Create external guest customer
+      const customerId = crypto.randomUUID();
+      const now = new Date().toISOString();
 
-    try {
       await db.prepare(
         `INSERT INTO customers (
           id,
@@ -314,22 +276,15 @@ export async function createNewCustomer(
         now
       ).run();
 
-      return customerId;
-    } catch (error: any) {
-      // Handle UNIQUE constraint on email
-      if (error.message?.includes('UNIQUE constraint')) {
-        throw new Error(`Customer with email ${new_customer.email} already exists`);
-      }
-      throw new Error(`Failed to create customer: ${error.message}`);
+      return { customerId };
+    } else if (request.user_type === 'new_resident') {
+      // Create new resident (requires creating user and household)
+      // This is more complex - for now, require admin to create via user management
+      return { error: 'Please create new residents via User Management first' };
     }
+  } catch (error: any) {
+    return { error: `Failed to create customer: ${error.message}` };
   }
 
-  if (request.user_type === 'new_resident') {
-    throw new Error(
-      'Creating new residents through admin booking is not supported. ' +
-      'Please create the user account and household first, then create a booking for the existing resident.'
-    );
-  }
-
-  throw new Error(`Invalid user_type for customer creation: ${request.user_type}`);
+  return { error: `Invalid user_type for customer creation: ${request.user_type}` };
 }
