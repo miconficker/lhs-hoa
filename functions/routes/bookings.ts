@@ -24,6 +24,7 @@ import type {
 } from '../../types';
 import { getUserFromRequest } from '../lib/auth';
 import { applyCascadingBlockLogic } from '../lib/slot-availability';
+import { createBookingNotification } from '../lib/booking-notifications';
 import {
   getGuestSessionFromRequest,
   getClientIp,
@@ -1270,6 +1271,19 @@ bookingsRouter.post('/:id/action', async (c) => {
     auth.userId,
     id
   ).run();
+
+  // Send notification based on action
+  if (action === 'approve') {
+    await createBookingNotification(c.env.DB, { ...currentBooking, id, booking_status: nextStatus }, 'approved_to_payment_due');
+  } else if (action === 'confirm_payment') {
+    await createBookingNotification(c.env.DB, { ...currentBooking, id, booking_status: nextStatus }, 'payment_verified_confirmed');
+  } else if (action === 'reject') {
+    await createBookingNotification(c.env.DB, { ...currentBooking, id, booking_status: nextStatus }, 'rejected', rejection_reason);
+  } else if (action === 'request_new_proof') {
+    await createBookingNotification(c.env.DB, { ...currentBooking, id, booking_status: nextStatus }, 'payment_review_failed');
+  } else if (action === 'mark_no_show') {
+    await createBookingNotification(c.env.DB, { ...currentBooking, id, booking_status: nextStatus }, 'cancelled');
+  }
 
   if (nextStatus === 'confirmed' && fromStatus !== 'confirmed') {
     try {
