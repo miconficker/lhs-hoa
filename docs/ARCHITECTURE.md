@@ -119,8 +119,8 @@ lhs-hoa/
 │   │   ├── notifications.ts      # /api/notifications/*
 │   │   ├── pass-management.ts    # /api/pass-requests/*
 │   │   ├── payments.ts           # /api/payments/*
+│   │   ├── bookings.ts           # /api/bookings/* (unified booking system)
 │   │   ├── polls.ts              # /api/polls/*
-│   │   ├── reservations.ts       # /api/reservations/*
 │   │   ├── service-requests.ts   # /api/service-requests/*
 │   │   ├── delinquency.ts        # /api/admin/delinquency/*
 │   │   ├── public.ts             # /api/public/* (no authentication - external bookings)
@@ -132,6 +132,16 @@ lhs-hoa/
 │   ├── components/
 │   │   ├── ui/                   # shadcn/ui base components
 │   │   ├── admin/                # Admin-specific components
+│   │   ├── booking/              # Booking system components (unified)
+│   │   │   ├── BookingCalendar.tsx       # Calendar view with availability
+│   │   │   ├── BookingHistory.tsx        # User booking history
+│   │   │   ├── BookingStatusPage.tsx     # Status tracking page
+│   │   │   ├── CalendarDayCell.tsx       # Individual calendar day cell
+│   │   │   ├── CalendarLegend.tsx        # Calendar color legend
+│   │   │   ├── PricingCard.tsx           # Pricing information card
+│   │   │   ├── UnifiedBookingCalendar.tsx # Unified calendar component
+│   │   │   ├── UnifiedBookingForm.tsx    # Unified booking form
+│   │   │   └── useCalendarAvailability.ts # Calendar availability hook
 │   │   │   └── lots/             # Lot management components
 │   │   │       ├── LotsManagementPage.tsx
 │   │   │       ├── AssignMemberDialog.tsx
@@ -150,6 +160,7 @@ lhs-hoa/
 │   │   └── useAuth.ts            # Authentication state (Zustand)
 │   ├── lib/
 │   │   ├── api.ts                # API client & request helpers
+│   │   ├── booking-status.ts     # Unified booking status config
 │   │   ├── utils.ts              # Utility functions (cn())
 │   │   ├── logger.ts             # Client-side logging
 │   │   ├── sanitize.ts           # XSS prevention utilities (DOMPurify)
@@ -157,7 +168,9 @@ lhs-hoa/
 │   │   └── paymentExport.ts      # CSV export utilities
 │   ├── public/                   # Public-facing components
 │   │   ├── PublicPageHeader.tsx  # Shared header with dark mode toggle
-│   │   └── PublicLayout.tsx      # Layout wrapper for public pages
+│   │   ├── PublicLayout.tsx      # Layout wrapper for public pages
+│   │   ├── QRCodeDisplay.tsx     # QR code for status tracking
+│   │   └── StatusPhaseIndicator.tsx  # Booking status phase indicator
 │   ├── pages/                    # Page components
 │   │   ├── admin/                # Admin-specific pages
 │   │   │   ├── AdminLayout.tsx   # Admin layout wrapper with persistent sidebar
@@ -167,14 +180,21 @@ lhs-hoa/
 │   │   │   │   └── BoardMembersTab.tsx
 │   │   │   ├── MemberApprovalsPage.tsx
 │   │   │   └── reservations/     # Reservation management
-│   │   │       └── ExternalRentalsTab.tsx  # External rentals with pending queue
+│   │   │       └── UnifiedBookingsTab.tsx  # Unified bookings with status workflow
+│   │   ├── bookings/             # Unified booking pages (residents + customers)
+│   │   │   ├── BookingDetailsPage.tsx  # View booking details with status
+│   │   │   └── BookingPaymentPage.tsx  # Upload payment proof
 │   │   ├── public/              # Public pages (no authentication)
 │   │   │   ├── LandingPage.tsx             # Landing page with resident/visitor options
 │   │   │   ├── ExternalRentalsPage.tsx     # Browse amenities (with dark mode)
 │   │   │   ├── AmenityDetailPage.tsx      # Calendar & pricing
 │   │   │   ├── BookingPage.tsx             # Guest booking form
 │   │   │   ├── ConfirmationPage.tsx        # Status tracking
-│   │   │   └── SuccessPage.tsx             # Booking success with auto-redirect
+│   │   │   ├── SuccessPage.tsx             # Booking success with auto-redirect
+│   │   │   ├── InquiryPage.tsx             # Initial inquiry form
+│   │   │   ├── InquiryPaymentPage.tsx      # Payment after inquiry approval
+│   │   │   ├── InquiryPendingPage.tsx      # Pending inquiry status
+│   │   │   └── StatusCheckPage.tsx         # Check status by reference number
 │   │   ├── LoginPage.tsx
 │   │   ├── DashboardPage.tsx     # Resident dashboard (user-centric)
 │   │   ├── MapPage.tsx
@@ -268,8 +288,16 @@ The app uses **React Router v6** with nested routes:
 ├── /external-rentals/book (public)                    # Guest booking form
 ├── /external-rentals/confirmation/:id (public)       # Booking status tracker
 ├── /external-rentals/success/:id (public)             # Booking success page
+├── /inquiry (public)                                   # Initial inquiry form
+├── /inquiry/:amenityType (public)                     # Amenity-specific inquiry
+├── /inquiry/payment/:id (public)                      # Payment after approval
+├── /inquiry/pending/:id (public)                      # Pending inquiry status
+├── /status/check (public)                             # Check status by reference
 └── / (protected - MainLayout)
     ├── /dashboard              # Resident dashboard (user-centric)
+    ├── /bookings               # Unified booking management
+    ├── /bookings/:id           # Booking details
+    ├── /bookings/:id/payment   # Upload payment proof
     ├── /map
     ├── /service-requests
     ├── /reservations
@@ -603,77 +631,176 @@ CREATE TABLE payments (
 );
 ```
 
-#### `reservations` (Internal - Residents)
+#### `customers` (External Guest Records)
 ```sql
-CREATE TABLE reservations (
+CREATE TABLE customers (
   id TEXT PRIMARY KEY,
-  household_id TEXT NOT NULL REFERENCES households(id),
-  amenity_type TEXT NOT NULL CHECK(amenity_type IN ('clubhouse', 'pool', 'basketball-court')),
-  date DATE NOT NULL,
-  slot TEXT NOT NULL CHECK(slot IN ('AM', 'PM')),
-  status TEXT DEFAULT 'pending',
-  purpose TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(household_id, amenity_type, date, slot)
-);
-```
-
-#### `external_rentals` (Public - Non-Residents)
-```sql
-CREATE TABLE external_rentals (
-  id TEXT PRIMARY KEY,
-  amenity_type TEXT NOT NULL CHECK(amenity_type IN ('clubhouse', 'pool', 'basketball-court', 'tennis-court')),
-  date DATE NOT NULL,
-  slot TEXT NOT NULL CHECK(slot IN ('AM', 'PM', 'FULL_DAY')),
-  renter_name TEXT NOT NULL,
-  renter_contact TEXT,
-  amount REAL NOT NULL,
-  payment_status TEXT DEFAULT 'unpaid' CHECK(payment_status IN ('unpaid', 'partial', 'paid', 'overdue')),
-  notes TEXT,
-  -- Public booking fields (migration 0020)
-  guest_name TEXT,
-  guest_email TEXT,
-  guest_phone TEXT,
-  proof_of_payment_url TEXT,
-  booking_status TEXT DEFAULT 'pending_payment' CHECK(
-    booking_status IN ('pending_payment', 'pending_verification', 'confirmed', 'rejected', 'cancelled')
-  ),
-  rejection_reason TEXT,
-  created_ip TEXT,
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  phone TEXT,
   guest_notes TEXT,
-  admin_notes TEXT,
+  created_ip TEXT,
   ip_retained_until DATE,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  -- NOTE: No UNIQUE constraint on (amenity_type, date, slot) - allows multiple pending requests
-  -- Confirmed bookings are tracked in booking_blocked_dates table
-);
-```
-
-#### `booking_blocked_dates` (Confirmed Bookings Only)
-```sql
-CREATE TABLE booking_blocked_dates (
-  id TEXT PRIMARY KEY,
-  amenity_type TEXT NOT NULL CHECK(amenity_type IN ('clubhouse', 'pool', 'basketball-court', 'tennis-court')),
-  booking_date DATE NOT NULL,
-  slot TEXT NOT NULL CHECK(slot IN ('AM', 'PM', 'FULL_DAY')),
-  external_rental_id TEXT REFERENCES external_rentals(id),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(amenity_type, booking_date, slot)  -- Only confirmed bookings block slots
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
-**Design Difference - Internal vs External Bookings**:
+**Purpose**: Stores external guest information separate from bookings. Guests can make multiple bookings without re-entering information.
 
-| Aspect | Internal (`reservations`) | External (`external_rentals`) |
-|--------|--------------------------|------------------------------|
-| **Who** | Residents | Non-residents/public |
+#### `bookings` (Unified Booking System)
+```sql
+CREATE TABLE bookings (
+  id TEXT PRIMARY KEY,
+
+  -- Exactly one of these must be set (CHECK constraint enforced)
+  user_id TEXT REFERENCES users(id),         -- for residents
+  customer_id TEXT REFERENCES customers(id), -- for external guests
+
+  household_id TEXT REFERENCES households(id), -- for resident bookings
+
+  -- Explicit workflow (kept even though user_id/customer_id implies it)
+  workflow TEXT NOT NULL CHECK(workflow IN ('resident', 'external')),
+
+  -- Booking details
+  amenity_type TEXT NOT NULL CHECK(amenity_type IN ('clubhouse', 'pool', 'basketball-court', 'tennis-court')),
+  date DATE NOT NULL,
+  slot TEXT NOT NULL CHECK(slot IN ('AM', 'PM', 'FULL_DAY')),
+
+  -- Pricing breakdown
+  base_rate REAL NOT NULL,
+  duration_hours INTEGER NOT NULL,
+  day_multiplier REAL NOT NULL DEFAULT 1.0,
+  season_multiplier REAL NOT NULL DEFAULT 1.0,
+  resident_discount REAL DEFAULT 0,  -- 0 = no discount, 0.5 = 50% off
+  amount REAL NOT NULL,
+  pricing_calculated_at TEXT NOT NULL DEFAULT (datetime('now')),
+
+  -- Payment tracking
+  payment_status TEXT DEFAULT 'unpaid' CHECK(payment_status IN ('unpaid', 'partial', 'paid', 'overdue', 'waived')),
+  amount_paid REAL DEFAULT 0,
+  payment_method TEXT,
+  receipt_number TEXT,
+  proof_of_payment_url TEXT,
+
+  -- Unified status workflow (simplified)
+  booking_status TEXT NOT NULL DEFAULT 'submitted' CHECK(booking_status IN (
+    'submitted',        -- awaiting admin approval
+    'payment_due',      -- approved; awaiting payment/proof
+    'payment_review',   -- proof uploaded; admin reviewing
+    'confirmed',
+    'rejected',
+    'cancelled',
+    'no_show'
+  )),
+
+  -- Event details
+  event_type TEXT CHECK(event_type IN ('wedding', 'birthday', 'meeting', 'sports', 'other', NULL)),
+  purpose TEXT,
+  attendee_count INTEGER,
+
+  -- Admin notes
+  admin_notes TEXT,
+  rejection_reason TEXT,
+
+  -- Admin approval metadata
+  approved_at TEXT,
+  approved_by TEXT REFERENCES users(id),
+
+  -- Audit
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  created_by TEXT REFERENCES users(id),
+  created_by_customer_id TEXT REFERENCES customers(id),
+  created_ip TEXT,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_by TEXT REFERENCES users(id),
+
+  -- Soft delete
+  deleted_at TEXT,
+  deleted_by TEXT REFERENCES users(id),
+
+  -- Ensure exactly one of user_id or customer_id is set
+  CHECK (
+    (user_id IS NOT NULL AND customer_id IS NULL) OR
+    (user_id IS NULL AND customer_id IS NOT NULL)
+  )
+);
+```
+
+**Purpose**: Single unified table for all bookings (resident and external) with consistent status workflow.
+
+**Status Workflow**:
+1. `submitted` - Initial state, awaiting admin review
+2. `payment_due` - Admin approved, awaiting payment/proof upload
+3. `payment_review` - Payment proof uploaded, admin verifying
+4. `confirmed` - Payment verified, booking confirmed
+5. `rejected` - Booking rejected (with reason)
+6. `cancelled` - Booking cancelled by user or admin
+7. `no_show` - Marked as no-show by admin
+
+**Design Difference - Resident vs External Bookings**:
+
+| Aspect | Resident (`user_id`) | External (`customer_id`) |
+|--------|---------------------|--------------------------|
+| **Who** | Authenticated residents | Non-residents/public |
 | **Auth Required** | Yes | No |
-| **Confirmation** | Instant (if available) | Manual approval by admin |
-| **Slot Blocking** | Blocks immediately on booking | Only blocks when confirmed |
-| **Multiple Pending** | Not allowed (UNIQUE constraint) | Allowed with timestamp sorting |
-| **Payment Flow** | Record payment after booking | Upload proof before confirmation |
-| **Discount** | N/A | 50% resident discount when logged in |
-| **Reference Number** | N/A | Generated format: `EXT-YYYYMMDD-XXX` |
+| **Confirmation** | Admin approval | Admin approval |
+| **Slot Blocking** | Only when confirmed | Only when confirmed |
+| **Multiple Pending** | Allowed with timestamp sorting | Allowed with timestamp sorting |
+| **Payment Flow** | Upload proof before confirmation | Upload proof before confirmation |
+| **Discount** | Automatic 50% resident discount | Full price |
+| **Reference Number** | `RES-YYYYMMDD-XXX` | `EXT-YYYYMMDD-XXX` |
+
+**Indexes**:
+```sql
+CREATE INDEX idx_bookings_user ON bookings(user_id);
+CREATE INDEX idx_bookings_customer ON bookings(customer_id);
+CREATE INDEX idx_bookings_household ON bookings(household_id);
+CREATE INDEX idx_bookings_workflow ON bookings(workflow);
+CREATE INDEX idx_bookings_status ON bookings(booking_status);
+CREATE INDEX idx_bookings_payment_status ON bookings(payment_status);
+CREATE INDEX idx_bookings_date ON bookings(date);
+CREATE INDEX idx_bookings_slot_lookup ON bookings(amenity_type, date, slot) WHERE deleted_at IS NULL;
+```
+
+**Compatibility Views** (for backward compatibility):
+```sql
+-- Legacy reservations view (resident bookings only)
+CREATE VIEW reservations_legacy AS
+  SELECT
+    b.id, b.household_id, b.amenity_type, b.date, b.slot,
+    b.amount, b.payment_status, b.amount_paid, b.payment_method, b.receipt_number,
+    CASE b.booking_status
+      WHEN 'confirmed' THEN 'confirmed'
+      WHEN 'cancelled' THEN 'cancelled'
+      ELSE 'pending'
+    END AS status,
+    b.purpose, b.created_at, b.created_by
+  FROM bookings b
+  WHERE b.workflow = 'resident' AND b.deleted_at IS NULL;
+
+-- Legacy external_rentals view (external bookings only)
+CREATE VIEW external_rentals_legacy AS
+  SELECT
+    b.id, b.amenity_type, b.date, b.slot,
+    b.amount, b.payment_status, b.amount_paid, b.payment_method, b.receipt_number,
+    CASE b.booking_status
+      WHEN 'submitted' THEN 'inquiry_submitted'
+      WHEN 'payment_due' THEN 'pending_payment'
+      WHEN 'payment_review' THEN 'pending_verification'
+      ELSE b.booking_status
+    END AS booking_status,
+    c.first_name || ' ' || c.last_name AS guest_name,
+    c.first_name AS guest_first_name, c.last_name AS guest_last_name,
+    c.email AS guest_email, c.phone AS guest_phone,
+    b.proof_of_payment_url, b.admin_notes, b.rejection_reason,
+    b.created_at, b.created_by, b.created_ip,
+    b.approved_at, b.approved_by, c.guest_notes, b.purpose
+  FROM bookings b
+  JOIN customers c ON b.customer_id = c.id
+  WHERE b.workflow = 'external' AND b.deleted_at IS NULL;
+```
 
 #### `polls` & `poll_votes`
 ```sql
@@ -2209,38 +2336,52 @@ jobs:
 
 ## Document Metadata
 
-**Last Updated**: 2026-03-13
-**Version**: 1.11.0
-**Status**: Production System (Security Hardened)
+**Last Updated**: 2026-03-14
+**Version**: 1.12.0
+**Status**: Production System (Unified Booking System)
 **Maintained By**: Development Team
 
-**Recent Updates (v1.11.0)**:
-- Comprehensive security hardening for external rental system
-  - Security headers (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy)
-  - Rate limiting expansion with 8 tiers (public_api, availability, pricing, status_check, proof_upload, etc.)
-  - Enhanced input validation (email checks, max length constraints, URL whitelisting)
-  - XSS prevention via DOMPurify sanitization on user-generated content
-  - CSRF token protection for state-changing operations
-  - Cloudflare Turnstile integration (optional CAPTCHA for non-residents)
-  - File upload validation (type whitelist, size limits, path traversal prevention)
-- New security utilities in functions/lib/
-  - `csrf.ts` - HMAC-signed CSRF tokens with timestamp expiration
-  - `turnstile.ts` - Cloudflare Turnstile verification
-  - Updated `rate-limit.ts` - Added 5 new rate limit configurations
-- Frontend security enhancements
-  - `src/lib/sanitize.ts` - XSS prevention utilities with DOMPurify
-  - `BookingPage.tsx` - Turnstile widget, enhanced file validation
-  - `ConfirmationPage.tsx` - Sanitized rejection_reason and admin_notes output
-  - `api.ts` - Auto-includes CSRF tokens for public endpoint requests
-- Environment configuration
-  - Added `TURNSTILE_SITE_KEY` to wrangler.jsonc vars
-  - Updated `vite-env.d.ts` with VITE_TURNSTILE_SITE_KEY type
-  - Updated `.dev.vars.example` with TURNSTILE_SECRET_KEY template
-- Security score improved from 8/10 to 9/10
-- Phase 1 critical security hardening completed
-- OWASP Top 10 compliance improved (Partial → Good)
+**Recent Updates (v1.12.0)**:
+- Unified booking system with single `bookings` table (migration 0028)
+  - Replaced separate `reservations` and `external_rentals` tables
+  - Simplified status workflow: submitted → payment_due → payment_review → confirmed
+  - Shared terminal states: confirmed, rejected, cancelled, no_show
+  - Explicit `workflow` column for clear customer type separation (resident/external)
+  - Compatibility views for backward compatibility with existing code
+- New `customers` table for external guest management
+  - Guest information stored separately from bookings
+  - Guests can make multiple bookings without re-entering data
+  - IP retention tracking for GDPR compliance
+- Centralized booking status configuration (`src/lib/booking-status.ts`)
+  - Status labels, colors, icons for all booking states
+  - Valid transitions by customer type (resident/external)
+  - Helper functions: `isTerminalStatus()`, `allowsPayment()`, `allowsCancellation()`
+  - `getStatusColorClasses()` returns dark mode compatible color classes
+- New booking pages (`src/pages/bookings/`)
+  - `BookingDetailsPage` - view booking details with status badge
+  - `BookingPaymentPage` - upload payment proof for pending bookings
+- New booking components (`src/components/booking/`)
+  - `CalendarDayCell` - individual day cell with booking indicators
+  - `CalendarLegend` - color legend for calendar states
+  - `UnifiedBookingCalendar` - unified calendar for all bookings
+  - `useCalendarAvailability` - custom hook for availability data
+- New public inquiry workflow pages (`src/pages/public/`)
+  - `InquiryPage` - initial inquiry form for external guests
+  - `InquiryPaymentPage` - payment after inquiry approval
+  - `InquiryPendingPage` - pending inquiry status tracker
+  - `StatusCheckPage` - check status by reference number
+- Guest authentication support via `useAuth` hook
+  - Optional customer authentication for external guests
+  - Separate from user authentication flow
+- Updated API routes for unified booking system
+  - `/api/bookings/*` - unified booking endpoints (replaces separate routes)
+  - `functions/routes/bookings.ts` - handles both resident and external bookings
+  - `functions/routes/public.ts` - public inquiry and status endpoints
+- Updated types to support unified bookings and customers table
+  - `BookingWithCustomer` type includes customer data for external bookings
+  - `Customer` type for guest records
 
-**Recent Updates (v1.10.0)**:
+**Recent Updates (v1.11.0)**:
 - Public layout wrapper for consistent browsing experience
   - Created `PublicLayout.tsx` component that wraps `PublicPageHeader` with consistent container
   - All public booking pages now use `PublicLayout` for uniform spacing, max-width, and navigation
