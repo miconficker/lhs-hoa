@@ -107,6 +107,8 @@ lhs-hoa/
 │   │   ├── auth.ts              # JWT, password hashing, Google OAuth
 │   │   ├── csrf.ts              # CSRF token generation and verification
 │   │   ├── rate-limit.ts        # Rate limiting using D1 database
+│   │   ├── public-api-dtos.ts   # Public API response DTOs (security layer)
+│   │   ├── reference-numbers.ts # Reference number format validation
 │   │   └── turnstile.ts         # Cloudflare Turnstile CAPTCHA verification
 │   ├── routes/                   # API endpoint handlers
 │   │   ├── auth.ts               # /api/auth/*
@@ -124,6 +126,7 @@ lhs-hoa/
 │   │   ├── service-requests.ts   # /api/service-requests/*
 │   │   ├── delinquency.ts        # /api/admin/delinquency/*
 │   │   ├── public.ts             # /api/public/* (no authentication - external bookings)
+│   │   ├── public-v1.ts          # Legacy public API isolation (version-specific fixes)
 │   │   └── admin.ts              # /api/admin/* (admin-only)
 │   └── types/
 │       └── index.ts              # Shared TypeScript types
@@ -132,6 +135,8 @@ lhs-hoa/
 │   ├── components/
 │   │   ├── ui/                   # shadcn/ui base components
 │   │   ├── admin/                # Admin-specific components
+│   │   │   ├── test/              # Admin test components
+│   │   │   │   └── NotificationBadgeTest.tsx  # Badge count testing
 │   │   ├── booking/              # Booking system components (unified)
 │   │   │   ├── BookingCalendar.tsx       # Calendar view with availability
 │   │   │   ├── BookingHistory.tsx        # User booking history
@@ -158,7 +163,8 @@ lhs-hoa/
 │   │   └── skeletons/            # Loading skeletons
 │   ├── hooks/                    # Custom React hooks
 │   │   ├── useAuth.ts            # Authentication state (Zustand)
-│   │   └── useAdminNotificationCounts.ts  # Admin sidebar notification badges
+│   │   ├── useAdminNotificationCounts.ts  # Admin sidebar notification badges
+│   │   └── useUserNotificationCounts.ts   # User/homeowner navigation badges
 │   ├── lib/
 │   │   ├── api.ts                # API client & request helpers
 │   │   ├── booking-status.ts     # Unified booking status config
@@ -180,6 +186,8 @@ lhs-hoa/
 │   │   │   │   ├── UsersTab.tsx   # Users list and management
 │   │   │   │   └── BoardMembersTab.tsx
 │   │   │   ├── MemberApprovalsPage.tsx
+│   │   │   ├── test/             # Admin test pages
+│   │   │   │   └── NotificationBadgeTestPage.tsx  # Badge count testing page
 │   │   │   └── reservations/     # Reservation management
 │   │   │       └── UnifiedBookingsTab.tsx  # Unified bookings with status workflow
 │   │   ├── bookings/             # Unified booking pages (residents + customers)
@@ -240,13 +248,17 @@ lhs-hoa/
 │   ├── 0007_system_settings.sql
 │   ├── 0008_seed_data.sql
 │   ├── 0019_manual_delinquencies.sql  # Manual delinquency tracking
-│   └── 0020_delinquency_reason_codes.sql  # Structured reason codes (bylaw grounds)
+│   ├── 0020_delinquency_reason_codes.sql  # Structured reason codes (bylaw grounds)
+│   └── 0032_reference_number_mappings.sql  # Reference number format validation
 │
 ├── scripts/                      # Utility scripts
 │   ├── svg-to-geojson.ts         # Convert SVG map to GeoJSON
 │   └── lot-mapping.json          # Lot annotation mapping
 │
 ├── docs/                         # Documentation
+│   ├── security/                 # Security documentation
+│   │   ├── 2026-03-15-public-api-security-audit.md
+│   │   └── 2026-03-15-security-fixes-implementation.md
 │   └── payment-api-reference.md
 │
 ├── .dev.vars                     # Local development secrets
@@ -2516,10 +2528,42 @@ jobs:
 
 ## Document Metadata
 
-**Last Updated**: 2026-03-14
-**Version**: 1.12.2
+**Last Updated**: 2026-03-15
+**Version**: 1.13.0
 **Status**: Production System (Unified Booking System)
 **Maintained By**: Development Team
+
+**Recent Updates (v1.13.0)**:
+- Public API security fixes (DTO layer, reference number validation)
+  - Created `functions/lib/public-api-dtos.ts` with Zod schemas for all public API responses
+  - Created `functions/lib/reference-numbers.ts` for reference number format validation
+  - Added migration 0032: `reference_number_mappings` table for type-based reference number validation
+  - Created legacy API isolation in `functions/routes/public-v1.ts` for version-specific fixes
+  - Prevents database structure disclosure through enum value exposure
+  - All public API responses now use DTO layer with type-safe transformations
+  - Reference number validation ensures `RES-YYYYMMDD-XXX` and `EXT-YYYYMMDD-XXX` formats
+- User/Homeowner notification badges
+  - Added `useUserNotificationCounts` hook (`src/hooks/useUserNotificationCounts.ts`)
+  - Real-time badge counts for Messages and Notifications in user navigation
+  - Auto-refreshes every 30 seconds using parallel API requests
+  - Graceful error handling - individual API failures don't break the feature
+  - Type-safe badge key configuration mapped to counts object
+  - Displays in both desktop horizontal menu and mobile sheet navigation
+  - Added `src/pages/admin/test/NotificationBadgeTestPage.tsx` for badge testing
+- Timeline phase indicator for booking details
+  - Added `StatusPhaseIndicator` to `BookingDetailsPage.tsx` (resident bookings)
+  - Added `StatusPhaseIndicator` to `ConfirmationPage.tsx` (external bookings)
+  - Visual 4-phase timeline: Submitted → Payment → Verified → Confirmed
+  - Special terminal state handling for Rejected, Cancelled, No Show statuses
+  - Clear visual feedback for booking workflow progress
+- External booking availability optimization
+  - Optimized `useCalendarAvailability.ts` to use single range query instead of parallel requests
+  - Reduced API calls from ~30 requests/month to 1 request/month for external bookings
+  - Fixed slot blocking display bug - all fetched dates are now cached, not just requested ones
+  - Improved calendar performance and data completeness for external users
+- Security documentation additions
+  - Added `docs/security/2026-03-15-public-api-security-audit.md` - security audit findings
+  - Added `docs/security/2026-03-15-security-fixes-implementation.md` - implementation details
 
 **Recent Updates (v1.12.2)**:
 - Admin sidebar notification badges
