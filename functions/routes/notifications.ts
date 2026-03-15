@@ -43,12 +43,14 @@ notificationsRouter.get("/", async (c) => {
   const type = c.req.query("type");
   const readStatus = c.req.query("read");
 
+  // Query notifications by user_id or customer_id
+  // For external customers, authUser.userId will be the customer_id
   let query = `
-    SELECT id, user_id, type, title, content, link, read, created_at, sent_at
+    SELECT id, user_id, customer_id, type, title, content, link, read, created_at, sent_at
     FROM notifications
-    WHERE user_id = ?
+    WHERE user_id = ? OR customer_id = ?
   `;
-  const params: any[] = [authUser.userId];
+  const params: any[] = [authUser.userId, authUser.userId];
 
   if (type) {
     query += ` AND type = ?`;
@@ -69,8 +71,8 @@ notificationsRouter.get("/", async (c) => {
 
   // Get unread count
   const unreadResult = await c.env.DB.prepare(
-    `SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND read = 0`
-  ).bind(authUser.userId).first();
+    `SELECT COUNT(*) as count FROM notifications WHERE (user_id = ? OR customer_id = ?) AND read = 0`
+  ).bind(authUser.userId, authUser.userId).first();
 
   return c.json({
     notifications: notifications.results,
@@ -144,10 +146,10 @@ notificationsRouter.put("/:id/read", async (c) => {
 
   const id = c.req.param("id");
 
-  // Verify ownership
+  // Verify ownership (by user_id OR customer_id)
   const existing = await c.env.DB.prepare(
-    `SELECT * FROM notifications WHERE id = ? AND user_id = ?`
-  ).bind(id, authUser.userId).first();
+    `SELECT * FROM notifications WHERE id = ? AND (user_id = ? OR customer_id = ?)`
+  ).bind(id, authUser.userId, authUser.userId).first();
 
   if (!existing) {
     return c.json({ error: "Notification not found" }, 404);
@@ -172,8 +174,8 @@ notificationsRouter.put("/read-all", async (c) => {
   }
 
   await c.env.DB.prepare(
-    `UPDATE notifications SET read = 1 WHERE user_id = ? AND read = 0`
-  ).bind(authUser.userId).run();
+    `UPDATE notifications SET read = 1 WHERE (user_id = ? OR customer_id = ?) AND read = 0`
+  ).bind(authUser.userId, authUser.userId).run();
 
   return c.json({ success: true });
 });
@@ -187,10 +189,10 @@ notificationsRouter.delete("/:id", async (c) => {
 
   const id = c.req.param("id");
 
-  // Verify ownership
+  // Verify ownership (by user_id OR customer_id)
   const existing = await c.env.DB.prepare(
-    `SELECT * FROM notifications WHERE id = ? AND user_id = ?`
-  ).bind(id, authUser.userId).first();
+    `SELECT * FROM notifications WHERE id = ? AND (user_id = ? OR customer_id = ?)`
+  ).bind(id, authUser.userId, authUser.userId).first();
 
   if (!existing) {
     return c.json({ error: "Notification not found" }, 404);
@@ -307,27 +309,29 @@ notificationsRouter.get("/admin/all", async (c) => {
   return c.json({ notifications: notifications.results });
 });
 
-// Helper: Create notification for a user
+// Helper: Create notification for a user or customer
 export async function createNotification(
   db: D1Database,
   userId: string,
   type: "demand_letter" | "reminder" | "late_notice" | "announcement" | "alert" | "booking_status" | "payment_reminder" | "booking_reminder" | "payment_verification_requested" | "payment_verified" | "payment_rejected",
   title: string,
   content: string,
-  link?: string
+  link?: string,
+  customerId?: string
 ): Promise<any> {
   const id = crypto.randomUUID();
   await db.prepare(
-    `INSERT INTO notifications (id, user_id, type, title, content, link, read, sent_at)
-     VALUES (?, ?, ?, ?, ?, ?, 0, datetime('now'))`
+    `INSERT INTO notifications (id, user_id, customer_id, type, title, content, link, read, sent_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))`
   )
-    .bind(id, userId, type, title, content, link || null)
+    .bind(id, userId || null, customerId || null, type, title, content, link || null)
     .run();
 
   // Return the notification data directly without a SELECT query
   return {
     id,
-    user_id: userId,
+    user_id: userId || null,
+    customer_id: customerId || null,
     type,
     title,
     content,
@@ -348,7 +352,7 @@ export async function createBulkNotifications(
 ): Promise<any[]> {
   const results = [];
   for (const userId of userIds) {
-    const notification = await createNotification(db, userId, type, title, content, link);
+    const notification = await createNotification(db, userId, type, title, content, link, undefined);
     results.push(notification);
   }
   return results;

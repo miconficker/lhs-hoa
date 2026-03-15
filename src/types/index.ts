@@ -1472,6 +1472,64 @@ export interface UserSearchResponse {
   results: UserSearchResult[];
 }
 
+// =============================================================================
+// Admin Analytics
+// =============================================================================
+
+export interface BookingAnalyticsQuery {
+  start_date?: string; // YYYY-MM-DD
+  end_date?: string; // YYYY-MM-DD
+  period?: "7d" | "30d" | "90d" | "this_month";
+  group_by?: "amenity" | "slot" | "customer_type" | "status";
+}
+
+export interface BookingAnalyticsResponse {
+  summary: {
+    period: { start: string; end: string };
+    total_revenue: number;
+    total_bookings: number;
+    confirmed_bookings: number;
+    cancelled_bookings: number;
+    outstanding_balance: number;
+    unique_customers: number;
+    repeat_customers: number;
+    repeat_customer_rate: number;
+    cancellation_rate: number;
+  };
+  revenue_by_amenity: Array<{
+    amenity: string;
+    revenue: number;
+    bookings: number;
+  }>;
+  revenue_by_day: Array<{
+    date: string;
+    revenue: number;
+    bookings: number;
+  }>;
+  bookings_by_status: Array<{
+    status: string;
+    count: number;
+    percentage: number;
+  }>;
+  customer_type_breakdown: Array<{
+    type: "resident" | "external";
+    count: number;
+    revenue: number;
+    percentage: number;
+  }>;
+  popular_slots: Array<{
+    slot: string;
+    count: number;
+    percentage: number;
+  }>;
+  top_customers: Array<{
+    customer_name: string;
+    customer_type: string;
+    bookings: number;
+    total_revenue: number;
+  }>;
+}
+
 // Pricing calculation result (matches functions/lib/pricing.ts)
 export interface PricingCalculation {
   baseRate: number;

@@ -101,7 +101,10 @@ import type {
   MyBookingsResponse,
   BookingStatusResponse,
   BookingAvailabilityResponse,
+  BookingAnalyticsResponse,
   PricingCalculation,
+  AdminBookingRequest,
+  AdminBookingResponse,
 } from "@/types";
 
 import { logger } from "@/lib/logger";
@@ -1591,6 +1594,27 @@ export const api = {
           ),
       },
     },
+    // Analytics
+    getBookingAnalytics: (params?: {
+      start_date?: string;
+      end_date?: string;
+      period?: "7d" | "30d" | "90d" | "this_month";
+    }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.start_date) queryParams.set("start_date", params.start_date);
+      if (params?.end_date) queryParams.set("end_date", params.end_date);
+      if (params?.period) queryParams.set("period", params.period);
+      const queryString = queryParams.toString();
+      return apiGet<BookingAnalyticsResponse>(
+        `/admin/analytics/bookings${queryString ? `?${queryString}` : ""}`,
+      );
+    },
+    // Create booking as admin
+    createBooking: (input: AdminBookingRequest) =>
+      apiRequest<AdminBookingResponse>("/admin/bookings/create", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
   },
   notifications: {
     list: (params?: {

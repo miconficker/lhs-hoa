@@ -58,6 +58,21 @@ const UsersSection = lazy(() =>
     default: m.UsersSection,
   })),
 );
+const BookingAnalyticsPage = lazy(() =>
+  import("./pages/admin/analytics/BookingAnalyticsPage").then((m) => ({
+    default: m.BookingAnalyticsPage,
+  })),
+);
+const CreateBookingPage = lazy(() =>
+  import("./pages/admin/create-booking/CreateBookingPage").then((m) => ({
+    default: m.CreateBookingPage,
+  })),
+);
+const NotificationBadgeTest = lazy(() =>
+  import("./components/admin/test/NotificationBadgeTest").then((m) => ({
+    default: m.NotificationBadgeTest,
+  })),
+);
 const DebugPage = lazy(() =>
   import("./pages/DebugPage").then((m) => ({ default: m.DebugPage })),
 );
@@ -254,6 +269,36 @@ function App() {
                 <ProtectedRoute allowedRoles={["admin"]}>
                   <AdminLayout>
                     <MemberApprovalsPage />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/analytics"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminLayout>
+                    <BookingAnalyticsPage />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/create-booking"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminLayout>
+                    <CreateBookingPage />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="admin/test/notification-badges"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminLayout>
+                    <NotificationBadgeTest />
                   </AdminLayout>
                 </ProtectedRoute>
               }

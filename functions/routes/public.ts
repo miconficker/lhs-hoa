@@ -1088,3 +1088,40 @@ publicRouter.post('/bookings/:id/verify', async (c) => {
     }
   });
 });
+
+// GET /api/public/bookings/:id/notifications - Get notifications for a booking (public access)
+// This allows external guests to view notifications without authentication
+publicRouter.get('/bookings/:id/notifications', async (c) => {
+  const id = c.req.param('id');
+
+  // Verify booking exists
+  const booking = await c.env.DB.prepare(
+    `SELECT b.customer_id, b.user_id
+     FROM bookings b
+     WHERE b.id = ? AND b.deleted_at IS NULL`
+  ).bind(id).first();
+
+  if (!booking) {
+    return c.json({ error: 'Booking not found' }, 404);
+  }
+
+  // Get notifications for this booking's customer or user
+  const notifications = await c.env.DB.prepare(
+    `SELECT id, type, title, content, link, read, created_at, sent_at
+     FROM notifications
+     WHERE customer_id = ? OR user_id = ?
+     ORDER BY created_at DESC
+     LIMIT 50`
+  ).bind(booking.customer_id || '', booking.user_id || '').all();
+
+  // Filter notifications to only those relevant to this booking
+  // (i.e., notifications whose link contains this booking ID)
+  const filtered = (notifications.results || []).filter((n: any) =>
+    !n.link || n.link.includes(id)
+  );
+
+  return c.json({
+    notifications: filtered,
+    unread_count: filtered.filter((n: any) => !n.read).length,
+  });
+});

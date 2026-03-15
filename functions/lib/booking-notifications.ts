@@ -110,5 +110,14 @@ export async function createBookingNotification(
 
   // Import and call the notification helper
   const { createNotification } = await import('../routes/notifications');
-  await createNotification(db, userId, type, title, content, link);
+  // For residents: pass userId, for external guests: pass customer_id
+  await createNotification(
+    db,
+    booking.user_id || null,
+    type,
+    title,
+    content,
+    link,
+    booking.customer_id || null
+  );
 }

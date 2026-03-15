@@ -7,6 +7,8 @@ import type { User, UserRole } from '../types';
 import { timeBlocksRouter } from './admin/time-blocks';
 import { externalRentalsRouter } from './admin/external-rentals';
 import { amenityClosuresRouter } from './admin/amenity-closures';
+import { adminBookingsRouter } from './admin/bookings';
+import { analyticsRouter } from './admin/analytics';
 import delinquencyRoutes from './delinquency';
 
 type Env = {
@@ -29,6 +31,8 @@ export const adminRouter = new Hono<{ Bindings: Env }>();
 adminRouter.route('/time-blocks', timeBlocksRouter);
 adminRouter.route('/external-rentals', externalRentalsRouter);
 adminRouter.route('/amenity-closures', amenityClosuresRouter);
+adminRouter.route('/bookings', adminBookingsRouter);
+adminRouter.route('/analytics', analyticsRouter);
 adminRouter.route('/', delinquencyRoutes);
 
 // Helper function to generate UUID

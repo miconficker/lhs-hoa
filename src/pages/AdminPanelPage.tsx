@@ -15,6 +15,8 @@ import { NotificationsPage } from "./NotificationsPage";
 import { MessagesPage } from "./MessagesPage";
 import { PaymentsPage } from "./PaymentsPage";
 import { DelinquencyPage } from "./admin/financials/DelinquencyPage";
+import { BookingAnalyticsPage } from "./admin/analytics/BookingAnalyticsPage";
+import { CreateBookingPage } from "./admin/create-booking/CreateBookingPage";
 import { PaymentVerificationQueue } from "@/components/PaymentVerificationQueue";
 import { PaymentChart } from "@/components/charts/PaymentChart";
 import { RequestStatusChart } from "@/components/charts/RequestStatusChart";
@@ -105,6 +107,12 @@ export function AdminPanelPage() {
   }
   if (pathSection === "messages") {
     return <MessagesPage />;
+  }
+  if (pathSection === "analytics") {
+    return <BookingAnalyticsPage />;
+  }
+  if (pathSection === "create-booking") {
+    return <CreateBookingPage />;
   }
   if (pathSection === "payments" && !location.pathname.includes("in-person")) {
     return <PaymentsPage />;
