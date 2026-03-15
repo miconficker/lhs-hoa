@@ -57,7 +57,7 @@ export function ExternalRentalsPage() {
   return (
     <PublicLayout title="External Rentals" showBackButton backTo="/">
       {/* Hero Section */}
-      <div className="bg-primary text-primary-foreground py-16 px-4 -mx-4 sm:-mx-8 mt-[-2rem] sm:mt-[-2.5rem]">
+      <div className="bg-primary text-primary-foreground py-16 px-4 -mx-4 sm:-mx-8">
         <div className="max-w-6xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Rent Our Amenities for Your Events

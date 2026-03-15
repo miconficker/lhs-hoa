@@ -127,7 +127,7 @@ notificationsRouter.post("/", async (c) => {
 
   await c.env.DB.prepare(
     `INSERT INTO notifications (id, user_id, type, title, content, link, read, sent_at)
-     VALUES (?, ?, ?, ?, ?, ?, 1, datetime('now'))`
+     VALUES (?, ?, ?, ?, ?, ?, 0, datetime('now'))`
   ).bind(id, user_id, type, title, content, link || null).run();
 
   const notification = await c.env.DB.prepare(

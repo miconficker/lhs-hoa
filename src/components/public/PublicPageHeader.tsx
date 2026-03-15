@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
-import { Home, Moon, Sun, Calendar } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import lhsLogo from "@/assets/lhs-logo.svg";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 export interface PublicPageHeaderProps {
   title?: string;
@@ -15,51 +15,55 @@ export function PublicPageHeader({
   showBackButton = false,
   backTo = "/",
 }: PublicPageHeaderProps) {
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const isDark = mounted && theme === "dark";
-
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        {/* Left: Logo/Back button */}
-        <div className="flex items-center gap-4">
-          {showBackButton && (
-            <Link to={backTo}>
-              <Button variant="ghost" size="icon">
-                <Calendar className="w-5 h-5" />
-              </Button>
+    <header className="sticky top-0 z-50 border-b shadow-sm bg-background border-border">
+      <div className="overflow-visible px-4 mx-auto max-w-full sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          {/* Left: back button + logo */}
+          <div className="flex gap-3 items-center min-w-0">
+            {showBackButton && (
+              <Link to={backTo}>
+                <Button variant="ghost" size="icon">
+                  <Calendar className="w-5 h-5" />
+                </Button>
+              </Link>
+            )}
+            <Link to="/" className="flex gap-2 items-center shrink-0">
+              <img
+                src={lhsLogo}
+                alt="Laguna Hills HOA"
+                width="40"
+                height="40"
+                className="w-auto h-10"
+              />
+              <span className="hidden text-xl font-bold text-foreground sm:inline">
+                Laguna Hills HOA
+              </span>
+              <span className="text-xl font-bold text-foreground sm:hidden">
+                LHS HOA
+              </span>
             </Link>
-          )}
-          <Link to="/" className="flex items-center gap-2 font-semibold">
-            <Home className="w-5 h-5" />
-            <span className="hidden sm:inline">Laguna Hills HOA</span>
-          </Link>
-          {title && (
-            <span className="hidden md:inline text-muted-foreground">
-              / {title}
-            </span>
-          )}
-        </div>
+            {title && (
+              <span className="hidden md:inline text-muted-foreground">
+                / {title}
+              </span>
+            )}
+          </div>
 
-        {/* Right: Theme toggle */}
-        <button
-          onClick={() => setTheme(isDark ? "light" : "dark")}
-          className="w-10 h-10 rounded-lg border-2 border-border bg-background hover:bg-accent hover:text-accent-foreground transition-all shadow-sm"
-          aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
-        >
-          {mounted && (
-            <>
-              <Sun className="h-[1.3rem] w-[1.3rem] rotate-0 scale-100 transition-all duration-300 dark:-rotate-90 dark:scale-0 text-amber-500" />
-              <Moon className="absolute h-[1.3rem] w-[1.3rem] rotate-90 scale-0 transition-all duration-300 dark:rotate-0 dark:scale-100 text-indigo-400" />
-            </>
-          )}
-        </button>
+          {/* Right: theme toggle + login button */}
+          <nav
+            className="flex gap-2 items-center shrink-0"
+            aria-label="Utility menu"
+          >
+            <ThemeToggle />
+            <Link
+              to="/login"
+              className="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Login
+            </Link>
+          </nav>
+        </div>
       </div>
     </header>
   );

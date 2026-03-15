@@ -13,6 +13,10 @@ import { Link, NavLink } from "react-router-dom";
 import { Menu, ChevronDown } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { navItems, type NavItem, type Role } from "./nav-items";
+import {
+  useUserNotificationCounts,
+  type UserNotificationCounts,
+} from "@/hooks/useUserNotificationCounts";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -80,7 +84,15 @@ function ChildLink({
 
 // ─── Bar mode ───────────────────────────────────────────────────────────────
 
-function NavBar({ items, role }: { items: NavItem[]; role: Role }) {
+function NavBar({
+  items,
+  role,
+  counts,
+}: {
+  items: NavItem[];
+  role: Role;
+  counts: UserNotificationCounts;
+}) {
   return (
     <NavigationMenu>
       <NavigationMenuList className="flex items-center gap-0.5">
@@ -98,8 +110,15 @@ function NavBar({ items, role }: { items: NavItem[]; role: Role }) {
                 <NavigationMenuContent>
                   <ul className="grid gap-0.5 p-2 min-w-[180px]">
                     {children.map((child) => (
-                      <li key={child.to}>
+                      <li key={child.to} className="flex items-center">
                         <ChildLink item={child} />
+                        {child.badgeKey &&
+                          counts[child.badgeKey] !== undefined &&
+                          counts[child.badgeKey]! > 0 && (
+                            <span className="ml-auto mr-2 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
+                              {counts[child.badgeKey]}
+                            </span>
+                          )}
                       </li>
                     ))}
                   </ul>
@@ -133,10 +152,12 @@ function NavSheetContent({
   items,
   role,
   onClose,
+  counts,
 }: {
   items: NavItem[];
   role: Role;
   onClose: () => void;
+  counts: UserNotificationCounts;
 }) {
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
 
@@ -175,12 +196,16 @@ function NavSheetContent({
               {isOpen && (
                 <div className="ml-4 mt-0.5 space-y-0.5 border-l border-border pl-3">
                   {children.map((child) => (
-                    <ChildLink
-                      key={child.to}
-                      item={child}
-                      onClick={onClose}
-                      sheet
-                    />
+                    <div key={child.to} className="flex items-center">
+                      <ChildLink item={child} onClick={onClose} sheet />
+                      {child.badgeKey &&
+                        counts[child.badgeKey] !== undefined &&
+                        counts[child.badgeKey]! > 0 && (
+                          <span className="ml-auto mr-2 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
+                            {counts[child.badgeKey]}
+                          </span>
+                        )}
+                    </div>
                   ))}
                 </div>
               )}
@@ -219,6 +244,7 @@ interface AppNavProps {
 
 export function AppNav({ mode, className }: AppNavProps) {
   const { user } = useAuth();
+  const { counts } = useUserNotificationCounts();
   const [sheetOpen, setSheetOpen] = useState(false);
 
   if (!user) return null;
@@ -229,7 +255,7 @@ export function AppNav({ mode, className }: AppNavProps) {
   if (mode === "bar") {
     return (
       <div className={className}>
-        <NavBar items={visibleItems} role={role} />
+        <NavBar items={visibleItems} role={role} counts={counts} />
       </div>
     );
   }
@@ -259,6 +285,7 @@ export function AppNav({ mode, className }: AppNavProps) {
             items={visibleItems}
             role={role}
             onClose={() => setSheetOpen(false)}
+            counts={counts}
           />
         </SheetContent>
       </Sheet>

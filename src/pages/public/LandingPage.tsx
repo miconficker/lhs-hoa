@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { LogIn, Calendar, Users, Sparkles, Moon, Sun } from "lucide-react";
+import { LogIn, Calendar, Users, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,13 +27,15 @@ export function LandingPage() {
       <div className="fixed top-4 right-4 z-50">
         <button
           onClick={() => setTheme(isDark ? "light" : "dark")}
-          className="w-10 h-10 rounded-lg border-2 border-border bg-background hover:bg-accent hover:text-accent-foreground transition-all shadow-sm"
+          className="px-3 py-1.5 rounded-md text-sm font-medium bg-muted hover:bg-accent transition-colors flex items-center gap-2"
           aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
         >
           {mounted && (
             <>
-              <Sun className="h-[1.3rem] w-[1.3rem] rotate-0 scale-100 transition-all duration-300 dark:-rotate-90 dark:scale-0 text-amber-500" />
-              <Moon className="absolute h-[1.3rem] w-[1.3rem] rotate-90 scale-0 transition-all duration-300 dark:rotate-0 dark:scale-100 text-indigo-400" />
+              <span className="text-base">{isDark ? "🌙" : "☀️"}</span>
+              <span className="hidden sm:inline">
+                {isDark ? "Dark" : "Light"}
+              </span>
             </>
           )}
         </button>

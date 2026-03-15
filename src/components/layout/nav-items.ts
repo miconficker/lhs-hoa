@@ -19,6 +19,13 @@ export interface NavItem {
   icon?: LucideIcon;
   roles: Role[];
   children?: NavItem[];
+  badgeKey?: keyof UserNotificationCounts;
+}
+
+// Import type for badge keys
+interface UserNotificationCounts {
+  unreadNotifications: number;
+  unreadMessages: number;
 }
 
 export const navItems: NavItem[] = [
@@ -116,11 +123,13 @@ export const navItems: NavItem[] = [
         to: "/messages",
         label: "Messages",
         roles: ["admin", "resident", "staff"],
+        badgeKey: "unreadMessages",
       },
       {
         to: "/notifications",
         label: "Notifications",
         roles: ["admin", "resident", "staff"],
+        badgeKey: "unreadNotifications",
       },
     ],
   },

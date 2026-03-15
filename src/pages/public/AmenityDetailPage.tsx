@@ -108,7 +108,7 @@ export function AmenityDetailPage() {
   return (
     <PublicLayout title={info.name} showBackButton backTo="/external-rentals">
       {/* Hero Image */}
-      <div className="relative h-64 md:h-80 -mx-4 sm:-mx-8 mt-[-2rem] sm:mt-[-2.5rem]">
+      <div className="relative h-64 md:h-80 -mx-4 sm:-mx-8">
         <img
           src={info.image}
           alt={info.name}
