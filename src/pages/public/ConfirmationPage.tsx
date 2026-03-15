@@ -11,6 +11,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { QRCodeDisplay } from "@/components/public/QRCodeDisplay";
+import { StatusPhaseIndicator } from "@/components/public/StatusPhaseIndicator";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -208,6 +209,13 @@ export function ConfirmationPage() {
                 )}
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Timeline Phase Indicator */}
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <StatusPhaseIndicator status={booking.status as any} />
           </CardContent>
         </Card>
 

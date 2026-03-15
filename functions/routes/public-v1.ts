@@ -180,7 +180,7 @@ publicV1Router.get('/availability/:amenityType', async (c) => {
   try {
     const blockedSet = new Set<string>();
 
-    // Get confirmed bookings
+    // Get confirmed bookings (only confirmed bookings block slots)
     const confirmedBookings = await c.env.DB.prepare(
       `SELECT date, slot FROM bookings
        WHERE amenity_type = ? AND date BETWEEN ? AND ?
