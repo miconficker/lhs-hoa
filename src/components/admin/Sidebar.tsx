@@ -109,7 +109,12 @@ const baseNavItems: NavItem[] = [
     href: "/admin/financials",
     icon: DollarSign,
     children: [
-      { title: "Payments", href: "/admin/payments", icon: DollarSign },
+      {
+        title: "Payments",
+        href: "/admin/payments",
+        icon: DollarSign,
+        badgeKey: "pendingPayments",
+      },
       {
         title: "Dues Settings",
         href: "/admin/dues-settings",

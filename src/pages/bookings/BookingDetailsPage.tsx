@@ -26,6 +26,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { StatusPhaseIndicator } from "@/components/public/StatusPhaseIndicator";
 
 import type { BookingWithCustomer } from "@/types";
 
@@ -172,6 +173,13 @@ export function BookingDetailsPage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Timeline Phase Indicator */}
+      <Card>
+        <CardContent className="pt-6">
+          <StatusPhaseIndicator status={booking.booking_status as any} />
+        </CardContent>
+      </Card>
+
       {/* Header */}
       <div className="space-y-2">
         <Button

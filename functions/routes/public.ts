@@ -66,7 +66,7 @@ publicRouter.get('/availability/:amenityType', async (c) => {
 
   const blockedSet = new Set<string>();
 
-  // Get confirmed bookings from unified bookings table
+  // Get confirmed bookings (only confirmed bookings block slots)
   try {
     const confirmedBookings = await c.env.DB.prepare(
       `SELECT date, slot FROM bookings

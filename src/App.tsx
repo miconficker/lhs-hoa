@@ -69,8 +69,8 @@ const CreateBookingPage = lazy(() =>
   })),
 );
 const NotificationBadgeTest = lazy(() =>
-  import("./components/admin/test/NotificationBadgeTest").then((m) => ({
-    default: m.NotificationBadgeTest,
+  import("./pages/admin/test/NotificationBadgeTestPage").then((m) => ({
+    default: m.NotificationBadgeTestPage,
   })),
 );
 const DebugPage = lazy(() =>
