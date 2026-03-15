@@ -1853,6 +1853,82 @@ interface AdminNotificationCounts {
 badgeKey?: keyof ReturnType<typeof useAdminNotificationCounts>["counts"];
 ```
 
+### User/Homeowner Navigation Badges
+
+**Purpose**: Display real-time notification counts on user-facing navigation items.
+
+**Hook**: `useUserNotificationCounts` (`src/hooks/useUserNotificationCounts.ts`)
+
+**Implementation**:
+- Fetches counts from multiple API endpoints in parallel using `Promise.allSettled()`
+- Auto-refreshes every 30 seconds
+- Gracefully handles API failures (individual failures don't break the entire feature)
+- Works in both horizontal bar navigation (xl+) and sheet navigation (mobile)
+
+**Badge Locations**:
+| Navigation Item | Badge Key | API Endpoint | Count Source |
+|-----------------|-----------|--------------|--------------|
+| Messages | `unreadMessages` | `GET /api/messages/threads` | Threads with unread messages |
+| Notifications | `unreadNotifications` | `GET /api/notifications?read=false` | Unread notifications for user |
+
+**Usage Pattern**:
+```typescript
+// AppNav component
+import { useUserNotificationCounts, type UserNotificationCounts } from "@/hooks/useUserNotificationCounts";
+
+const { counts } = useUserNotificationCounts();
+// counts = { unreadNotifications, unreadMessages }
+```
+
+**Badge Configuration** (`src/components/layout/nav-items.ts`):
+```typescript
+export interface NavItem {
+  label: string;
+  to?: string;
+  icon?: LucideIcon;
+  roles: Role[];
+  children?: NavItem[];
+  badgeKey?: keyof UserNotificationCounts;  // Maps to counts object
+}
+
+export const navItems: NavItem[] = [
+  {
+    label: "Communications",
+    children: [
+      {
+        to: "/messages",
+        label: "Messages",
+        badgeKey: "unreadMessages",  // Maps to counts.unreadMessages
+      },
+      {
+        to: "/notifications",
+        label: "Notifications",
+        badgeKey: "unreadNotifications",  // Maps to counts.unreadNotifications
+      },
+    ],
+  },
+  // ...
+];
+```
+
+**UI Rendering**:
+- Badges appear as primary-colored circular indicators (`bg-primary`) with white text
+- Only shown when count > 0
+- Positioned with `ml-auto` to align right in navigation items
+- Styled with `rounded-full px-2 py-0.5 text-xs font-medium`
+- Displays in both desktop horizontal menu and mobile sheet navigation
+
+**Type Safety**:
+```typescript
+export interface UserNotificationCounts {
+  unreadNotifications: number;
+  unreadMessages: number;
+}
+
+// Badge key is type-checked against counts object
+badgeKey?: keyof UserNotificationCounts;
+```
+
 ### My Lots Components (Resident-Facing)
 
 **Purpose**: Allow primary owners to manage household members directly from the My Lots page.
