@@ -141,40 +141,34 @@ export function useCalendarAvailability({
           setAvailability((prev) => new Map([...prev, ...result]));
           return result;
         } else {
-          // External mode
-          const promises = datesToFetch.map((date) =>
-            fetch(`/api/public/availability/${amenityType}?date=${date}`, {
+          // External mode - use range query for efficiency
+          const response = await fetch(
+            `/api/public/availability/${amenityType}?start=${datesToFetch[0]}&end=${datesToFetch[datesToFetch.length - 1]}`,
+            {
               headers: { "Content-Type": "application/json" },
-            }),
+            },
           );
 
-          const responses = await Promise.all(promises);
-
-          const failedResponse = responses.find((r) => !r.ok);
-          if (failedResponse) {
+          if (!response.ok) {
             throw new Error("Failed to fetch availability");
           }
 
-          // Process all responses
-          for (const response of responses) {
-            const data = await response.json();
+          const data = await response.json();
 
-            // NEW FIX: Correctly extract the array from your specific API format
-            const availableArray = data.available || data.data?.available;
+          // Extract array from API response
+          const availableArray = data.available || data.data?.available;
 
-            if (Array.isArray(availableArray)) {
-              for (const item of availableArray) {
+          if (Array.isArray(availableArray)) {
+            for (const item of availableArray) {
+              // Only cache dates that were requested
+              if (datesToFetch.includes(item.date)) {
                 result.set(item.date, item.available_slots);
                 cache.data.set(item.date, item.available_slots);
               }
-            } else if (data.data && data.data.date) {
-              // Fallback just in case
-              result.set(data.data.date, data.data.available_slots);
-              cache.data.set(data.data.date, data.data.available_slots);
             }
           }
 
-          // NEW FIX: Use functional state update
+          // Use functional state update
           setAvailability((prev) => new Map([...prev, ...result]));
           return result;
         }
