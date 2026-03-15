@@ -160,11 +160,9 @@ export function useCalendarAvailability({
 
           if (Array.isArray(availableArray)) {
             for (const item of availableArray) {
-              // Only cache dates that were requested
-              if (datesToFetch.includes(item.date)) {
-                result.set(item.date, item.available_slots);
-                cache.data.set(item.date, item.available_slots);
-              }
+              // Cache all dates from the response
+              result.set(item.date, item.available_slots);
+              cache.data.set(item.date, item.available_slots);
             }
           }
 
